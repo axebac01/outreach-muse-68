@@ -38,7 +38,7 @@ const OutreachContent = ({ leadId, campaignId }: { leadId: string; campaignId: s
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="rounded-lg border p-5 space-y-3">
+          <div key={i} className="rounded-lg border p-6 space-y-3">
             <div className="h-4 w-24 bg-muted animate-pulse rounded" />
             <div className="h-3 w-48 bg-muted animate-pulse rounded" />
             <div className="space-y-2">
@@ -53,7 +53,7 @@ const OutreachContent = ({ leadId, campaignId }: { leadId: string; campaignId: s
 
   if (!outreach) {
     return (
-      <div className="rounded-lg border p-8 text-center text-muted-foreground">
+      <div className="rounded-xl border p-8 text-center text-muted-foreground">
         No emails generated for this lead yet.
       </div>
     );
@@ -110,10 +110,10 @@ const Outreach = () => {
   if (isLoading) {
     return (
       <Layout>
-        <div className="container py-10">
+        <div className="container py-12">
           <div className="h-8 w-48 bg-muted animate-pulse rounded mb-8" />
-          <div className="flex gap-6">
-            <div className="w-56 space-y-2">
+          <div className="flex gap-8">
+            <div className="w-64 space-y-2">
               {[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-muted animate-pulse rounded-lg" />)}
             </div>
             <div className="flex-1 space-y-4">
@@ -127,15 +127,20 @@ const Outreach = () => {
 
   return (
     <Layout>
-      <div className="container py-10">
+      <div className="container py-12">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold">Generated outreach</h1>
-          <p className="text-sm text-muted-foreground">Review, copy, and refine your email sequences. {leads?.length || 0} leads.</p>
+          {campaign && (
+            <p className="text-sm text-muted-foreground mb-1">
+              <span className="font-medium text-foreground">{campaign.name}</span> · Outreach
+            </p>
+          )}
+          <h1 className="text-3xl font-bold">Generated outreach</h1>
+          <p className="text-muted-foreground mt-1">Review, copy, and refine your email sequences. {leads?.length || 0} leads.</p>
         </div>
 
-        <div className="flex gap-6">
-          <div className="w-56 flex-shrink-0 space-y-1">
-            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Leads</p>
+        <div className="flex gap-8">
+          <div className="w-64 flex-shrink-0 space-y-1 border-r pr-6">
+            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">Leads</p>
             {leads?.map((lead) => (
               <LeadButton key={lead.id} lead={lead} isSelected={selectedLeadId === lead.id} onClick={() => setSelectedLeadId(lead.id)} />
             ))}
@@ -145,7 +150,7 @@ const Outreach = () => {
             {selectedLeadId && id ? (
               <OutreachContent leadId={selectedLeadId} campaignId={id} />
             ) : (
-              <div className="rounded-lg border p-8 text-center text-muted-foreground">
+              <div className="rounded-xl border p-8 text-center text-muted-foreground">
                 Select a lead to view their outreach.
               </div>
             )}
@@ -162,15 +167,15 @@ const LeadButton = ({ lead, isSelected, onClick }: { lead: any; isSelected: bool
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors ${
+      className={`w-full text-left rounded-lg px-3 py-2.5 text-sm transition-colors ${
         isSelected ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-muted-foreground"
       }`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5">
         {outreach?.status === "approved" ? (
-          <Check className="h-3 w-3 text-success flex-shrink-0" />
+          <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />
         ) : (
-          <Circle className="h-3 w-3 text-muted-foreground/50 flex-shrink-0" />
+          <Circle className="h-3.5 w-3.5 text-muted-foreground/50 flex-shrink-0" />
         )}
         <div className="min-w-0">
           <div className="font-medium text-foreground truncate">{lead.full_name}</div>

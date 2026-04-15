@@ -13,11 +13,11 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="container py-10">
-        <div className="flex items-center justify-between mb-8">
+      <div className="container py-12">
+        <div className="flex items-center justify-between mb-10">
           <div>
-            <h1 className="text-2xl font-bold">Your campaigns</h1>
-            <p className="text-sm text-muted-foreground">Manage and track your outreach campaigns</p>
+            <h1 className="text-3xl font-bold">Your campaigns</h1>
+            <p className="text-muted-foreground mt-1">Manage and track your outreach campaigns</p>
           </div>
           {canCreateCampaign ? (
             <Button asChild>
@@ -43,7 +43,7 @@ const Dashboard = () => {
         {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-xl border bg-card p-5 space-y-3">
+              <div key={i} className="rounded-xl border bg-card p-6 space-y-3">
                 <div className="h-5 w-16 bg-muted animate-pulse rounded-full" />
                 <div className="h-5 w-32 bg-muted animate-pulse rounded" />
                 <div className="h-4 w-full bg-muted animate-pulse rounded" />
@@ -67,10 +67,10 @@ const Dashboard = () => {
               <Link
                 key={c.id}
                 to={`/campaign/${c.id}`}
-                className="group rounded-xl border bg-card p-5 space-y-3 hover:shadow-md hover:border-primary/20 transition-all duration-200"
+                className="group rounded-xl border bg-card p-6 space-y-3 card-hover hover:border-primary/20"
               >
                 <div className="flex items-center justify-between">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
                     c.status === "generated" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
                   }`}>
                     {c.status === "generated" ? "Generated" : "Draft"}

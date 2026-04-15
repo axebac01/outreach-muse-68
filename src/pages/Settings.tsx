@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { User, CreditCard, BarChart3, Pencil, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 
 const Settings = () => {
   const { user } = useAuth();
@@ -32,14 +33,17 @@ const Settings = () => {
     }
   };
 
+  const campaignPercent = limits.campaigns === Infinity ? 0 : Math.min((campaignCount / limits.campaigns) * 100, 100);
+  const outreachPercent = limits.outreachPerMonth === Infinity ? 0 : Math.min((monthlyOutreach / limits.outreachPerMonth) * 100, 100);
+
   return (
     <Layout>
-      <div className="container py-10 max-w-2xl">
-        <h1 className="text-2xl font-bold mb-8">Settings</h1>
+      <div className="container py-12 max-w-2xl">
+        <h1 className="text-3xl font-bold mb-10">Settings</h1>
 
         <div className="space-y-6">
           {/* Profile */}
-          <div className="rounded-xl border bg-card p-6 space-y-4">
+          <div className="rounded-xl border bg-card p-6 space-y-4 card-hover">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                 <User className="h-5 w-5 text-primary" />
@@ -82,7 +86,7 @@ const Settings = () => {
           </div>
 
           {/* Plan */}
-          <div className="rounded-xl border bg-card p-6 space-y-4">
+          <div className="rounded-xl border bg-card p-6 space-y-4 card-hover">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                 <CreditCard className="h-5 w-5 text-primary" />
@@ -110,7 +114,7 @@ const Settings = () => {
           </div>
 
           {/* Usage */}
-          <div className="rounded-xl border bg-card p-6 space-y-4">
+          <div className="rounded-xl border bg-card p-6 space-y-4 card-hover">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                 <BarChart3 className="h-5 w-5 text-primary" />
@@ -120,18 +124,28 @@ const Settings = () => {
                 <p className="text-sm text-muted-foreground">Your current usage this month</p>
               </div>
             </div>
-            <div className="grid gap-3 text-sm">
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Campaigns</span>
-                <span className="font-medium">
-                  {campaignCount} / {limits.campaigns === Infinity ? "∞" : limits.campaigns}
-                </span>
+            <div className="grid gap-4 text-sm">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Campaigns</span>
+                  <span className="font-medium">
+                    {campaignCount} / {limits.campaigns === Infinity ? "∞" : limits.campaigns}
+                  </span>
+                </div>
+                {limits.campaigns !== Infinity && (
+                  <Progress value={campaignPercent} className="h-2" />
+                )}
               </div>
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Outreach generated (this month)</span>
-                <span className="font-medium">
-                  {monthlyOutreach} / {limits.outreachPerMonth === Infinity ? "∞" : limits.outreachPerMonth}
-                </span>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Outreach generated (this month)</span>
+                  <span className="font-medium">
+                    {monthlyOutreach} / {limits.outreachPerMonth === Infinity ? "∞" : limits.outreachPerMonth}
+                  </span>
+                </div>
+                {limits.outreachPerMonth !== Infinity && (
+                  <Progress value={outreachPercent} className="h-2" />
+                )}
               </div>
             </div>
           </div>

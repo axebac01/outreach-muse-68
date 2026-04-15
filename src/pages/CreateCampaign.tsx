@@ -41,44 +41,47 @@ const CreateCampaign = () => {
 
   return (
     <Layout>
-      <div className="container max-w-2xl py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">Create a new campaign</h1>
-          <p className="text-sm text-muted-foreground">Tell MailLead.ai who you want to reach and what you're offering.</p>
+      <div className="container max-w-2xl py-12">
+        <div className="mb-10">
+          <p className="text-sm text-muted-foreground mb-2 font-medium">Step 1 of 2</p>
+          <h1 className="text-3xl font-bold">Create a new campaign</h1>
+          <p className="text-muted-foreground mt-1">Tell MailLead.ai who you want to reach and what you're offering.</p>
         </div>
         {!canCreateCampaign && (
           <div className="mb-6">
             <UpgradeBanner message="You've reached your free limit. Upgrade to keep generating outreach." />
           </div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="name">Campaign name</Label>
-            <Input id="name" placeholder="e.g., SaaS Founders Q2 Outreach" value={form.name} onChange={(e) => update("name", e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="audience">Target audience / ICP</Label>
-            <Textarea id="audience" placeholder="e.g., B2B SaaS founders, Series A-B, 20-200 employees" value={form.target_audience} onChange={(e) => update("target_audience", e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="product">What do you sell?</Label>
-            <Input id="product" placeholder="e.g., AI-powered cold email tool" value={form.product} onChange={(e) => update("product", e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="offer">Your offer</Label>
-            <Input id="offer" placeholder="e.g., 14-day free trial + dedicated onboarding" value={form.offer} onChange={(e) => update("offer", e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tone">Tone of voice</Label>
-            <Input id="tone" placeholder="e.g., Professional but friendly" value={form.tone} onChange={(e) => update("tone", e.target.value)} required />
-          </div>
-          <div className="flex gap-3">
-            <Button type="submit" className="flex-1" disabled={createCampaign.isPending || !canCreateCampaign}>
-              {createCampaign.isPending ? "Creating..." : "Create campaign"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => navigate("/dashboard")}>Cancel</Button>
-          </div>
-        </form>
+        <div className="rounded-xl border bg-card p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="name">Campaign name</Label>
+              <Input id="name" placeholder="e.g., SaaS Founders Q2 Outreach" value={form.name} onChange={(e) => update("name", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="audience">Target audience / ICP</Label>
+              <Textarea id="audience" placeholder="e.g., B2B SaaS founders, Series A-B, 20-200 employees" value={form.target_audience} onChange={(e) => update("target_audience", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="product">What do you sell?</Label>
+              <Input id="product" placeholder="e.g., AI-powered cold email tool" value={form.product} onChange={(e) => update("product", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="offer">Your offer</Label>
+              <Input id="offer" placeholder="e.g., 14-day free trial + dedicated onboarding" value={form.offer} onChange={(e) => update("offer", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tone">Tone of voice</Label>
+              <Input id="tone" placeholder="e.g., Professional but friendly" value={form.tone} onChange={(e) => update("tone", e.target.value)} required />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button type="submit" variant="hero" className="flex-1" disabled={createCampaign.isPending || !canCreateCampaign}>
+                {createCampaign.isPending ? "Creating..." : "Create campaign"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => navigate("/dashboard")}>Cancel</Button>
+            </div>
+          </form>
+        </div>
       </div>
     </Layout>
   );
