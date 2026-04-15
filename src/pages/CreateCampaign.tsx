@@ -30,7 +30,7 @@ const CreateCampaign = () => {
       <div className="container max-w-2xl py-10">
         <div className="mb-8">
           <h1 className="text-2xl font-bold">Create a new campaign</h1>
-          <p className="text-sm text-muted-foreground">Tell SignalFlow who you want to reach and what you're offering.</p>
+          <p className="text-sm text-muted-foreground">Tell MailLead.ai who you want to reach and what you're offering.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">

@@ -17,7 +17,7 @@ const Navbar = () => {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Mail className="h-4 w-4 text-primary-foreground" />
           </div>
-          SignalFlow
+          MailLead.ai
         </Link>
 
         {!isApp ? (

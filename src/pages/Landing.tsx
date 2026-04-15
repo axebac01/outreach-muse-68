@@ -6,7 +6,7 @@ import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock } from "lucide-r
 const features = [
   { icon: Zap, title: "Personalized in seconds", description: "Generate unique emails for every lead based on their company, role, and background — no templates needed." },
   { icon: Target, title: "3x more replies", description: "Outreach that's actually relevant gets opened, read, and replied to." },
-  { icon: Clock, title: "Hours saved, every day", description: "Stop researching and writing manually. SignalFlow does the heavy lifting so you can focus on closing." },
+  { icon: Clock, title: "Hours saved, every day", description: "Stop researching and writing manually. MailLead.ai does the heavy lifting so you can focus on closing." },
   { icon: Users, title: "Built for teams", description: "Manage campaigns, leads, and sequences in one place — whether you're a founder or a 50-person sales team." },
   { icon: BarChart3, title: "Campaign overview", description: "See all your campaigns and generated outreach from a single dashboard." },
   { icon: Mail, title: "Full email sequences", description: "Get a cold email plus two follow-ups generated for every single lead." },
@@ -27,7 +27,7 @@ const Landing = () => {
             <span className="text-primary">at scale.</span>
           </h1>
           <p className="mx-auto max-w-xl text-lg text-muted-foreground">
-            SignalFlow helps founders and sales teams generate high-converting outreach for every lead — without spending hours researching and writing manually.
+            MailLead.ai helps founders and sales teams generate high-converting outreach for every lead — without spending hours researching and writing manually.
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Button variant="hero" size="lg" asChild>
@@ -69,7 +69,7 @@ const Landing = () => {
       <section className="container py-20">
         <div className="mx-auto max-w-2xl text-center space-y-6">
           <h2 className="text-3xl font-bold">Ready to send outreach that converts?</h2>
-          <p className="text-muted-foreground">Join hundreds of teams already using SignalFlow to book more meetings.</p>
+          <p className="text-muted-foreground">Join hundreds of teams already using MailLead.ai to book more meetings.</p>
           <Button variant="hero" size="lg" asChild>
             <Link to="/signup" className="gap-2">
               Start free
@@ -84,9 +84,9 @@ const Landing = () => {
         <div className="container flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Mail className="h-4 w-4" />
-            SignalFlow
+            MailLead.ai
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 SignalFlow. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">© 2026 MailLead.ai. All rights reserved.</p>
         </div>
       </footer>
     </Layout>
