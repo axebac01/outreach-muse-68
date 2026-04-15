@@ -36,7 +36,7 @@ const Dashboard = () => {
 
         {!canCreateCampaign && (
           <div className="mb-6">
-            <UpgradeBanner message="You've reached your free limit. Upgrade to keep generating outreach." />
+            <UpgradeBanner message="You've used your free campaign. Upgrade to create unlimited campaigns and scale your outreach." />
           </div>
         )}
 
