@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useCampaign } from "@/hooks/useCampaigns";
 import { useLeads, useCreateLead } from "@/hooks/useLeads";
 import { useUsage } from "@/hooks/useUsage";
@@ -10,9 +10,12 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import UpgradeBanner from "@/components/UpgradeBanner";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const CampaignDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: campaign, isLoading: campaignLoading } = useCampaign(id);
   const { data: leads, isLoading: leadsLoading } = useLeads(id);
   const createLead = useCreateLead();
@@ -51,7 +54,13 @@ const CampaignDetails = () => {
         body: { campaign_id: id },
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast.success(`Emails generated for ${data.count} leads!`);
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["outreach"] });
+      queryClient.invalidateQueries({ queryKey: ["usage"] });
+      navigate(`/outreach/${id}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to generate emails");
     } finally {
@@ -62,8 +71,14 @@ const CampaignDetails = () => {
   if (campaignLoading || leadsLoading) {
     return (
       <Layout>
-        <div className="container py-10 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="container py-10">
+          <div className="space-y-4">
+            <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+            <div className="grid grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />)}
+            </div>
+            <div className="h-64 bg-muted animate-pulse rounded-lg" />
+          </div>
         </div>
       </Layout>
     );
@@ -85,6 +100,13 @@ const CampaignDetails = () => {
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl font-bold">{campaign.name}</h1>
           <div className="flex gap-2">
+            {campaign.status === "generated" && (
+              <Button variant="outline" asChild>
+                <Link to={`/outreach/${campaign.id}`} className="gap-1.5">
+                  View emails <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setShowAddRow(true)} className="gap-1.5" disabled={!canAddLead(leadsList.length)}>
               <Plus className="h-4 w-4" /> Add Lead
             </Button>
@@ -103,31 +125,24 @@ const CampaignDetails = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 text-sm">
           <div className="rounded-lg border p-3">
             <p className="text-muted-foreground text-xs mb-1">Audience</p>
-            <p className="font-medium">{campaign.target_audience}</p>
+            <p className="font-medium">{campaign.target_audience || "—"}</p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-muted-foreground text-xs mb-1">Product</p>
-            <p className="font-medium">{campaign.product}</p>
+            <p className="font-medium">{campaign.product || "—"}</p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-muted-foreground text-xs mb-1">Offer</p>
-            <p className="font-medium">{campaign.offer}</p>
+            <p className="font-medium">{campaign.offer || "—"}</p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-muted-foreground text-xs mb-1">Tone</p>
-            <p className="font-medium">{campaign.tone}</p>
+            <p className="font-medium">{campaign.tone || "—"}</p>
           </div>
         </div>
 
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Add leads ({leadsList.length})</h2>
-          {campaign.status === "generated" && (
-            <Button variant="outline" size="sm" asChild>
-              <Link to={`/outreach/${campaign.id}`} className="gap-1.5">
-                View generated emails <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          )}
         </div>
 
         <div className="rounded-lg border overflow-hidden">
@@ -164,6 +179,13 @@ const CampaignDetails = () => {
                     <td className="p-2 flex gap-1">
                       <Input placeholder="Notes" value={newLead.notes} onChange={(e) => setNewLead({ ...newLead, notes: e.target.value })} className="h-8 text-sm" />
                       <Button size="sm" className="h-8" onClick={handleAddLead} disabled={createLead.isPending}>Add</Button>
+                    </td>
+                  </tr>
+                )}
+                {leadsList.length === 0 && !showAddRow && (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      No leads yet. Click "Add Lead" to get started.
                     </td>
                   </tr>
                 )}

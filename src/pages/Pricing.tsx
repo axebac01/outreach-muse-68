@@ -1,7 +1,7 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 const tiers = [
   {
@@ -9,7 +9,7 @@ const tiers = [
     price: "Free",
     period: "",
     description: "For founders testing the waters",
-    features: ["1 campaign", "10 leads per campaign", "AI email generation", "Full email sequences", "Copy to clipboard"],
+    features: ["1 campaign", "10 leads per campaign", "10 outreach generations/month", "AI email generation", "Full email sequences", "Copy to clipboard"],
     cta: "Start free",
     popular: false,
   },
@@ -18,10 +18,20 @@ const tiers = [
     price: "€99",
     period: "/month",
     description: "For teams scaling outbound",
-    features: ["Unlimited campaigns", "Unlimited leads", "AI email generation", "Follow-up sequences", "Priority support", "Team collaboration"],
+    features: ["Unlimited campaigns", "Unlimited leads", "Unlimited generations", "AI email generation", "Follow-up sequences", "Priority support", "Team collaboration"],
     cta: "Upgrade to Growth",
     popular: true,
   },
+];
+
+const comparisonRows = [
+  { feature: "Campaigns", starter: "1", growth: "Unlimited" },
+  { feature: "Leads per campaign", starter: "10", growth: "Unlimited" },
+  { feature: "AI generations / month", starter: "10", growth: "Unlimited" },
+  { feature: "Email sequences", starter: true, growth: true },
+  { feature: "Regeneration", starter: true, growth: true },
+  { feature: "Priority support", starter: false, growth: true },
+  { feature: "Team collaboration", starter: false, growth: true },
 ];
 
 const Pricing = () => (
@@ -31,7 +41,7 @@ const Pricing = () => (
         <h1 className="text-3xl font-bold mb-3">Simple, transparent pricing</h1>
         <p className="text-muted-foreground">Start free. Upgrade when you're ready to scale.</p>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto">
+      <div className="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto mb-16">
         {tiers.map((tier) => (
           <div
             key={tier.name}
@@ -64,6 +74,44 @@ const Pricing = () => (
           </div>
         ))}
       </div>
+
+      {/* Comparison Table */}
+      <div className="max-w-3xl mx-auto">
+        <h2 className="text-xl font-bold text-center mb-6">Compare plans</h2>
+        <div className="rounded-xl border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="text-left p-3 font-medium">Feature</th>
+                <th className="text-center p-3 font-medium">Starter</th>
+                <th className="text-center p-3 font-medium text-primary">Growth</th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparisonRows.map((row) => (
+                <tr key={row.feature} className="border-b last:border-0">
+                  <td className="p-3 font-medium">{row.feature}</td>
+                  <td className="p-3 text-center">
+                    {typeof row.starter === "boolean" ? (
+                      row.starter ? <Check className="h-4 w-4 text-primary mx-auto" /> : <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                    ) : (
+                      <span className="text-muted-foreground">{row.starter}</span>
+                    )}
+                  </td>
+                  <td className="p-3 text-center">
+                    {typeof row.growth === "boolean" ? (
+                      row.growth ? <Check className="h-4 w-4 text-primary mx-auto" /> : <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                    ) : (
+                      <span className="font-medium">{row.growth}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <p className="text-center text-sm text-muted-foreground mt-8">
         You've reached your free limit? <Link to="/signup" className="text-primary hover:underline font-medium">Upgrade to keep generating outreach.</Link>
       </p>

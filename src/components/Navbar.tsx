@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Mail, Menu, X, LogOut } from "lucide-react";
+import { Mail, Menu, X, LogOut, Settings } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -10,7 +10,8 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
   const isApp = location.pathname.startsWith("/dashboard") || 
     location.pathname.startsWith("/campaign") || 
-    location.pathname.startsWith("/outreach");
+    location.pathname.startsWith("/outreach") ||
+    location.pathname.startsWith("/settings");
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleSignOut = async () => {
@@ -75,6 +76,9 @@ const Navbar = () => {
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild><Link to="/dashboard">Dashboard</Link></Button>
             <Button asChild><Link to="/campaign/new">New Campaign</Link></Button>
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/settings"><Settings className="h-4 w-4" /></Link>
+            </Button>
             <Button variant="outline" onClick={handleSignOut} className="gap-1.5">
               <LogOut className="h-4 w-4" /> Log out
             </Button>

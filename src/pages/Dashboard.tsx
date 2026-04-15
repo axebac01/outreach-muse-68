@@ -41,8 +41,18 @@ const Dashboard = () => {
         )}
 
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-xl border bg-card p-5 space-y-3">
+                <div className="h-5 w-16 bg-muted animate-pulse rounded-full" />
+                <div className="h-5 w-32 bg-muted animate-pulse rounded" />
+                <div className="h-4 w-full bg-muted animate-pulse rounded" />
+                <div className="flex justify-between">
+                  <div className="h-3 w-16 bg-muted animate-pulse rounded" />
+                  <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : !campaigns || campaigns.length === 0 ? (
           <EmptyState
@@ -57,7 +67,7 @@ const Dashboard = () => {
               <Link
                 key={c.id}
                 to={`/campaign/${c.id}`}
-                className="group rounded-xl border bg-card p-5 space-y-3 hover:shadow-md transition-all"
+                className="group rounded-xl border bg-card p-5 space-y-3 hover:shadow-md hover:border-primary/20 transition-all duration-200"
               >
                 <div className="flex items-center justify-between">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
