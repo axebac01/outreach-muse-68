@@ -17,7 +17,7 @@ const Navbar = () => {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Mail className="h-4 w-4 text-primary-foreground" />
           </div>
-          MailLead.ai
+          SignalFlow
         </Link>
 
         {!isApp ? (
@@ -28,7 +28,7 @@ const Navbar = () => {
             </div>
             <div className="hidden items-center gap-3 md:flex">
               <Button variant="ghost" asChild><Link to="/login">Log in</Link></Button>
-              <Button asChild><Link to="/signup">Get started free</Link></Button>
+              <Button asChild><Link to="/signup">Start free</Link></Button>
             </div>
             <button className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -38,7 +38,7 @@ const Navbar = () => {
                 <div className="flex flex-col gap-3">
                   <Link to="/pricing" className="text-sm py-2" onClick={() => setMobileOpen(false)}>Pricing</Link>
                   <Button variant="ghost" asChild><Link to="/login" onClick={() => setMobileOpen(false)}>Log in</Link></Button>
-                  <Button asChild><Link to="/signup" onClick={() => setMobileOpen(false)}>Get started free</Link></Button>
+                  <Button asChild><Link to="/signup" onClick={() => setMobileOpen(false)}>Start free</Link></Button>
                 </div>
               </div>
             )}

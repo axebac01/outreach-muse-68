@@ -4,12 +4,12 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock } from "lucide-react";
 
 const features = [
-  { icon: Zap, title: "AI-Powered Personalization", description: "Generate unique emails for each lead based on their company, role, and background." },
-  { icon: Target, title: "Higher Reply Rates", description: "Personalized outreach gets 3x more replies than generic templates." },
-  { icon: Clock, title: "Save Hours Every Day", description: "What takes your team hours now takes seconds with MailLead.ai." },
-  { icon: Users, title: "Built for Teams", description: "Manage campaigns, leads, and generated emails all in one place." },
-  { icon: BarChart3, title: "Campaign Dashboard", description: "Track all your campaigns and generated outreach from a single view." },
-  { icon: Mail, title: "Full Email Sequences", description: "Get a cold email + 2 follow-ups generated for every single lead." },
+  { icon: Zap, title: "Personalized in seconds", description: "Generate unique emails for every lead based on their company, role, and background — no templates needed." },
+  { icon: Target, title: "3x more replies", description: "Outreach that's actually relevant gets opened, read, and replied to." },
+  { icon: Clock, title: "Hours saved, every day", description: "Stop researching and writing manually. SignalFlow does the heavy lifting so you can focus on closing." },
+  { icon: Users, title: "Built for teams", description: "Manage campaigns, leads, and sequences in one place — whether you're a founder or a 50-person sales team." },
+  { icon: BarChart3, title: "Campaign overview", description: "See all your campaigns and generated outreach from a single dashboard." },
+  { icon: Mail, title: "Full email sequences", description: "Get a cold email plus two follow-ups generated for every single lead." },
 ];
 
 const Landing = () => {
@@ -20,20 +20,19 @@ const Landing = () => {
         <div className="mx-auto max-w-3xl text-center space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm text-muted-foreground">
             <Zap className="h-3.5 w-3.5" />
-            AI-powered cold outreach for B2B teams
+            Personalized outbound that actually gets replies.
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl leading-[1.1]">
-            Cold emails that actually{" "}
-            <span className="text-primary">get replies</span>
+            Write personalized cold emails{" "}
+            <span className="text-primary">at scale.</span>
           </h1>
           <p className="mx-auto max-w-xl text-lg text-muted-foreground">
-            Generate hyper-personalized cold emails and follow-ups for every lead in seconds. 
-            Stop writing templates. Start booking meetings.
+            SignalFlow helps founders and sales teams generate high-converting outreach for every lead — without spending hours researching and writing manually.
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Button variant="hero" size="lg" asChild>
               <Link to="/signup" className="gap-2">
-                Start free — no card required
+                Start free
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -41,7 +40,7 @@ const Landing = () => {
               <Link to="/pricing">View pricing</Link>
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Used by 500+ B2B teams worldwide</p>
+          <p className="text-xs text-muted-foreground">No credit card required · Set up in 2 minutes</p>
         </div>
       </section>
 
@@ -49,8 +48,8 @@ const Landing = () => {
       <section id="features" className="border-t bg-muted/30 py-20">
         <div className="container">
           <div className="mx-auto max-w-2xl text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3">Everything you need to close more deals</h2>
-            <p className="text-muted-foreground">From lead import to personalized sequences — all in one workflow.</p>
+            <h2 className="text-3xl font-bold mb-3">Everything you need to book more meetings</h2>
+            <p className="text-muted-foreground">From lead import to personalized sequences — one workflow, zero busywork.</p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
@@ -69,11 +68,11 @@ const Landing = () => {
       {/* CTA */}
       <section className="container py-20">
         <div className="mx-auto max-w-2xl text-center space-y-6">
-          <h2 className="text-3xl font-bold">Ready to 10x your outbound?</h2>
-          <p className="text-muted-foreground">Join hundreds of sales teams already using MailLead.ai to book more meetings.</p>
+          <h2 className="text-3xl font-bold">Ready to send outreach that converts?</h2>
+          <p className="text-muted-foreground">Join hundreds of teams already using SignalFlow to book more meetings.</p>
           <Button variant="hero" size="lg" asChild>
             <Link to="/signup" className="gap-2">
-              Get started for free
+              Start free
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
@@ -85,9 +84,9 @@ const Landing = () => {
         <div className="container flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Mail className="h-4 w-4" />
-            MailLead.ai
+            SignalFlow
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 MailLead.ai. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">© 2026 SignalFlow. All rights reserved.</p>
         </div>
       </footer>
     </Layout>

@@ -27,7 +27,7 @@ const Login = () => {
               <Mail className="h-5 w-5 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold">Welcome back</h1>
-            <p className="text-sm text-muted-foreground">Log in to your MailLead.ai account</p>
+            <p className="text-sm text-muted-foreground">Log in to your SignalFlow account</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">

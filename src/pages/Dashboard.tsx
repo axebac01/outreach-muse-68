@@ -13,13 +13,13 @@ const Dashboard = () => {
       <div className="container py-10">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold">Campaigns</h1>
-            <p className="text-sm text-muted-foreground">Manage your outreach campaigns</p>
+            <h1 className="text-2xl font-bold">Your campaigns</h1>
+            <p className="text-sm text-muted-foreground">Manage and track your outreach campaigns</p>
           </div>
           <Button asChild>
             <Link to="/campaign/new" className="gap-2">
               <Plus className="h-4 w-4" />
-              New Campaign
+              New campaign
             </Link>
           </Button>
         </div>

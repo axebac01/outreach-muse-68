@@ -65,7 +65,7 @@ const CampaignDetails = () => {
         </div>
 
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Leads ({leads.length})</h2>
+          <h2 className="text-lg font-semibold">Add leads ({leads.length})</h2>
           {campaign.status === "generated" && (
             <Button variant="outline" size="sm" asChild>
               <Link to={`/outreach/${campaign.id}`} className="gap-1.5">

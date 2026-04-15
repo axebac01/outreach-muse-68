@@ -6,30 +6,21 @@ import { Check } from "lucide-react";
 const tiers = [
   {
     name: "Starter",
-    price: "$0",
-    period: "/month",
-    description: "For individuals testing the waters",
-    features: ["1 campaign", "10 leads per campaign", "AI email generation", "Copy to clipboard"],
-    cta: "Get started free",
+    price: "Free",
+    period: "",
+    description: "For founders testing the waters",
+    features: ["1 campaign", "10 leads per campaign", "AI email generation", "Full email sequences", "Copy to clipboard"],
+    cta: "Start free",
     popular: false,
   },
   {
-    name: "Pro",
-    price: "$49",
+    name: "Growth",
+    price: "€99",
     period: "/month",
     description: "For teams scaling outbound",
-    features: ["Unlimited campaigns", "100 leads per campaign", "AI email generation", "Follow-up sequences", "Priority support"],
-    cta: "Start free trial",
+    features: ["Unlimited campaigns", "Unlimited leads", "AI email generation", "Follow-up sequences", "Priority support", "Team collaboration"],
+    cta: "Upgrade to Growth",
     popular: true,
-  },
-  {
-    name: "Scale",
-    price: "$149",
-    period: "/month",
-    description: "For agencies and large teams",
-    features: ["Everything in Pro", "Unlimited leads", "API access", "Custom AI tone", "Dedicated account manager", "SSO"],
-    cta: "Contact sales",
-    popular: false,
   },
 ];
 
@@ -40,7 +31,7 @@ const Pricing = () => (
         <h1 className="text-3xl font-bold mb-3">Simple, transparent pricing</h1>
         <p className="text-muted-foreground">Start free. Upgrade when you're ready to scale.</p>
       </div>
-      <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto">
+      <div className="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto">
         {tiers.map((tier) => (
           <div
             key={tier.name}
@@ -57,7 +48,7 @@ const Pricing = () => (
             </div>
             <div>
               <span className="text-4xl font-bold">{tier.price}</span>
-              <span className="text-muted-foreground text-sm">{tier.period}</span>
+              {tier.period && <span className="text-muted-foreground text-sm">{tier.period}</span>}
             </div>
             <ul className="space-y-2.5">
               {tier.features.map((f) => (
@@ -73,6 +64,9 @@ const Pricing = () => (
           </div>
         ))}
       </div>
+      <p className="text-center text-sm text-muted-foreground mt-8">
+        You've reached your free limit? <Link to="/signup" className="text-primary hover:underline font-medium">Upgrade to keep generating outreach.</Link>
+      </p>
     </div>
   </Layout>
 );
