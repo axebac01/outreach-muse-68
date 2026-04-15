@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Mail } from "lucide-react";
+import { Mail, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const Signup = () => {
@@ -63,6 +63,18 @@ const Signup = () => {
               {loading ? "Creating account..." : "Create account"}
             </Button>
           </form>
+
+          {/* Testimonial */}
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+            <div className="flex gap-0.5">
+              {[...Array(5)].map((_, i) => <Star key={i} className="h-3.5 w-3.5 fill-primary text-primary" />)}
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              "MailLead.ai cut our outreach prep time by 90%. We booked 12 meetings in our first week."
+            </p>
+            <p className="text-xs font-medium">— Marcus R., Founder at SalesSync</p>
+          </div>
+
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link to="/login" className="text-primary hover:underline font-medium">Log in</Link>
