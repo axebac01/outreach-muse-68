@@ -14,8 +14,8 @@ const Outreach = () => {
     <Layout>
       <div className="container py-10">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold">{campaign.name}</h1>
-          <p className="text-sm text-muted-foreground">Generated outreach for {campaign.leads.length} leads</p>
+          <h1 className="text-2xl font-bold">Generated outreach</h1>
+          <p className="text-sm text-muted-foreground">Review, copy, and refine your email sequences. {campaign.leads.length} leads in "{campaign.name}".</p>
         </div>
 
         <div className="flex gap-6">

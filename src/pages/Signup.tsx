@@ -15,7 +15,7 @@ const Signup = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Account created! Welcome to MailLead.ai");
+    toast.success("Account created! Welcome to SignalFlow");
     navigate("/dashboard");
   };
 
@@ -28,7 +28,7 @@ const Signup = () => {
               <Mail className="h-5 w-5 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold">Create your account</h1>
-            <p className="text-sm text-muted-foreground">Start generating personalized outreach in minutes</p>
+            <p className="text-sm text-muted-foreground">Start generating personalized outreach with SignalFlow</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
