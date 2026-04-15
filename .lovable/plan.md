@@ -1,38 +1,95 @@
 
 
-## Step 7 — QA Fix Pass
+## Step 8 — UX + Polish
 
-### Issues Found
+### Summary
+Refine spacing, typography, card layouts, button hierarchy, and visual clarity across all pages to feel like a premium B2B SaaS product.
 
-1. **CampaignDetails: Duplicate "Notes" table header** — Line 161 has a second `<th>Notes</th>` that shouldn't exist. The table header has 8 columns but data rows only have 7 cells, causing misalignment.
+### Changes
 
-2. **CampaignDetails: Add-lead row missing delete column** — The input row has 6 `<td>` elements but the table has 7 columns (after fixing #1). The Notes input and Add button are crammed into one cell. Need to split Notes into its own `<td>` and put the Add/Cancel buttons in the action column.
+**1. Global CSS (`src/index.css`)**
+- Add subtle body gradient background (very light blue-to-white)
+- Add `.card-hover` utility class with scale transform on hover
+- Increase heading font weights: h1 gets `font-bold` with tighter tracking
 
-3. **CampaignDetails: Empty state colSpan wrong** — `colSpan={7}` but should match actual column count after fix.
+**2. Landing page (`src/pages/Landing.tsx`)**
+- Increase hero vertical padding (`py-24 md:py-40`)
+- Make hero h1 larger on desktop (`md:text-7xl`) with tighter `leading-[1.05]`
+- Add subtle animated gradient blob behind hero text
+- Increase feature card padding and add `group` hover lift effect (`hover:-translate-y-1`)
+- Make testimonial section more spacious with larger quote text
+- Add `animate-fade-in` to hero elements with staggered delays
 
-4. **useCampaign uses `.single()`** — Should use `.maybeSingle()` per project guidelines to avoid errors when campaign not found.
+**3. Dashboard (`src/pages/Dashboard.tsx`)**
+- Increase top padding to `py-12`
+- Add page description with slightly larger text
+- Campaign cards: increase padding to `p-6`, add `hover:-translate-y-0.5` transform
+- Status badges: slightly larger with `px-2.5 py-1`
+- Skeleton loaders: match updated card padding
 
-5. **useProfile uses `.single()`** — Same issue. Should use `.maybeSingle()` to handle missing profiles gracefully.
+**4. Campaign Details (`src/pages/CampaignDetails.tsx`)**
+- Wrap the info grid cards in subtle gradient borders
+- Add icons to each info card (Target, Package, Gift, MessageSquare)
+- Increase section spacing between header, info grid, and leads table
+- Style the "Generate Emails" button with the `hero` variant for prominence
+- Add a subtle card wrapper around the leads table section
 
-6. **Regeneration double-counts usage** — The edge function always inserts `usage_tracking` rows, even on regeneration. This inflates the monthly outreach count. Should skip usage tracking when `lead_id` is provided (regeneration).
+**5. Create Campaign (`src/pages/CreateCampaign.tsx`)**
+- Wrap form in a card with border and padding
+- Add step indicator or progress hint ("Step 1 of 2: Define your campaign")
+- Increase spacing between form fields
+- Make submit button use `hero` variant
 
-7. **Dashboard lead count type casting** — `((c as any).leads as any[])?.[0]?.count` works but is fragile. Can be cleaned up.
+**6. Outreach page (`src/pages/Outreach.tsx`)**
+- Increase lead sidebar width to `w-64`
+- Add a subtle border-right separator to the sidebar
+- Improve lead button hover states with rounded corners and better spacing
+- Add campaign name in the header breadcrumb style
 
-### Fixes
+**7. Email Card (`src/components/EmailCard.tsx`)**
+- Add left border accent (2px primary color) for visual hierarchy
+- Increase padding and add subtle background tint
+- Make subject line stand out more with a badge-like styling
 
-| File | Fix |
-|------|-----|
-| `src/pages/CampaignDetails.tsx` | Remove duplicate Notes header, fix add-row layout to 7 columns, add Cancel button, fix colSpan |
-| `src/hooks/useCampaigns.ts` | Change `useCampaign` to use `.maybeSingle()` |
-| `src/hooks/useProfile.ts` | Change `useProfile` to use `.maybeSingle()` |
-| `supabase/functions/generate-outreach/index.ts` | Skip usage tracking when `lead_id` is set (regeneration) |
-| `src/pages/Dashboard.tsx` | Clean up lead count extraction |
+**8. Settings (`src/pages/Settings.tsx`)**
+- Add usage progress bars (visual fill) instead of just text ratios
+- Add subtle card hover effects
 
-### No changes needed
-- Landing, Pricing, Signup, Login — all functional
-- Settings — working with edit name
-- Outreach — regenerate wired to all cards
-- CreateCampaign — validation, limits, toasts all working
-- Edge function AI generation — structured output working
-- Empty states and loading states — all present
+**9. Pricing (`src/pages/Pricing.tsx`)**
+- Growth tier: add gradient background instead of plain border highlight
+- Increase card padding and spacing
+- Make "Most popular" badge more prominent
+- Add money-back guarantee text under pricing
+
+**10. Auth pages (`Login.tsx`, `Signup.tsx`)**
+- Add a subtle card wrapper around the form
+- Increase form spacing
+- Add a thin primary-color top border on the card for brand accent
+
+**11. Navbar (`src/components/Navbar.tsx`)**
+- Add subtle bottom border shadow for depth
+- Increase logo font size slightly
+- In app mode: add a subtle divider between nav groups
+
+### Files to Modify
+| File | Changes |
+|------|---------|
+| `src/index.css` | Add utility classes, refine base styles |
+| `src/pages/Landing.tsx` | Hero sizing, animations, feature card hover |
+| `src/pages/Dashboard.tsx` | Card padding, hover transforms, spacing |
+| `src/pages/CampaignDetails.tsx` | Info card icons, button hierarchy, table wrapper |
+| `src/pages/CreateCampaign.tsx` | Card wrapper, hero button, step hint |
+| `src/pages/Outreach.tsx` | Sidebar width, separator, breadcrumb |
+| `src/components/EmailCard.tsx` | Left border accent, padding, subject styling |
+| `src/pages/Settings.tsx` | Usage progress bars |
+| `src/pages/Pricing.tsx` | Growth tier gradient, spacing, guarantee text |
+| `src/pages/Login.tsx` | Card wrapper, top border accent |
+| `src/pages/Signup.tsx` | Card wrapper, top border accent |
+| `src/components/Navbar.tsx` | Border shadow, spacing |
+
+### Technical Details
+- All changes are CSS/Tailwind only, no new dependencies
+- Uses existing `animate-fade-in` keyframe from tailwind config
+- Progress bars use simple `div` with percentage width and `bg-primary` fill
+- No functional logic changes, purely visual refinements
 
