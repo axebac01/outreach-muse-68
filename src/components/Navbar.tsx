@@ -20,9 +20,9 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
+    <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg shadow-[0_1px_3px_0_hsl(var(--foreground)/0.04)]">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+        <Link to="/" className="flex items-center gap-2.5 font-bold text-lg">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Mail className="h-4 w-4 text-primary-foreground" />
           </div>
@@ -73,12 +73,14 @@ const Navbar = () => {
             )}
           </>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <Button variant="ghost" asChild><Link to="/dashboard">Dashboard</Link></Button>
+            <div className="w-px h-5 bg-border mx-1" />
             <Button asChild><Link to="/campaign/new">New Campaign</Link></Button>
             <Button variant="ghost" size="icon" asChild>
               <Link to="/settings"><Settings className="h-4 w-4" /></Link>
             </Button>
+            <div className="w-px h-5 bg-border mx-1" />
             <Button variant="outline" onClick={handleSignOut} className="gap-1.5">
               <LogOut className="h-4 w-4" /> Log out
             </Button>

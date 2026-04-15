@@ -12,9 +12,9 @@ interface EmailCardProps {
 
 const EmailCard = ({ title, content, subjectLine, onRegenerate, isRegenerating }: EmailCardProps) => {
   return (
-    <div className="rounded-lg border bg-card p-5 space-y-3">
+    <div className="rounded-lg border-l-2 border-l-primary border border-border bg-card p-6 space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="font-medium text-sm">{title}</h4>
+        <h4 className="font-semibold text-sm">{title}</h4>
         <div className="flex items-center gap-2">
           {onRegenerate && (
             <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={isRegenerating} className="gap-1.5 text-muted-foreground">
@@ -27,7 +27,7 @@ const EmailCard = ({ title, content, subjectLine, onRegenerate, isRegenerating }
       </div>
       {subjectLine && (
         <div className="text-sm">
-          <span className="font-medium text-muted-foreground">Subject:</span>{" "}
+          <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground mr-2">Subject</span>
           <span className="font-medium">{subjectLine}</span>
         </div>
       )}

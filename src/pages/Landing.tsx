@@ -24,20 +24,22 @@ const Landing = () => {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-        <div className="container relative py-20 md:py-32">
-          <div className="mx-auto max-w-3xl text-center space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm text-muted-foreground">
+        {/* Animated gradient blob */}
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/5 rounded-full blur-3xl animate-pulse pointer-events-none" />
+        <div className="container relative py-24 md:py-40">
+          <div className="mx-auto max-w-3xl text-center space-y-8">
+            <div className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm text-muted-foreground animate-fade-in">
               <Zap className="h-3.5 w-3.5" />
               Personalized outbound that actually gets replies.
             </div>
-            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl leading-[1.08]">
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-7xl leading-[1.05] animate-fade-in">
               Write personalized cold emails{" "}
               <span className="text-primary">at scale.</span>
             </h1>
-            <p className="mx-auto max-w-xl text-lg text-muted-foreground leading-relaxed">
+            <p className="mx-auto max-w-xl text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in">
               MailLead.ai helps founders and sales teams generate high-converting outreach for every lead — without spending hours researching and writing manually.
             </p>
-            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center animate-fade-in">
               <Button variant="hero" size="lg" asChild>
                 <Link to="/signup" className="gap-2">
                   Start free
@@ -48,19 +50,19 @@ const Landing = () => {
                 <Link to="/pricing">View pricing</Link>
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">No credit card required · Set up in 2 minutes</p>
+            <p className="text-xs text-muted-foreground animate-fade-in">No credit card required · Set up in 2 minutes</p>
           </div>
         </div>
       </section>
 
       {/* Social Proof */}
-      <section className="border-y bg-muted/30 py-8">
+      <section className="border-y bg-muted/30 py-10">
         <div className="container">
-          <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-16">
+          <div className="flex flex-col items-center gap-8 sm:flex-row sm:justify-center sm:gap-20">
             {socialProof.map((item) => (
               <div key={item.label} className="text-center">
-                <div className="text-2xl font-bold text-primary">{item.metric}</div>
-                <div className="text-sm text-muted-foreground">{item.label}</div>
+                <div className="text-3xl font-bold text-primary">{item.metric}</div>
+                <div className="text-sm text-muted-foreground mt-1">{item.label}</div>
               </div>
             ))}
           </div>
@@ -68,19 +70,19 @@ const Landing = () => {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-20">
+      <section id="features" className="py-24">
         <div className="container">
-          <div className="mx-auto max-w-2xl text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3">Everything you need to book more meetings</h2>
-            <p className="text-muted-foreground">From lead import to personalized sequences — one workflow, zero busywork.</p>
+          <div className="mx-auto max-w-2xl text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">Everything you need to book more meetings</h2>
+            <p className="text-lg text-muted-foreground">From lead import to personalized sequences — one workflow, zero busywork.</p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
-              <div key={f.title} className="rounded-xl border bg-card p-6 space-y-3 hover:shadow-md hover:border-primary/20 transition-all duration-200">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <div key={f.title} className="group rounded-xl border bg-card p-7 space-y-4 hover:shadow-md hover:border-primary/20 hover:-translate-y-1 transition-all duration-200">
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
                   <f.icon className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="font-semibold">{f.title}</h3>
+                <h3 className="font-semibold text-base">{f.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
@@ -89,13 +91,13 @@ const Landing = () => {
       </section>
 
       {/* Testimonial */}
-      <section className="border-y bg-muted/30 py-16">
+      <section className="border-y bg-muted/30 py-20">
         <div className="container">
-          <div className="mx-auto max-w-2xl text-center space-y-4">
+          <div className="mx-auto max-w-2xl text-center space-y-6">
             <div className="flex justify-center gap-1">
               {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 fill-primary text-primary" />)}
             </div>
-            <blockquote className="text-lg font-medium leading-relaxed">
+            <blockquote className="text-xl md:text-2xl font-medium leading-relaxed">
               "We used to spend 3 hours writing emails for 10 leads. MailLead.ai does it in under a minute — and the reply rates are actually better."
             </blockquote>
             <div className="text-sm text-muted-foreground">
@@ -106,10 +108,10 @@ const Landing = () => {
       </section>
 
       {/* CTA */}
-      <section className="container py-20">
+      <section className="container py-24">
         <div className="mx-auto max-w-2xl text-center space-y-6">
           <h2 className="text-3xl font-bold">Ready to send outreach that converts?</h2>
-          <p className="text-muted-foreground">Join hundreds of teams already using MailLead.ai to book more meetings.</p>
+          <p className="text-lg text-muted-foreground">Join hundreds of teams already using MailLead.ai to book more meetings.</p>
           <Button variant="hero" size="lg" asChild>
             <Link to="/signup" className="gap-2">
               Start free
