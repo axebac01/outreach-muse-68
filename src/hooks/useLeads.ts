@@ -48,3 +48,19 @@ export const useCreateLead = () => {
     },
   });
 };
+
+export const useDeleteLead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, campaign_id }: { id: string; campaign_id: string }) => {
+      const { error } = await supabase.from("leads").delete().eq("id", id);
+      if (error) throw error;
+      return { campaign_id };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["leads", data.campaign_id] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+  });
+};

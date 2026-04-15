@@ -89,8 +89,8 @@ const OutreachContent = ({ leadId, campaignId }: { leadId: string; campaignId: s
         onRegenerate={handleRegenerate}
         isRegenerating={regenerating}
       />
-      <EmailCard title="Follow-up #1" content={outreach.follow_up_1 || ""} />
-      <EmailCard title="Follow-up #2" content={outreach.follow_up_2 || ""} />
+      <EmailCard title="Follow-up #1" content={outreach.follow_up_1 || ""} onRegenerate={handleRegenerate} isRegenerating={regenerating} />
+      <EmailCard title="Follow-up #2" content={outreach.follow_up_2 || ""} onRegenerate={handleRegenerate} isRegenerating={regenerating} />
     </div>
   );
 };
