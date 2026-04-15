@@ -204,8 +204,6 @@ const CampaignDetails = () => {
                       No leads yet. Click "Add Lead" to get started.
                     </td>
                   </tr>
-                    </td>
-                  </tr>
                 )}
               </tbody>
             </table>

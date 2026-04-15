@@ -39,3 +39,4 @@ export const useUpdateProfile = () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
+};
