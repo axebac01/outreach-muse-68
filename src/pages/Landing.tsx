@@ -84,9 +84,9 @@ const Landing = () => {
         <div className="container flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Mail className="h-4 w-4" />
-            SignalFlow
+            MailLead.ai
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 SignalFlow. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">© 2026 MailLead.ai. All rights reserved.</p>
         </div>
       </footer>
     </Layout>
