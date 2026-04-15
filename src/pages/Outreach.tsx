@@ -5,17 +5,48 @@ import { useOutreachForLead, useApproveOutreach } from "@/hooks/useOutreach";
 import EmailCard from "@/components/EmailCard";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, Circle } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCampaign } from "@/hooks/useCampaigns";
 
-const OutreachContent = ({ leadId }: { leadId: string }) => {
+const OutreachContent = ({ leadId, campaignId }: { leadId: string; campaignId: string }) => {
   const { data: outreach, isLoading } = useOutreachForLead(leadId);
   const approveOutreach = useApproveOutreach();
+  const queryClient = useQueryClient();
+  const [regenerating, setRegenerating] = useState(false);
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-outreach", {
+        body: { campaign_id: campaignId, lead_id: leadId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Emails regenerated!");
+      queryClient.invalidateQueries({ queryKey: ["outreach", leadId] });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to regenerate");
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-lg border p-5 space-y-3">
+            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+            <div className="h-3 w-48 bg-muted animate-pulse rounded" />
+            <div className="space-y-2">
+              <div className="h-3 w-full bg-muted animate-pulse rounded" />
+              <div className="h-3 w-3/4 bg-muted animate-pulse rounded" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -39,19 +70,25 @@ const OutreachContent = ({ leadId }: { leadId: string }) => {
 
   return (
     <div className="space-y-4">
-      {outreach.status === "pending" && (
-        <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        {outreach.status === "pending" && (
           <Button onClick={handleApprove} disabled={approveOutreach.isPending} className="gap-1.5" size="sm">
             <Check className="h-4 w-4" /> Approve
           </Button>
-        </div>
-      )}
-      {outreach.status === "approved" && (
-        <div className="rounded-lg bg-success/10 text-success px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5">
-          <Check className="h-4 w-4" /> Approved
-        </div>
-      )}
-      <EmailCard title="Cold Email" content={outreach.cold_email || ""} subjectLine={outreach.subject_line || ""} />
+        )}
+        {outreach.status === "approved" && (
+          <div className="rounded-lg bg-success/10 text-success px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5">
+            <Check className="h-4 w-4" /> Approved
+          </div>
+        )}
+      </div>
+      <EmailCard
+        title="Cold Email"
+        content={outreach.cold_email || ""}
+        subjectLine={outreach.subject_line || ""}
+        onRegenerate={handleRegenerate}
+        isRegenerating={regenerating}
+      />
       <EmailCard title="Follow-up #1" content={outreach.follow_up_1 || ""} />
       <EmailCard title="Follow-up #2" content={outreach.follow_up_2 || ""} />
     </div>
@@ -61,6 +98,7 @@ const OutreachContent = ({ leadId }: { leadId: string }) => {
 const Outreach = () => {
   const { id } = useParams();
   const { data: leads, isLoading } = useLeads(id);
+  const { data: campaign } = useCampaign(id);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,8 +110,16 @@ const Outreach = () => {
   if (isLoading) {
     return (
       <Layout>
-        <div className="container py-10 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="container py-10">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded mb-8" />
+          <div className="flex gap-6">
+            <div className="w-56 space-y-2">
+              {[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-muted animate-pulse rounded-lg" />)}
+            </div>
+            <div className="flex-1 space-y-4">
+              {[...Array(3)].map((_, i) => <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />)}
+            </div>
+          </div>
         </div>
       </Layout>
     );
@@ -91,22 +137,13 @@ const Outreach = () => {
           <div className="w-56 flex-shrink-0 space-y-1">
             <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Leads</p>
             {leads?.map((lead) => (
-              <button
-                key={lead.id}
-                onClick={() => setSelectedLeadId(lead.id)}
-                className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors ${
-                  selectedLeadId === lead.id ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-muted-foreground"
-                }`}
-              >
-                <div className="font-medium text-foreground">{lead.full_name}</div>
-                <div className="text-xs">{lead.company}</div>
-              </button>
+              <LeadButton key={lead.id} lead={lead} isSelected={selectedLeadId === lead.id} onClick={() => setSelectedLeadId(lead.id)} />
             ))}
           </div>
 
           <div className="flex-1">
-            {selectedLeadId ? (
-              <OutreachContent leadId={selectedLeadId} />
+            {selectedLeadId && id ? (
+              <OutreachContent leadId={selectedLeadId} campaignId={id} />
             ) : (
               <div className="rounded-lg border p-8 text-center text-muted-foreground">
                 Select a lead to view their outreach.
@@ -116,6 +153,31 @@ const Outreach = () => {
         </div>
       </div>
     </Layout>
+  );
+};
+
+const LeadButton = ({ lead, isSelected, onClick }: { lead: any; isSelected: boolean; onClick: () => void }) => {
+  const { data: outreach } = useOutreachForLead(lead.id);
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors ${
+        isSelected ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-muted-foreground"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        {outreach?.status === "approved" ? (
+          <Check className="h-3 w-3 text-success flex-shrink-0" />
+        ) : (
+          <Circle className="h-3 w-3 text-muted-foreground/50 flex-shrink-0" />
+        )}
+        <div className="min-w-0">
+          <div className="font-medium text-foreground truncate">{lead.full_name}</div>
+          <div className="text-xs truncate">{lead.company}</div>
+        </div>
+      </div>
+    </button>
   );
 };
 
