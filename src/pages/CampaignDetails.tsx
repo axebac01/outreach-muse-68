@@ -2,9 +2,9 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useCampaign } from "@/hooks/useCampaigns";
-import { useLeads, useCreateLead } from "@/hooks/useLeads";
+import { useLeads, useCreateLead, useDeleteLead } from "@/hooks/useLeads";
 import { useUsage } from "@/hooks/useUsage";
-import { ArrowRight, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ const CampaignDetails = () => {
   const { data: campaign, isLoading: campaignLoading } = useCampaign(id);
   const { data: leads, isLoading: leadsLoading } = useLeads(id);
   const createLead = useCreateLead();
+  const deleteLead = useDeleteLead();
   const { canAddLead, canGenerateOutreach } = useUsage();
   const [showAddRow, setShowAddRow] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -156,6 +157,8 @@ const CampaignDetails = () => {
                   <th className="text-left p-3 font-medium">Website</th>
                   <th className="text-left p-3 font-medium">LinkedIn</th>
                   <th className="text-left p-3 font-medium">Notes</th>
+                  <th className="p-3 w-10"></th>
+                  <th className="text-left p-3 font-medium">Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,6 +170,19 @@ const CampaignDetails = () => {
                     <td className="p-3 text-muted-foreground">{lead.website}</td>
                     <td className="p-3 text-muted-foreground">{lead.linkedin_url}</td>
                     <td className="p-3 text-muted-foreground">{lead.notes}</td>
+                    <td className="p-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          deleteLead.mutate({ id: lead.id, campaign_id: id! });
+                          toast.success("Lead removed");
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
                 {showAddRow && (
@@ -184,8 +200,10 @@ const CampaignDetails = () => {
                 )}
                 {leadsList.length === 0 && !showAddRow && (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
                       No leads yet. Click "Add Lead" to get started.
+                    </td>
+                  </tr>
                     </td>
                   </tr>
                 )}

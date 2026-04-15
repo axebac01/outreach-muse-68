@@ -39,20 +39,3 @@ export const useUpdateProfile = () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
-};
-  const { user } = useAuth();
-
-  return useQuery({
-    queryKey: ["profile", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user!.id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
-};

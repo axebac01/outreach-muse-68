@@ -1,15 +1,36 @@
 import Layout from "@/components/Layout";
 import { useAuth } from "@/context/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
 import { useUsage } from "@/hooks/useUsage";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
-import { User, CreditCard, BarChart3 } from "lucide-react";
+import { User, CreditCard, BarChart3, Pencil, Check } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const Settings = () => {
   const { user } = useAuth();
   const { data: profile } = useProfile();
+  const updateProfile = useUpdateProfile();
   const { plan, campaignCount, monthlyOutreach, limits } = useUsage();
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+
+  const handleEditName = () => {
+    setNameValue(profile?.full_name || "");
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    try {
+      await updateProfile.mutateAsync({ full_name: nameValue });
+      setEditingName(false);
+      toast.success("Name updated!");
+    } catch {
+      toast.error("Failed to update name");
+    }
+  };
 
   return (
     <Layout>
@@ -29,9 +50,29 @@ const Settings = () => {
               </div>
             </div>
             <div className="grid gap-3 text-sm">
-              <div className="flex justify-between py-2 border-b">
+              <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-muted-foreground">Name</span>
-                <span className="font-medium">{profile?.full_name || "—"}</span>
+                {editingName ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={nameValue}
+                      onChange={(e) => setNameValue(e.target.value)}
+                      className="h-8 w-48 text-sm"
+                      autoFocus
+                      onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+                    />
+                    <Button size="sm" className="h-8" onClick={handleSaveName} disabled={updateProfile.isPending}>
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{profile?.full_name || "—"}</span>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleEditName}>
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Email</span>
