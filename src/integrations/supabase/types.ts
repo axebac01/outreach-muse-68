@@ -14,7 +14,178 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campaigns: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          offer: string | null
+          product: string | null
+          status: string
+          target_audience: string | null
+          tone: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          offer?: string | null
+          product?: string | null
+          status?: string
+          target_audience?: string | null
+          tone?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          offer?: string | null
+          product?: string | null
+          status?: string
+          target_audience?: string | null
+          tone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      generated_outreach: {
+        Row: {
+          cold_email: string | null
+          created_at: string
+          follow_up_1: string | null
+          follow_up_2: string | null
+          id: string
+          lead_id: string
+          opener: string | null
+          status: string
+          subject_line: string | null
+          user_id: string
+        }
+        Insert: {
+          cold_email?: string | null
+          created_at?: string
+          follow_up_1?: string | null
+          follow_up_2?: string | null
+          id?: string
+          lead_id: string
+          opener?: string | null
+          status?: string
+          subject_line?: string | null
+          user_id: string
+        }
+        Update: {
+          cold_email?: string | null
+          created_at?: string
+          follow_up_1?: string | null
+          follow_up_2?: string | null
+          id?: string
+          lead_id?: string
+          opener?: string | null
+          status?: string
+          subject_line?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_outreach_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          campaign_id: string
+          company: string
+          created_at: string
+          full_name: string
+          id: string
+          linkedin_url: string | null
+          notes: string | null
+          role: string | null
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          campaign_id: string
+          company: string
+          created_at?: string
+          full_name: string
+          id?: string
+          linkedin_url?: string | null
+          notes?: string | null
+          role?: string | null
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          company?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          linkedin_url?: string | null
+          notes?: string | null
+          role?: string | null
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          plan: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          plan?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          plan?: string
+        }
+        Relationships: []
+      }
+      usage_tracking: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
