@@ -1,94 +1,41 @@
 
 
-## Steps 5-10: AI Generation, Full Implementation, QA, Polish & Conversion
+## Step 6 — Page-by-Page QA & Fixes
 
-### Summary
-Replace placeholder email generation with real AI (Lovable AI Gateway), fix all data bindings, add a settings page, polish the UI, and optimize for conversion. One edge function handles all generation with structured output.
+### Current State
+Most pages are already implemented with real data bindings, working forms, loading states, empty states, and toasts. After auditing every page and hook, here are the remaining fixes:
 
-### Step 5 — AI Generation
+### Fixes Needed
 
-**Update `supabase/functions/generate-outreach/index.ts`:**
-- Replace placeholder string templates with calls to `https://ai.gateway.lovable.dev/v1/chat/completions`
-- Use `LOVABLE_API_KEY` (already available) with model `google/gemini-3-flash-preview`
-- Use tool calling to extract structured JSON with fields: `subject_line`, `opener`, `cold_email`, `follow_up_1`, `follow_up_2`
-- System prompt enforces: short subject lines (<60 chars), emails under 120 words, no spammy language, no fake claims, personalized to lead data, optimized for reply rate
-- Process each lead individually for better personalization
-- Include campaign context (audience, product, offer, tone) in the prompt
-- Handle 429/402 errors from the AI gateway gracefully
-- Keep the existing usage tracking and campaign status update logic
+**1. Dashboard lead count (Dashboard.tsx)**
+The query `select("*, leads(count)")` returns `{ leads: [{ count: N }] }` but the template uses `(c as any).leads?.[0]?.count` which is fragile and may not work with the typed client. Fix the type cast to properly extract the count.
 
-### Step 6 — Page-by-Page Implementation
+**2. CampaignDetails — delete lead support**
+Currently leads can be added but not deleted. Add a delete button per row so users can remove incorrect leads before generating.
 
-**Already working:** Dashboard, CreateCampaign, CampaignDetails (leads table + generate), Outreach (view/approve/copy), Login, Signup, Pricing, Landing.
+**3. CampaignDetails — "View emails" button visibility**
+The "View emails" button only shows when `campaign.status === "generated"`. After generating, the campaign query needs to be invalidated so the button appears immediately without a page refresh. The `handleGenerate` function already invalidates `["campaign", id]` — verify this works correctly.
 
-**Fixes needed:**
-- **Dashboard:** Lead count shows `0` — needs a proper count query or join
-- **CampaignDetails:** After generating, auto-navigate or show "View emails" link more prominently; invalidate queries after generation
-- **Outreach:** Wire the "Regenerate" button on `EmailCard` to actually call the edge function for a single lead
-- **Settings page:** Create `/settings` route with profile info, plan display, and usage stats
+**4. Outreach — regenerate for follow-ups**
+The regenerate button only appears on the Cold Email card. Add it to follow-up cards as well, or make it regenerate the full sequence (which the edge function already supports via `lead_id`).
 
-**New files:**
-- `src/pages/Settings.tsx` — shows profile name, email, current plan, usage stats, upgrade CTA
+**5. Settings — no edit profile functionality**
+The settings page displays profile info read-only. Add an editable name field with save button.
 
-### Step 7 — QA Fix Pass
+### Files to Modify
 
-- Fix campaign card lead count (currently broken `(c as any).leads?.[0]?.count`)
-- After outreach generation, invalidate both `["outreach"]` and campaign queries so status updates
-- Ensure `canGenerateOutreach` properly checks monthly limit against actual usage
-- Add error boundaries around main pages
-- Ensure empty states show correctly when no data
-
-### Step 8 — UX + Polish
-
-- Improve card spacing and hover states on Dashboard
-- Add subtle gradient to hero section background
-- Better typography hierarchy: tighter line-height on headings
-- Improve leads table responsiveness (horizontal scroll on mobile)
-- Add transition animations on campaign cards
-- Polish the outreach page lead sidebar with status indicators (pending/approved)
-- Add skeleton loaders instead of just spinners
-
-### Step 9 — Conversion Optimization
-
-- Landing page: Add social proof section ("Trusted by 500+ sales teams")
-- Stronger CTA copy on pricing page Growth tier
-- Add comparison table under pricing (Starter vs Growth)
-- Upgrade prompts: more specific value props ("Unlock unlimited campaigns and leads")
-- Add testimonial/quote on signup page
-- Sticky CTA on landing page for mobile
-
-### Step 10 — AI Quality
-
-- Refine system prompt: reference specific lead fields (company, role, LinkedIn insights)
-- Add tone calibration per campaign (casual/professional/bold)
-- Ensure opener references something specific about the lead's company
-- Follow-ups should feel like a natural sequence, not repetitive
-- Subject lines should avoid generic patterns like "Quick question" — aim for curiosity-driven, specific hooks
-
-### Files to Create/Modify
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `supabase/functions/generate-outreach/index.ts` | Rewrite with Lovable AI Gateway |
-| `src/pages/Settings.tsx` | New — profile, plan, usage |
-| `src/App.tsx` | Add `/settings` route |
-| `src/components/Navbar.tsx` | Add Settings link for logged-in users |
-| `src/pages/Dashboard.tsx` | Fix lead count, add skeleton loaders |
-| `src/pages/CampaignDetails.tsx` | Fix post-generation flow, query invalidation |
-| `src/pages/Outreach.tsx` | Wire regenerate button |
-| `src/components/EmailCard.tsx` | Accept onRegenerate callback |
-| `src/pages/Landing.tsx` | Add social proof, mobile sticky CTA, gradient |
-| `src/pages/Pricing.tsx` | Add comparison table, stronger CTAs |
-| `src/pages/Signup.tsx` | Add testimonial quote |
-| `src/index.css` | Minor polish: gradients, animations |
-| `src/hooks/useCampaigns.ts` | Add lead count to campaign query |
+| `src/pages/Dashboard.tsx` | Fix lead count type, remove `as any` |
+| `src/pages/CampaignDetails.tsx` | Add delete lead button per row |
+| `src/hooks/useLeads.ts` | Add `useDeleteLead` mutation |
+| `src/pages/Outreach.tsx` | Add regenerate to all email cards |
+| `src/pages/Settings.tsx` | Add editable name field with save |
+| `src/hooks/useProfile.ts` | Add `useUpdateProfile` mutation |
 
-### Technical Details
-
-- AI model: `google/gemini-3-flash-preview` via Lovable AI Gateway
-- Structured output via tool calling (not JSON mode) for reliable parsing
-- Each lead processed individually to maximize personalization quality
-- Edge function keeps CORS headers, auth validation, and usage tracking
-- No new database tables needed
-- Deploy edge function after rewrite
+### No Changes Needed
+- `/campaign/new` — fully working with validation, limits, toasts
+- `/login` and `/signup` — fully wired to auth
+- Edge function — already uses AI gateway with structured output
+- Usage limits — properly enforced across all pages
 
