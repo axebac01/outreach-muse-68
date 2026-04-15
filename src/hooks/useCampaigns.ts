@@ -31,7 +31,7 @@ export const useCampaign = (id: string | undefined) => {
         .select("*")
         .eq("id", id!)
         .eq("user_id", user!.id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
