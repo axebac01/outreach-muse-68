@@ -1,14 +1,22 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Mail, Menu, X } from "lucide-react";
+import { Mail, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const isApp = location.pathname.startsWith("/dashboard") || 
     location.pathname.startsWith("/campaign") || 
     location.pathname.startsWith("/outreach");
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
@@ -27,8 +35,19 @@ const Navbar = () => {
               <Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
             </div>
             <div className="hidden items-center gap-3 md:flex">
-              <Button variant="ghost" asChild><Link to="/login">Log in</Link></Button>
-              <Button asChild><Link to="/signup">Start free</Link></Button>
+              {user ? (
+                <>
+                  <Button variant="ghost" asChild><Link to="/dashboard">Dashboard</Link></Button>
+                  <Button variant="outline" onClick={handleSignOut} className="gap-1.5">
+                    <LogOut className="h-4 w-4" /> Log out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" asChild><Link to="/login">Log in</Link></Button>
+                  <Button asChild><Link to="/signup">Start free</Link></Button>
+                </>
+              )}
             </div>
             <button className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -37,8 +56,17 @@ const Navbar = () => {
               <div className="absolute top-16 left-0 right-0 border-b bg-background p-4 md:hidden">
                 <div className="flex flex-col gap-3">
                   <Link to="/pricing" className="text-sm py-2" onClick={() => setMobileOpen(false)}>Pricing</Link>
-                  <Button variant="ghost" asChild><Link to="/login" onClick={() => setMobileOpen(false)}>Log in</Link></Button>
-                  <Button asChild><Link to="/signup" onClick={() => setMobileOpen(false)}>Start free</Link></Button>
+                  {user ? (
+                    <>
+                      <Button variant="ghost" asChild><Link to="/dashboard" onClick={() => setMobileOpen(false)}>Dashboard</Link></Button>
+                      <Button variant="outline" onClick={() => { handleSignOut(); setMobileOpen(false); }}>Log out</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="ghost" asChild><Link to="/login" onClick={() => setMobileOpen(false)}>Log in</Link></Button>
+                      <Button asChild><Link to="/signup" onClick={() => setMobileOpen(false)}>Start free</Link></Button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -47,6 +75,9 @@ const Navbar = () => {
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild><Link to="/dashboard">Dashboard</Link></Button>
             <Button asChild><Link to="/campaign/new">New Campaign</Link></Button>
+            <Button variant="outline" onClick={handleSignOut} className="gap-1.5">
+              <LogOut className="h-4 w-4" /> Log out
+            </Button>
           </div>
         )}
       </div>

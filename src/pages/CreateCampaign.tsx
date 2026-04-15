@@ -6,12 +6,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useCreateCampaign } from "@/hooks/useCampaigns";
+import { useUsage } from "@/hooks/useUsage";
+import UpgradeBanner from "@/components/UpgradeBanner";
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
+  const createCampaign = useCreateCampaign();
+  const { canCreateCampaign } = useUsage();
   const [form, setForm] = useState({
     name: "",
-    targetAudience: "",
+    target_audience: "",
     product: "",
     offer: "",
     tone: "",
@@ -19,10 +24,19 @@ const CreateCampaign = () => {
 
   const update = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Campaign created! Add leads to continue.");
-    navigate("/campaign/1");
+    if (!canCreateCampaign) {
+      toast.error("You've reached your campaign limit. Upgrade to create more.");
+      return;
+    }
+    try {
+      const data = await createCampaign.mutateAsync(form);
+      toast.success("Campaign created! Add leads to continue.");
+      navigate(`/campaign/${data.id}`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create campaign");
+    }
   };
 
   return (
@@ -32,6 +46,11 @@ const CreateCampaign = () => {
           <h1 className="text-2xl font-bold">Create a new campaign</h1>
           <p className="text-sm text-muted-foreground">Tell MailLead.ai who you want to reach and what you're offering.</p>
         </div>
+        {!canCreateCampaign && (
+          <div className="mb-6">
+            <UpgradeBanner message="You've reached your free limit. Upgrade to keep generating outreach." />
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="name">Campaign name</Label>
@@ -39,7 +58,7 @@ const CreateCampaign = () => {
           </div>
           <div className="space-y-2">
             <Label htmlFor="audience">Target audience / ICP</Label>
-            <Textarea id="audience" placeholder="e.g., B2B SaaS founders, Series A-B, 20-200 employees" value={form.targetAudience} onChange={(e) => update("targetAudience", e.target.value)} required />
+            <Textarea id="audience" placeholder="e.g., B2B SaaS founders, Series A-B, 20-200 employees" value={form.target_audience} onChange={(e) => update("target_audience", e.target.value)} required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="product">What do you sell?</Label>
@@ -54,7 +73,9 @@ const CreateCampaign = () => {
             <Input id="tone" placeholder="e.g., Professional but friendly" value={form.tone} onChange={(e) => update("tone", e.target.value)} required />
           </div>
           <div className="flex gap-3">
-            <Button type="submit" className="flex-1">Create campaign</Button>
+            <Button type="submit" className="flex-1" disabled={createCampaign.isPending || !canCreateCampaign}>
+              {createCampaign.isPending ? "Creating..." : "Create campaign"}
+            </Button>
             <Button type="button" variant="outline" onClick={() => navigate("/dashboard")}>Cancel</Button>
           </div>
         </form>
