@@ -1,41 +1,38 @@
 
 
-## Step 6 — Page-by-Page QA & Fixes
+## Step 7 — QA Fix Pass
 
-### Current State
-Most pages are already implemented with real data bindings, working forms, loading states, empty states, and toasts. After auditing every page and hook, here are the remaining fixes:
+### Issues Found
 
-### Fixes Needed
+1. **CampaignDetails: Duplicate "Notes" table header** — Line 161 has a second `<th>Notes</th>` that shouldn't exist. The table header has 8 columns but data rows only have 7 cells, causing misalignment.
 
-**1. Dashboard lead count (Dashboard.tsx)**
-The query `select("*, leads(count)")` returns `{ leads: [{ count: N }] }` but the template uses `(c as any).leads?.[0]?.count` which is fragile and may not work with the typed client. Fix the type cast to properly extract the count.
+2. **CampaignDetails: Add-lead row missing delete column** — The input row has 6 `<td>` elements but the table has 7 columns (after fixing #1). The Notes input and Add button are crammed into one cell. Need to split Notes into its own `<td>` and put the Add/Cancel buttons in the action column.
 
-**2. CampaignDetails — delete lead support**
-Currently leads can be added but not deleted. Add a delete button per row so users can remove incorrect leads before generating.
+3. **CampaignDetails: Empty state colSpan wrong** — `colSpan={7}` but should match actual column count after fix.
 
-**3. CampaignDetails — "View emails" button visibility**
-The "View emails" button only shows when `campaign.status === "generated"`. After generating, the campaign query needs to be invalidated so the button appears immediately without a page refresh. The `handleGenerate` function already invalidates `["campaign", id]` — verify this works correctly.
+4. **useCampaign uses `.single()`** — Should use `.maybeSingle()` per project guidelines to avoid errors when campaign not found.
 
-**4. Outreach — regenerate for follow-ups**
-The regenerate button only appears on the Cold Email card. Add it to follow-up cards as well, or make it regenerate the full sequence (which the edge function already supports via `lead_id`).
+5. **useProfile uses `.single()`** — Same issue. Should use `.maybeSingle()` to handle missing profiles gracefully.
 
-**5. Settings — no edit profile functionality**
-The settings page displays profile info read-only. Add an editable name field with save button.
+6. **Regeneration double-counts usage** — The edge function always inserts `usage_tracking` rows, even on regeneration. This inflates the monthly outreach count. Should skip usage tracking when `lead_id` is provided (regeneration).
 
-### Files to Modify
+7. **Dashboard lead count type casting** — `((c as any).leads as any[])?.[0]?.count` works but is fragile. Can be cleaned up.
 
-| File | Change |
-|------|--------|
-| `src/pages/Dashboard.tsx` | Fix lead count type, remove `as any` |
-| `src/pages/CampaignDetails.tsx` | Add delete lead button per row |
-| `src/hooks/useLeads.ts` | Add `useDeleteLead` mutation |
-| `src/pages/Outreach.tsx` | Add regenerate to all email cards |
-| `src/pages/Settings.tsx` | Add editable name field with save |
-| `src/hooks/useProfile.ts` | Add `useUpdateProfile` mutation |
+### Fixes
 
-### No Changes Needed
-- `/campaign/new` — fully working with validation, limits, toasts
-- `/login` and `/signup` — fully wired to auth
-- Edge function — already uses AI gateway with structured output
-- Usage limits — properly enforced across all pages
+| File | Fix |
+|------|-----|
+| `src/pages/CampaignDetails.tsx` | Remove duplicate Notes header, fix add-row layout to 7 columns, add Cancel button, fix colSpan |
+| `src/hooks/useCampaigns.ts` | Change `useCampaign` to use `.maybeSingle()` |
+| `src/hooks/useProfile.ts` | Change `useProfile` to use `.maybeSingle()` |
+| `supabase/functions/generate-outreach/index.ts` | Skip usage tracking when `lead_id` is set (regeneration) |
+| `src/pages/Dashboard.tsx` | Clean up lead count extraction |
+
+### No changes needed
+- Landing, Pricing, Signup, Login — all functional
+- Settings — working with edit name
+- Outreach — regenerate wired to all cards
+- CreateCampaign — validation, limits, toasts all working
+- Edge function AI generation — structured output working
+- Empty states and loading states — all present
 
