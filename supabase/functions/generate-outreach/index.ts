@@ -5,40 +5,99 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const SYSTEM_PROMPT = `You are an expert B2B cold email copywriter. You write short, personalized cold outreach that gets replies.
+const SYSTEM_PROMPT = `You are a cold email ghostwriter for B2B founders. You write like a busy founder texting a peer — short, direct, zero fluff.
 
-Rules:
-- Subject lines: under 60 characters, curiosity-driven, specific to the lead. Never use "Quick question" or generic hooks.
-- Opener: 1 sentence referencing something specific about the lead's company or role. No fake compliments.
-- Cold email: under 120 words total. Clear value prop, one CTA, no spammy language, no fake claims.
-- Follow-up 1: under 80 words. Add new angle or value, reference the first email naturally.
-- Follow-up 2: under 60 words. Final friendly nudge, graceful close.
-- Tone should match the campaign tone setting.
-- Never use phrases like "I hope this email finds you well", "synergy", "leverage", "circle back".
-- Write like a real human, not a marketer.`
+## Voice
+- Conversational, confident, specific. Never salesy.
+- Write like you personally looked at their company for 2 minutes and had one sharp thought.
+- Every email should feel like it was written by a human who gives a damn, not a sequence tool.
+
+## Hard Rules
+- Open with an observation about THEIR business, never about yourself.
+- Connect your product to a specific pain point the lead likely has based on their role or company.
+- One CTA per email. Low-friction CTAs only: "Worth a look?" / "Want me to send details?" / "Open to a 10-min chat this week?" — NEVER "jump on a call" or "schedule a demo".
+- Each follow-up must introduce a NEW angle, insight, or proof point. Never rehash the first email.
+- Mention the lead's first name at most once per email (in the greeting). Never repeat it mid-body.
+- Match the campaign tone setting strictly.
+
+## Banned Phrases (never use these or variations)
+- "I hope this email finds you well"
+- "reaching out"
+- "I wanted to"
+- "I'd love to"
+- "just following up"
+- "checking in"
+- "touch base"
+- "circle back"
+- "synergy" / "leverage"
+- "quick question"
+- "I came across your company"
+- "I was impressed by"
+- "I noticed that you"
+
+## Bad vs Good Examples
+BAD opener: "I came across your company and was impressed by what you're building."
+GOOD opener: "Saw that Acme just launched a second product line — scaling outbound with a team of 3 is brutal."
+
+BAD CTA: "I'd love to jump on a quick call to discuss how we can help."
+GOOD CTA: "Want me to send a 2-min walkthrough?"
+
+BAD follow-up: "Just following up on my last email. Would love to connect."
+GOOD follow-up: "One thing I forgot to mention — [Company X] cut their outbound time by 60% doing exactly this. Figured it might click for you too."`
+
+function buildUserPrompt(lead: any, campaign: any): string {
+  const parts: string[] = []
+
+  parts.push(`Generate a cold email sequence for this lead.`)
+  parts.push(``)
+  parts.push(`## Lead`)
+  parts.push(`- Name: ${lead.full_name}`)
+  parts.push(`- Company: ${lead.company}`)
+
+  if (lead.role) {
+    parts.push(`- Role: ${lead.role}`)
+    parts.push(`  → Frame the value prop around pain points specific to someone in a "${lead.role}" role.`)
+  }
+
+  if (lead.website) {
+    parts.push(`- Website: ${lead.website}`)
+    parts.push(`  → Reference what this company likely does based on their URL. Use it to make the opener specific.`)
+  }
+
+  if (lead.linkedin_url) {
+    parts.push(`- LinkedIn: ${lead.linkedin_url}`)
+  }
+
+  if (lead.notes) {
+    parts.push(`- Notes: ${lead.notes}`)
+    parts.push(`  → THIS IS YOUR PRIMARY PERSONALIZATION HOOK. Use these notes as the basis for the opener and value prop. These are hand-written by the sender and contain the most specific info about the lead.`)
+  }
+
+  parts.push(``)
+  parts.push(`## Campaign Context`)
+  parts.push(`- Target audience: ${campaign.target_audience || 'B2B professionals'}`)
+  parts.push(`- Product: ${campaign.product || 'our product'}`)
+  parts.push(`- Offer: ${campaign.offer || 'a conversation'}`)
+  parts.push(`- Tone: ${campaign.tone || 'professional'}`)
+
+  parts.push(``)
+  parts.push(`## Important`)
+  parts.push(`- The cold email should make the reader think "this person actually looked at my company."`)
+  parts.push(`- Do NOT mention ${lead.full_name.split(' ')[0]}'s name more than once per email.`)
+  parts.push(`- Do NOT start any email with a self-introduction.`)
+  parts.push(`- Every follow-up must add a new angle — never repeat the first email's pitch.`)
+  parts.push(``)
+  parts.push(`Generate the sequence using the generate_email_sequence tool.`)
+
+  return parts.join('\n')
+}
 
 async function generateForLead(
   lead: any,
   campaign: any,
   apiKey: string
 ): Promise<any> {
-  const prompt = `Generate a cold email sequence for this lead:
-
-Lead:
-- Name: ${lead.full_name}
-- Company: ${lead.company}
-- Role: ${lead.role || 'unknown'}
-- Website: ${lead.website || 'none'}
-- LinkedIn: ${lead.linkedin_url || 'none'}
-- Notes: ${lead.notes || 'none'}
-
-Campaign context:
-- Target audience: ${campaign.target_audience || 'general'}
-- Product: ${campaign.product || 'our product'}
-- Offer: ${campaign.offer || 'a conversation'}
-- Tone: ${campaign.tone || 'professional'}
-
-Generate the full email sequence using the generate_email_sequence tool.`
+  const prompt = buildUserPrompt(lead, campaign)
 
   const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -47,7 +106,7 @@ Generate the full email sequence using the generate_email_sequence tool.`
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-3-flash-preview',
+      model: 'google/gemini-2.5-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: prompt },
@@ -61,11 +120,11 @@ Generate the full email sequence using the generate_email_sequence tool.`
             parameters: {
               type: 'object',
               properties: {
-                subject_line: { type: 'string', description: 'Short, curiosity-driven subject line under 60 chars' },
-                opener: { type: 'string', description: 'One sentence opener referencing the lead specifically' },
-                cold_email: { type: 'string', description: 'Full cold email body under 120 words' },
-                follow_up_1: { type: 'string', description: 'First follow-up email under 80 words' },
-                follow_up_2: { type: 'string', description: 'Final follow-up under 60 words' },
+                subject_line: { type: 'string', description: 'Specific to the lead\'s company or role. No generic hooks. Under 50 chars.' },
+                opener: { type: 'string', description: 'One sentence that proves you researched this person. Reference their company, role, or a specific detail from notes.' },
+                cold_email: { type: 'string', description: 'Under 100 words. Lead with an observation about their business, connect to a specific problem your product solves, end with a low-friction CTA (not "jump on a call").' },
+                follow_up_1: { type: 'string', description: 'Under 70 words. New angle — share a relevant result, stat, or case study. Don\'t repeat the first email.' },
+                follow_up_2: { type: 'string', description: 'Under 50 words. Breakup email. Friendly, zero pressure, leave the door open.' },
               },
               required: ['subject_line', 'opener', 'cold_email', 'follow_up_1', 'follow_up_2'],
               additionalProperties: false,
@@ -185,7 +244,6 @@ Deno.serve(async (req) => {
         })
       } catch (err) {
         console.error(`Failed to generate for lead ${lead.id}:`, err.message)
-        // Return partial error if AI fails for a specific lead
         if (err.message.includes('Rate limit') || err.message.includes('credits exhausted')) {
           return new Response(JSON.stringify({ error: err.message }), {
             status: err.message.includes('Rate limit') ? 429 : 402,
@@ -196,11 +254,11 @@ Deno.serve(async (req) => {
         outreachRows.push({
           lead_id: lead.id,
           user_id: user.id,
-          subject_line: `${lead.full_name} — ${campaign.offer || 'a quick idea'}`,
-          opener: `Hi ${lead.full_name}, I noticed ${lead.company} and thought this might be relevant.`,
-          cold_email: `Hi ${lead.full_name},\n\nI came across ${lead.company} and was impressed by what you're building${lead.role ? ` as ${lead.role}` : ''}.\n\n${campaign.product ? `We help teams like yours with ${campaign.product}.` : ''} ${campaign.offer ? `I'd love to offer you ${campaign.offer}.` : ''}\n\nWould it make sense to connect?\n\nBest`,
-          follow_up_1: `Hi ${lead.full_name},\n\nJust following up on my last note. Happy to share more details whenever works for you.\n\nBest`,
-          follow_up_2: `Hi ${lead.full_name},\n\nLast note from me! Wishing ${lead.company} continued success.\n\nCheers`,
+          subject_line: `${lead.company} — ${campaign.offer || 'a quick idea'}`,
+          opener: `Saw ${lead.company}${lead.role ? ` and your work as ${lead.role}` : ''} — had a thought.`,
+          cold_email: `Hi ${lead.full_name.split(' ')[0]},\n\n${lead.company} caught my eye${lead.notes ? ` — ${lead.notes.substring(0, 80)}` : ''}.\n\n${campaign.product ? `We help teams like yours with ${campaign.product}.` : ''} ${campaign.offer ? campaign.offer : 'Happy to share more if useful.'}\n\nWorth a quick look?`,
+          follow_up_1: `Hi ${lead.full_name.split(' ')[0]},\n\nOne more thought — teams in your space are seeing real results with this approach. Happy to share specifics if helpful.`,
+          follow_up_2: `Hi ${lead.full_name.split(' ')[0]},\n\nLast note from me. Wishing ${lead.company} the best — door's open if timing works later.`,
           status: 'pending',
         })
       }
