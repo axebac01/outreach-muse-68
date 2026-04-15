@@ -1,12 +1,15 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { sampleCampaigns } from "@/data/sampleData";
+import { useCampaigns } from "@/hooks/useCampaigns";
+import { useUsage } from "@/hooks/useUsage";
 import { Plus, ArrowRight } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
+import UpgradeBanner from "@/components/UpgradeBanner";
 
 const Dashboard = () => {
-  const campaigns = sampleCampaigns;
+  const { data: campaigns, isLoading } = useCampaigns();
+  const { canCreateCampaign } = useUsage();
 
   return (
     <Layout>
@@ -16,15 +19,32 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold">Your campaigns</h1>
             <p className="text-sm text-muted-foreground">Manage and track your outreach campaigns</p>
           </div>
-          <Button asChild>
-            <Link to="/campaign/new" className="gap-2">
+          {canCreateCampaign ? (
+            <Button asChild>
+              <Link to="/campaign/new" className="gap-2">
+                <Plus className="h-4 w-4" />
+                New campaign
+              </Link>
+            </Button>
+          ) : (
+            <Button disabled className="gap-2">
               <Plus className="h-4 w-4" />
               New campaign
-            </Link>
-          </Button>
+            </Button>
+          )}
         </div>
 
-        {campaigns.length === 0 ? (
+        {!canCreateCampaign && (
+          <div className="mb-6">
+            <UpgradeBanner message="You've reached your free limit. Upgrade to keep generating outreach." />
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        ) : !campaigns || campaigns.length === 0 ? (
           <EmptyState
             title="No campaigns yet"
             description="Create your first campaign to start generating personalized outreach."
@@ -48,10 +68,10 @@ const Dashboard = () => {
                   <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
                 <h3 className="font-semibold">{c.name}</h3>
-                <p className="text-sm text-muted-foreground line-clamp-2">{c.targetAudience}</p>
+                <p className="text-sm text-muted-foreground line-clamp-2">{c.target_audience}</p>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{c.leads.length} leads</span>
-                  <span>{c.createdAt}</span>
+                  <span>{(c as any).leads?.[0]?.count ?? 0} leads</span>
+                  <span>{new Date(c.created_at).toLocaleDateString()}</span>
                 </div>
               </Link>
             ))}
