@@ -158,7 +158,6 @@ const CampaignDetails = () => {
                   <th className="text-left p-3 font-medium">LinkedIn</th>
                   <th className="text-left p-3 font-medium">Notes</th>
                   <th className="p-3 w-10"></th>
-                  <th className="text-left p-3 font-medium">Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -192,9 +191,12 @@ const CampaignDetails = () => {
                     <td className="p-2"><Input placeholder="Role" value={newLead.role} onChange={(e) => setNewLead({ ...newLead, role: e.target.value })} className="h-8 text-sm" /></td>
                     <td className="p-2"><Input placeholder="Website" value={newLead.website} onChange={(e) => setNewLead({ ...newLead, website: e.target.value })} className="h-8 text-sm" /></td>
                     <td className="p-2"><Input placeholder="LinkedIn" value={newLead.linkedin_url} onChange={(e) => setNewLead({ ...newLead, linkedin_url: e.target.value })} className="h-8 text-sm" /></td>
-                    <td className="p-2 flex gap-1">
-                      <Input placeholder="Notes" value={newLead.notes} onChange={(e) => setNewLead({ ...newLead, notes: e.target.value })} className="h-8 text-sm" />
-                      <Button size="sm" className="h-8" onClick={handleAddLead} disabled={createLead.isPending}>Add</Button>
+                    <td className="p-2"><Input placeholder="Notes" value={newLead.notes} onChange={(e) => setNewLead({ ...newLead, notes: e.target.value })} className="h-8 text-sm" /></td>
+                    <td className="p-2">
+                      <div className="flex gap-1">
+                        <Button size="sm" className="h-8" onClick={handleAddLead} disabled={createLead.isPending}>Add</Button>
+                        <Button size="sm" variant="ghost" className="h-8" onClick={() => setShowAddRow(false)}>Cancel</Button>
+                      </div>
                     </td>
                   </tr>
                 )}

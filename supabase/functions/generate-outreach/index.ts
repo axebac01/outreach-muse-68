@@ -221,12 +221,14 @@ Deno.serve(async (req) => {
 
     if (insertError) throw insertError
 
-    // Track usage
-    const usageRows = leads.map(() => ({
-      user_id: user.id,
-      action: 'outreach_generated',
-    }))
-    await supabase.from('usage_tracking').insert(usageRows)
+    // Track usage only for full generation, not single-lead regeneration
+    if (!lead_id) {
+      const usageRows = leads.map(() => ({
+        user_id: user.id,
+        action: 'outreach_generated',
+      }))
+      await supabase.from('usage_tracking').insert(usageRows)
+    }
 
     // Update campaign status
     await supabase
