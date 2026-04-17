@@ -1,40 +1,45 @@
 
 
-## Improve AI Output Quality
+## CSV/Excel Lead Import
 
-### Summary
-Rewrite the system prompt, user prompt, and tool descriptions in the `generate-outreach` edge function to produce stronger personalization, more natural language, and clearer business value. No structural or logic changes — only prompt engineering.
+### Goal
+Let users bulk-upload leads from a CSV or Excel file on the Campaign Details page instead of adding them one-by-one.
 
-### Changes (single file: `supabase/functions/generate-outreach/index.ts`)
+### UX Flow
+1. On `/campaign/:id`, add an **"Import file"** button next to "Add Lead".
+2. Click opens a dialog: file picker (.csv, .xlsx, .xls) + a preview table of parsed rows with column mapping.
+3. User confirms → leads are bulk-inserted into Supabase, respecting the plan's lead limit.
+4. Toast shows how many were imported (and how many were skipped if the limit was hit).
 
-**1. System Prompt — complete rewrite**
-- Add explicit anti-patterns with examples of bad vs good writing
-- Add rules for personalization depth: reference the lead's role, company stage, or industry — not just their name
-- Require the cold email to connect the product to a specific pain point the lead likely has based on their role/company
-- Ban filler phrases: "reaching out", "I wanted to", "I'd love to", "just following up", "checking in", "touch base"
-- Require each follow-up to add a new insight or angle, never repeat the first email's pitch
-- Set a "write like a busy founder texting a peer" tone benchmark
-- Add instruction: open with an observation, not a self-introduction
+### Parsing
+- Use **`papaparse`** for CSV and **`xlsx`** (SheetJS) for Excel.
+- Auto-detect columns by header name (case-insensitive): `name`/`full_name`, `email`, `company`, `role`/`title`, `website`, `linkedin`/`linkedin_url`, `notes`.
+- Email is the only required field per row (since the user specifically mentioned email addresses). If `name` is missing, fall back to the email's local part.
+- Skip empty rows. Show a row count and the first 5 rows as preview.
 
-**2. User Prompt — richer context injection**
-- When `lead.notes` exists, instruct the model to use it as the primary personalization hook
-- When `lead.website` exists, tell the model to reference what the company does based on the URL
-- When `lead.role` exists, frame the value prop around that role's daily pain points
-- Add explicit instruction: "Do NOT mention the lead's name more than once per email"
-- Add: "The cold email should make the reader think 'this person actually looked at my company'"
+### Schema Change
+The `leads` table currently has no `email` column. Add it:
+```
+ALTER TABLE leads ADD COLUMN email text;
+```
+No NOT NULL constraint (existing leads have no email). Update the lead table UI to display the email column and update `useCreateLead` + the manual add-lead row to accept it.
 
-**3. Tool Parameter Descriptions — tighter constraints**
-- `subject_line`: "Specific to the lead's company or role. No generic hooks. Under 50 chars."
-- `opener`: "One sentence that proves you researched this person. Reference their company, role, or a specific detail from notes."
-- `cold_email`: "Under 100 words. Lead with an observation about their business, connect to a specific problem your product solves, end with a low-friction CTA (not 'jump on a call')."
-- `follow_up_1`: "Under 70 words. New angle — share a relevant result, stat, or case study. Don't repeat the first email."
-- `follow_up_2`: "Under 50 words. Breakup email. Friendly, zero pressure, leave the door open."
+### Limit Enforcement
+Before insert, compute `available = maxLeads - currentLeadCount`. If parsed rows exceed it, import only the first `available` rows and toast: *"Imported X of Y leads. Upgrade to import the rest."*
 
-**4. Model upgrade**
-- Switch from `google/gemini-3-flash-preview` to `google/gemini-2.5-flash` for better instruction following on nuanced copy tasks
+### Files to Modify / Create
+| File | Change |
+|------|--------|
+| `supabase/migrations/...` | Add `email` column to `leads` |
+| `src/components/ImportLeadsDialog.tsx` | **New** — file picker, parse, preview, confirm |
+| `src/lib/parseLeadsFile.ts` | **New** — CSV/XLSX → normalized lead rows |
+| `src/hooks/useLeads.ts` | Add `useBulkCreateLeads` mutation; include `email` in `useCreateLead` |
+| `src/pages/CampaignDetails.tsx` | Add "Import file" button, mount dialog, add Email column to table + add-row |
+| `package.json` | Add `papaparse`, `@types/papaparse`, `xlsx` |
 
-### What stays the same
-- All server logic, auth, CORS, error handling, usage tracking, DB operations
-- Tool calling structure (function calling with structured output)
-- Fallback templates for failed generations
+### Technical Notes
+- Bulk insert uses a single `supabase.from("leads").insert([...])` call with `user_id` and `campaign_id` stamped on each row.
+- All parsing happens client-side — no edge function needed.
+- File size cap: 2 MB (sane default for lead lists).
+- After successful import, invalidate `["leads", campaignId]` and `["campaigns"]` queries.
 
