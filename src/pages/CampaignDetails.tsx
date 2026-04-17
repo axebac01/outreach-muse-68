@@ -118,6 +118,9 @@ const CampaignDetails = () => {
                 </Link>
               </Button>
             )}
+            <Button variant="outline" onClick={() => setShowImport(true)} className="gap-1.5" disabled={!canAddLead(leadsList.length)}>
+              <Upload className="h-4 w-4" /> Import file
+            </Button>
             <Button variant="outline" onClick={() => setShowAddRow(true)} className="gap-1.5" disabled={!canAddLead(leadsList.length)}>
               <Plus className="h-4 w-4" /> Add Lead
             </Button>
@@ -156,6 +159,7 @@ const CampaignDetails = () => {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-3 font-medium">Name</th>
+                  <th className="text-left p-3 font-medium">Email</th>
                   <th className="text-left p-3 font-medium">Company</th>
                   <th className="text-left p-3 font-medium">Role</th>
                   <th className="text-left p-3 font-medium">Website</th>
@@ -168,6 +172,7 @@ const CampaignDetails = () => {
                 {leadsList.map((lead) => (
                   <tr key={lead.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="p-3 font-medium">{lead.full_name}</td>
+                    <td className="p-3 text-muted-foreground">{(lead as any).email || "—"}</td>
                     <td className="p-3">{lead.company}</td>
                     <td className="p-3">{lead.role}</td>
                     <td className="p-3 text-muted-foreground">{lead.website}</td>
@@ -191,6 +196,7 @@ const CampaignDetails = () => {
                 {showAddRow && (
                   <tr className="border-b bg-muted/20">
                     <td className="p-2"><Input placeholder="Full name" value={newLead.full_name} onChange={(e) => setNewLead({ ...newLead, full_name: e.target.value })} className="h-8 text-sm" /></td>
+                    <td className="p-2"><Input placeholder="Email" value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="h-8 text-sm" /></td>
                     <td className="p-2"><Input placeholder="Company" value={newLead.company} onChange={(e) => setNewLead({ ...newLead, company: e.target.value })} className="h-8 text-sm" /></td>
                     <td className="p-2"><Input placeholder="Role" value={newLead.role} onChange={(e) => setNewLead({ ...newLead, role: e.target.value })} className="h-8 text-sm" /></td>
                     <td className="p-2"><Input placeholder="Website" value={newLead.website} onChange={(e) => setNewLead({ ...newLead, website: e.target.value })} className="h-8 text-sm" /></td>
@@ -206,8 +212,8 @@ const CampaignDetails = () => {
                 )}
                 {leadsList.length === 0 && !showAddRow && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                      No leads yet. Click "Add Lead" to get started.
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                      No leads yet. Click "Add Lead" or "Import file" to get started.
                     </td>
                   </tr>
                 )}
