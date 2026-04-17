@@ -222,6 +222,13 @@ const CampaignDetails = () => {
           </div>
         </div>
       </div>
+      <ImportLeadsDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        campaignId={id!}
+        currentLeadCount={leadsList.length}
+        maxLeads={limits.leadsPerCampaign}
+      />
     </Layout>
   );
 };
