@@ -9,8 +9,10 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import UpgradeBanner from "@/components/UpgradeBanner";
+import ImportLeadsDialog from "@/components/ImportLeadsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { Upload } from "lucide-react";
 
 const infoCards = [
   { key: "target_audience", label: "Audience", icon: Target },
