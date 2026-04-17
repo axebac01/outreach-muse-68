@@ -29,10 +29,11 @@ const CampaignDetails = () => {
   const { data: leads, isLoading: leadsLoading } = useLeads(id);
   const createLead = useCreateLead();
   const deleteLead = useDeleteLead();
-  const { canAddLead, canGenerateOutreach } = useUsage();
+  const { canAddLead, canGenerateOutreach, limits } = useUsage();
   const [showAddRow, setShowAddRow] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [newLead, setNewLead] = useState({ full_name: "", company: "", role: "", website: "", linkedin_url: "", notes: "" });
+  const [newLead, setNewLead] = useState({ full_name: "", email: "", company: "", role: "", website: "", linkedin_url: "", notes: "" });
 
   const handleAddLead = async () => {
     if (!newLead.full_name || !newLead.company) {
