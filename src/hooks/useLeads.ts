@@ -30,6 +30,7 @@ export const useCreateLead = () => {
       campaign_id: string;
       full_name: string;
       company: string;
+      email?: string;
       role?: string;
       website?: string;
       linkedin_url?: string;
@@ -45,6 +46,38 @@ export const useCreateLead = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["leads", data.campaign_id] });
+    },
+  });
+};
+
+export const useBulkCreateLeads = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      campaign_id,
+      leads,
+    }: {
+      campaign_id: string;
+      leads: Array<{
+        full_name: string;
+        company: string;
+        email?: string;
+        role?: string;
+        website?: string;
+        linkedin_url?: string;
+        notes?: string;
+      }>;
+    }) => {
+      const rows = leads.map((l) => ({ ...l, campaign_id, user_id: user!.id }));
+      const { data, error } = await supabase.from("leads").insert(rows).select();
+      if (error) throw error;
+      return { campaign_id, inserted: data?.length ?? 0 };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["leads", data.campaign_id] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
     },
   });
 };
