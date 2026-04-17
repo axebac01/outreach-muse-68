@@ -102,6 +102,7 @@ export type Database = {
           campaign_id: string
           company: string
           created_at: string
+          email: string | null
           full_name: string
           id: string
           linkedin_url: string | null
@@ -114,6 +115,7 @@ export type Database = {
           campaign_id: string
           company: string
           created_at?: string
+          email?: string | null
           full_name: string
           id?: string
           linkedin_url?: string | null
@@ -126,6 +128,7 @@ export type Database = {
           campaign_id?: string
           company?: string
           created_at?: string
+          email?: string | null
           full_name?: string
           id?: string
           linkedin_url?: string | null
