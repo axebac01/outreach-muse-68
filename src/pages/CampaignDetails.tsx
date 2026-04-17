@@ -46,7 +46,7 @@ const CampaignDetails = () => {
     }
     try {
       await createLead.mutateAsync({ ...newLead, campaign_id: id! });
-      setNewLead({ full_name: "", company: "", role: "", website: "", linkedin_url: "", notes: "" });
+      setNewLead({ full_name: "", email: "", company: "", role: "", website: "", linkedin_url: "", notes: "" });
       setShowAddRow(false);
       toast.success("Lead added!");
     } catch (error: any) {
