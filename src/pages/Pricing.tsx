@@ -3,54 +3,52 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Check, X, Shield, ChevronDown } from "lucide-react";
 import { useState } from "react";
-
-const tiers = [
-  {
-    name: "Starter",
-    price: "Free",
-    period: "",
-    description: "Try it free — no credit card needed",
-    features: ["1 campaign", "10 leads per campaign", "10 outreach generations/month", "AI email generation", "Full email sequences", "Copy to clipboard"],
-    cta: "Start generating — it's free",
-    popular: false,
-  },
-  {
-    name: "Growth",
-    price: "€99",
-    period: "/month",
-    description: "For teams serious about pipeline",
-    features: ["Unlimited campaigns", "Unlimited leads", "Unlimited generations", "AI email generation", "Follow-up sequences", "Priority support", "Team collaboration", "Export to CSV (coming soon)"],
-    cta: "Unlock unlimited outreach",
-    popular: true,
-  },
-];
-
-const comparisonRows = [
-  { feature: "Campaigns", starter: "1", growth: "Unlimited" },
-  { feature: "Leads per campaign", starter: "10", growth: "Unlimited" },
-  { feature: "AI generations / month", starter: "10", growth: "Unlimited" },
-  { feature: "Email sequences", starter: true, growth: true },
-  { feature: "Regeneration", starter: true, growth: true },
-  { feature: "Priority support", starter: false, growth: true },
-  { feature: "Team collaboration", starter: false, growth: true },
-];
-
-const faqs = [
-  { q: "Can I cancel anytime?", a: "Yes — cancel anytime from your settings. No questions asked. If you're on Growth, you'll keep access until the end of your billing period." },
-  { q: "What happens when I hit the free limit?", a: "You can still view your existing campaigns and emails. To generate more outreach or create new campaigns, you'll need to upgrade to Growth." },
-  { q: "Do you store my lead data?", a: "Yes, your leads are stored securely so you can access your campaigns anytime. We never share or sell your data." },
-  { q: "Can I try Growth features before paying?", a: "The Starter plan gives you full access to the core AI engine. Growth simply removes the limits so you can scale." },
-];
+import { useTranslation } from "react-i18next";
 
 const Pricing = () => {
+  const { t } = useTranslation();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const tiers = [
+    {
+      name: t("pricing.starterName"),
+      price: t("pricing.starterPrice"),
+      period: "",
+      description: t("pricing.starterDesc"),
+      features: t("pricing.starterFeatures", { returnObjects: true }) as string[],
+      cta: t("pricing.starterCta"),
+      popular: false,
+    },
+    {
+      name: t("pricing.growthName"),
+      price: t("pricing.growthPrice"),
+      period: t("pricing.growthPeriod"),
+      description: t("pricing.growthDesc"),
+      features: t("pricing.growthFeatures", { returnObjects: true }) as string[],
+      cta: t("pricing.growthCta"),
+      popular: true,
+    },
+  ];
+
+  const unlimited = t("pricing.rows.unlimited");
+  const comparisonRows = [
+    { feature: t("pricing.rows.campaigns"), starter: "1", growth: unlimited },
+    { feature: t("pricing.rows.leadsPer"), starter: "10", growth: unlimited },
+    { feature: t("pricing.rows.generations"), starter: "10", growth: unlimited },
+    { feature: t("pricing.rows.sequences"), starter: true, growth: true },
+    { feature: t("pricing.rows.regen"), starter: true, growth: true },
+    { feature: t("pricing.rows.support"), starter: false, growth: true },
+    { feature: t("pricing.rows.team"), starter: false, growth: true },
+  ];
+
+  const faqs = t("pricing.faqs", { returnObjects: true }) as { q: string; a: string }[];
 
   return (
     <Layout>
       <div className="container py-24">
         <div className="mx-auto max-w-2xl text-center mb-16">
-          <h1 className="text-4xl font-bold mb-4">Simple, transparent pricing</h1>
-          <p className="text-lg text-muted-foreground">Start free. Upgrade when you're ready to scale.</p>
+          <h1 className="text-4xl font-bold mb-4">{t("pricing.title")}</h1>
+          <p className="text-lg text-muted-foreground">{t("pricing.subtitle")}</p>
         </div>
         <div className="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto mb-8">
           {tiers.map((tier) => (
@@ -64,7 +62,7 @@ const Pricing = () => {
             >
               {tier.popular && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-semibold text-primary-foreground shadow-md">
-                  Most popular
+                  {t("pricing.popular")}
                 </div>
               )}
               <div>
@@ -75,7 +73,7 @@ const Pricing = () => {
                 <span className="text-5xl font-bold">{tier.price}</span>
                 {tier.period && <span className="text-muted-foreground text-sm">{tier.period}</span>}
                 {tier.popular && (
-                  <p className="text-xs text-muted-foreground mt-2">That's less than one sales rep's hourly cost</p>
+                  <p className="text-xs text-muted-foreground mt-2">{t("pricing.growthNote")}</p>
                 )}
               </div>
               <ul className="space-y-3">
@@ -93,22 +91,20 @@ const Pricing = () => {
           ))}
         </div>
 
-        {/* Guarantee */}
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-16">
           <Shield className="h-4 w-4" />
-          <span>30-day money-back guarantee · No questions asked</span>
+          <span>{t("pricing.guarantee")}</span>
         </div>
 
-        {/* Comparison Table */}
         <div className="max-w-3xl mx-auto mb-20">
-          <h2 className="text-2xl font-bold text-center mb-8">Compare plans</h2>
+          <h2 className="text-2xl font-bold text-center mb-8">{t("pricing.compareTitle")}</h2>
           <div className="rounded-xl border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left p-4 font-medium">Feature</th>
-                  <th className="text-center p-4 font-medium">Starter</th>
-                  <th className="text-center p-4 font-medium text-primary">Growth</th>
+                  <th className="text-left p-4 font-medium">{t("pricing.feature")}</th>
+                  <th className="text-center p-4 font-medium">{t("pricing.starterName")}</th>
+                  <th className="text-center p-4 font-medium text-primary">{t("pricing.growthName")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -136,9 +132,8 @@ const Pricing = () => {
           </div>
         </div>
 
-        {/* FAQ */}
         <div className="max-w-2xl mx-auto mb-16">
-          <h2 className="text-2xl font-bold text-center mb-8">Frequently asked questions</h2>
+          <h2 className="text-2xl font-bold text-center mb-8">{t("pricing.faqTitle")}</h2>
           <div className="space-y-2">
             {faqs.map((faq, i) => (
               <div key={i} className="rounded-lg border">
@@ -160,7 +155,7 @@ const Pricing = () => {
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
-          Hit your free limit? <Link to="/signup" className="text-primary hover:underline font-medium">Upgrade to keep generating outreach.</Link>
+          {t("pricing.footerCtaPrefix")} <Link to="/signup" className="text-primary hover:underline font-medium">{t("pricing.footerCtaLink")}</Link>
         </p>
       </div>
     </Layout>

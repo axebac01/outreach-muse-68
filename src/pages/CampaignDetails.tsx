@@ -4,7 +4,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useCampaign } from "@/hooks/useCampaigns";
 import { useLeads, useCreateLead, useDeleteLead } from "@/hooks/useLeads";
 import { useUsage } from "@/hooks/useUsage";
-import { ArrowRight, Plus, Sparkles, Trash2, Target, Package, Gift, MessageSquare } from "lucide-react";
+import { ArrowRight, Plus, Sparkles, Trash2, Target, Package, Gift, MessageSquare, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -12,19 +12,13 @@ import UpgradeBanner from "@/components/UpgradeBanner";
 import ImportLeadsDialog from "@/components/ImportLeadsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Upload } from "lucide-react";
-
-const infoCards = [
-  { key: "target_audience", label: "Audience", icon: Target },
-  { key: "product", label: "Product", icon: Package },
-  { key: "offer", label: "Offer", icon: Gift },
-  { key: "tone", label: "Tone", icon: MessageSquare },
-] as const;
+import { useTranslation } from "react-i18next";
 
 const CampaignDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const { data: campaign, isLoading: campaignLoading } = useCampaign(id);
   const { data: leads, isLoading: leadsLoading } = useLeads(id);
   const createLead = useCreateLead();
@@ -35,28 +29,35 @@ const CampaignDetails = () => {
   const [generating, setGenerating] = useState(false);
   const [newLead, setNewLead] = useState({ full_name: "", email: "", company: "", role: "", website: "", linkedin_url: "", notes: "" });
 
+  const infoCards = [
+    { key: "target_audience", label: t("campaign.audience"), icon: Target },
+    { key: "product", label: t("campaign.product"), icon: Package },
+    { key: "offer", label: t("campaign.offer"), icon: Gift },
+    { key: "tone", label: t("campaign.tone"), icon: MessageSquare },
+  ] as const;
+
   const handleAddLead = async () => {
     if (!newLead.full_name || !newLead.company) {
-      toast.error("Name and company are required");
+      toast.error(t("campaign.nameCompanyReq"));
       return;
     }
     if (!canAddLead(leads?.length ?? 0)) {
-      toast.error("Lead limit reached. Upgrade to add more.");
+      toast.error(t("campaign.leadLimitReached"));
       return;
     }
     try {
       await createLead.mutateAsync({ ...newLead, campaign_id: id! });
       setNewLead({ full_name: "", email: "", company: "", role: "", website: "", linkedin_url: "", notes: "" });
       setShowAddRow(false);
-      toast.success("Lead added!");
+      toast.success(t("campaign.leadAdded"));
     } catch (error: any) {
-      toast.error(error.message || "Failed to add lead");
+      toast.error(error.message || t("campaign.addLeadFailed"));
     }
   };
 
   const handleGenerate = async () => {
     if (!canGenerateOutreach) {
-      toast.error("You've reached your free limit. Upgrade to keep generating outreach.");
+      toast.error(t("campaign.outreachLimit"));
       return;
     }
     setGenerating(true);
@@ -66,14 +67,14 @@ const CampaignDetails = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(`Emails generated for ${data.count} leads!`);
+      toast.success(t("campaign.emailsGenerated", { count: data.count }));
       queryClient.invalidateQueries({ queryKey: ["campaign", id] });
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       queryClient.invalidateQueries({ queryKey: ["outreach"] });
       queryClient.invalidateQueries({ queryKey: ["usage"] });
       navigate(`/outreach/${id}`);
     } catch (error: any) {
-      toast.error(error.message || "Failed to generate emails");
+      toast.error(error.message || t("campaign.generateFailed"));
     } finally {
       setGenerating(false);
     }
@@ -98,7 +99,7 @@ const CampaignDetails = () => {
   if (!campaign) {
     return (
       <Layout>
-        <div className="container py-12 text-center text-muted-foreground">Campaign not found.</div>
+        <div className="container py-12 text-center text-muted-foreground">{t("campaign.notFound")}</div>
       </Layout>
     );
   }
@@ -114,25 +115,25 @@ const CampaignDetails = () => {
             {campaign.status === "generated" && (
               <Button variant="outline" asChild>
                 <Link to={`/outreach/${campaign.id}`} className="gap-1.5">
-                  View emails <ArrowRight className="h-4 w-4" />
+                  {t("campaign.viewEmails")} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             )}
             <Button variant="outline" onClick={() => setShowImport(true)} className="gap-1.5" disabled={!canAddLead(leadsList.length)}>
-              <Upload className="h-4 w-4" /> Import file
+              <Upload className="h-4 w-4" /> {t("campaign.importFile")}
             </Button>
             <Button variant="outline" onClick={() => setShowAddRow(true)} className="gap-1.5" disabled={!canAddLead(leadsList.length)}>
-              <Plus className="h-4 w-4" /> Add Lead
+              <Plus className="h-4 w-4" /> {t("campaign.addLead")}
             </Button>
             <Button variant="hero" onClick={handleGenerate} className="gap-1.5" disabled={generating || leadsList.length === 0 || !canGenerateOutreach}>
-              <Sparkles className="h-4 w-4" /> {generating ? "Generating..." : "Generate Emails"}
+              <Sparkles className="h-4 w-4" /> {generating ? t("campaign.generating") : t("campaign.generate")}
             </Button>
           </div>
         </div>
 
         {!canAddLead(leadsList.length) && (
           <div className="mb-6">
-            <UpgradeBanner message="You've reached your lead limit. Upgrade to add more leads." />
+            <UpgradeBanner message={t("campaign.leadLimit")} />
           </div>
         )}
 
@@ -152,19 +153,19 @@ const CampaignDetails = () => {
 
         <div className="rounded-xl border bg-card overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b bg-muted/30">
-            <h2 className="text-base font-semibold">Leads ({leadsList.length})</h2>
+            <h2 className="text-base font-semibold">{t("campaign.leads")} ({leadsList.length})</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left p-3 font-medium">Name</th>
-                  <th className="text-left p-3 font-medium">Email</th>
-                  <th className="text-left p-3 font-medium">Company</th>
-                  <th className="text-left p-3 font-medium">Role</th>
-                  <th className="text-left p-3 font-medium">Website</th>
-                  <th className="text-left p-3 font-medium">LinkedIn</th>
-                  <th className="text-left p-3 font-medium">Notes</th>
+                  <th className="text-left p-3 font-medium">{t("campaign.name")}</th>
+                  <th className="text-left p-3 font-medium">{t("campaign.email")}</th>
+                  <th className="text-left p-3 font-medium">{t("campaign.company")}</th>
+                  <th className="text-left p-3 font-medium">{t("campaign.role")}</th>
+                  <th className="text-left p-3 font-medium">{t("campaign.website")}</th>
+                  <th className="text-left p-3 font-medium">{t("campaign.linkedin")}</th>
+                  <th className="text-left p-3 font-medium">{t("campaign.notes")}</th>
                   <th className="p-3 w-10"></th>
                 </tr>
               </thead>
@@ -185,7 +186,7 @@ const CampaignDetails = () => {
                         className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                         onClick={() => {
                           deleteLead.mutate({ id: lead.id, campaign_id: id! });
-                          toast.success("Lead removed");
+                          toast.success(t("campaign.leadRemoved"));
                         }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -195,17 +196,17 @@ const CampaignDetails = () => {
                 ))}
                 {showAddRow && (
                   <tr className="border-b bg-muted/20">
-                    <td className="p-2"><Input placeholder="Full name" value={newLead.full_name} onChange={(e) => setNewLead({ ...newLead, full_name: e.target.value })} className="h-8 text-sm" /></td>
-                    <td className="p-2"><Input placeholder="Email" value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="h-8 text-sm" /></td>
-                    <td className="p-2"><Input placeholder="Company" value={newLead.company} onChange={(e) => setNewLead({ ...newLead, company: e.target.value })} className="h-8 text-sm" /></td>
-                    <td className="p-2"><Input placeholder="Role" value={newLead.role} onChange={(e) => setNewLead({ ...newLead, role: e.target.value })} className="h-8 text-sm" /></td>
-                    <td className="p-2"><Input placeholder="Website" value={newLead.website} onChange={(e) => setNewLead({ ...newLead, website: e.target.value })} className="h-8 text-sm" /></td>
-                    <td className="p-2"><Input placeholder="LinkedIn" value={newLead.linkedin_url} onChange={(e) => setNewLead({ ...newLead, linkedin_url: e.target.value })} className="h-8 text-sm" /></td>
-                    <td className="p-2"><Input placeholder="Notes" value={newLead.notes} onChange={(e) => setNewLead({ ...newLead, notes: e.target.value })} className="h-8 text-sm" /></td>
+                    <td className="p-2"><Input placeholder={t("campaign.name")} value={newLead.full_name} onChange={(e) => setNewLead({ ...newLead, full_name: e.target.value })} className="h-8 text-sm" /></td>
+                    <td className="p-2"><Input placeholder={t("campaign.email")} value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="h-8 text-sm" /></td>
+                    <td className="p-2"><Input placeholder={t("campaign.company")} value={newLead.company} onChange={(e) => setNewLead({ ...newLead, company: e.target.value })} className="h-8 text-sm" /></td>
+                    <td className="p-2"><Input placeholder={t("campaign.role")} value={newLead.role} onChange={(e) => setNewLead({ ...newLead, role: e.target.value })} className="h-8 text-sm" /></td>
+                    <td className="p-2"><Input placeholder={t("campaign.website")} value={newLead.website} onChange={(e) => setNewLead({ ...newLead, website: e.target.value })} className="h-8 text-sm" /></td>
+                    <td className="p-2"><Input placeholder={t("campaign.linkedin")} value={newLead.linkedin_url} onChange={(e) => setNewLead({ ...newLead, linkedin_url: e.target.value })} className="h-8 text-sm" /></td>
+                    <td className="p-2"><Input placeholder={t("campaign.notes")} value={newLead.notes} onChange={(e) => setNewLead({ ...newLead, notes: e.target.value })} className="h-8 text-sm" /></td>
                     <td className="p-2">
                       <div className="flex gap-1">
-                        <Button size="sm" className="h-8" onClick={handleAddLead} disabled={createLead.isPending}>Add</Button>
-                        <Button size="sm" variant="ghost" className="h-8" onClick={() => setShowAddRow(false)}>Cancel</Button>
+                        <Button size="sm" className="h-8" onClick={handleAddLead} disabled={createLead.isPending}>{t("campaign.addBtn")}</Button>
+                        <Button size="sm" variant="ghost" className="h-8" onClick={() => setShowAddRow(false)}>{t("common.cancel")}</Button>
                       </div>
                     </td>
                   </tr>
@@ -213,7 +214,7 @@ const CampaignDetails = () => {
                 {leadsList.length === 0 && !showAddRow && (
                   <tr>
                     <td colSpan={8} className="p-8 text-center text-muted-foreground">
-                      No leads yet. Click "Add Lead" or "Import file" to get started.
+                      {t("campaign.noLeads")}
                     </td>
                   </tr>
                 )}

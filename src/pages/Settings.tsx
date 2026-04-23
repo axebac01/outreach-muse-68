@@ -9,12 +9,14 @@ import { User, CreditCard, BarChart3, Pencil, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { useTranslation } from "react-i18next";
 
 const Settings = () => {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
   const { plan, campaignCount, monthlyOutreach, limits } = useUsage();
+  const { t } = useTranslation();
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
 
@@ -27,9 +29,9 @@ const Settings = () => {
     try {
       await updateProfile.mutateAsync({ full_name: nameValue });
       setEditingName(false);
-      toast.success("Name updated!");
+      toast.success(t("settings.nameUpdated"));
     } catch {
-      toast.error("Failed to update name");
+      toast.error(t("settings.nameUpdateFailed"));
     }
   };
 
@@ -39,23 +41,22 @@ const Settings = () => {
   return (
     <Layout>
       <div className="container py-12 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-10">Settings</h1>
+        <h1 className="text-3xl font-bold mb-10">{t("settings.title")}</h1>
 
         <div className="space-y-6">
-          {/* Profile */}
           <div className="rounded-xl border bg-card p-6 space-y-4 card-hover">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h2 className="font-semibold">Profile</h2>
-                <p className="text-sm text-muted-foreground">Your account details</p>
+                <h2 className="font-semibold">{t("settings.profile")}</h2>
+                <p className="text-sm text-muted-foreground">{t("settings.profileSub")}</p>
               </div>
             </div>
             <div className="grid gap-3 text-sm">
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">Name</span>
+                <span className="text-muted-foreground">{t("settings.name")}</span>
                 {editingName ? (
                   <div className="flex items-center gap-2">
                     <Input
@@ -79,21 +80,20 @@ const Settings = () => {
                 )}
               </div>
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Email</span>
+                <span className="text-muted-foreground">{t("settings.email")}</span>
                 <span className="font-medium">{user?.email || "—"}</span>
               </div>
             </div>
           </div>
 
-          {/* Plan */}
           <div className="rounded-xl border bg-card p-6 space-y-4 card-hover">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                 <CreditCard className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h2 className="font-semibold">Plan</h2>
-                <p className="text-sm text-muted-foreground">Manage your subscription</p>
+                <h2 className="font-semibold">{t("settings.plan")}</h2>
+                <p className="text-sm text-muted-foreground">{t("settings.planSub")}</p>
               </div>
             </div>
             <div className="flex items-center justify-between">
@@ -102,32 +102,31 @@ const Settings = () => {
                   {plan}
                 </span>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {plan === "starter" ? "Free plan with limited usage" : "Unlimited access to all features"}
+                  {plan === "starter" ? t("settings.starterPlanDesc") : t("settings.growthPlanDesc")}
                 </p>
               </div>
               {plan === "starter" && (
                 <Button asChild size="sm">
-                  <Link to="/pricing">Upgrade</Link>
+                  <Link to="/pricing">{t("settings.upgrade")}</Link>
                 </Button>
               )}
             </div>
           </div>
 
-          {/* Usage */}
           <div className="rounded-xl border bg-card p-6 space-y-4 card-hover">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                 <BarChart3 className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h2 className="font-semibold">Usage</h2>
-                <p className="text-sm text-muted-foreground">Your current usage this month</p>
+                <h2 className="font-semibold">{t("settings.usage")}</h2>
+                <p className="text-sm text-muted-foreground">{t("settings.usageSub")}</p>
               </div>
             </div>
             <div className="grid gap-4 text-sm">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Campaigns</span>
+                  <span className="text-muted-foreground">{t("settings.campaigns")}</span>
                   <span className="font-medium">
                     {campaignCount} / {limits.campaigns === Infinity ? "∞" : limits.campaigns}
                   </span>
@@ -138,7 +137,7 @@ const Settings = () => {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Outreach generated (this month)</span>
+                  <span className="text-muted-foreground">{t("settings.outreachMonth")}</span>
                   <span className="font-medium">
                     {monthlyOutreach} / {limits.outreachPerMonth === Infinity ? "∞" : limits.outreachPerMonth}
                   </span>

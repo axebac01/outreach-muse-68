@@ -7,9 +7,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Mail, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +33,7 @@ const Signup = () => {
       toast.error(error.message);
       return;
     }
-    toast.success("Account created! Welcome to MailLead.ai");
+    toast.success(t("auth.signupSuccess"));
     navigate("/dashboard");
   };
 
@@ -44,24 +46,24 @@ const Signup = () => {
               <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 mb-4">
                 <Mail className="h-5 w-5 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold">Create your account</h1>
-              <p className="text-sm text-muted-foreground">Start generating personalized outreach with MailLead.ai</p>
+              <h1 className="text-2xl font-bold">{t("auth.signupTitle")}</h1>
+              <p className="text-sm text-muted-foreground">{t("auth.signupSub")}</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="name">Full name</Label>
-                <Input id="name" placeholder="Alex Smith" value={name} onChange={(e) => setName(e.target.value)} required />
+                <Label htmlFor="name">{t("auth.fullName")}</Label>
+                <Input id="name" placeholder={t("auth.namePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Work email</Label>
-                <Input id="email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Label htmlFor="email">{t("auth.workEmail")}</Label>
+                <Input id="email" type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("auth.password")}</Label>
                 <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Creating account..." : "Create account"}
+                {loading ? t("auth.creating") : t("auth.signupBtn")}
               </Button>
             </form>
 
@@ -69,15 +71,13 @@ const Signup = () => {
               <div className="flex gap-0.5">
                 {[...Array(5)].map((_, i) => <Star key={i} className="h-3.5 w-3.5 fill-primary text-primary" />)}
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                "MailLead.ai cut our outreach prep time by 90%. We booked 12 meetings in our first week."
-              </p>
-              <p className="text-xs font-medium">— Marcus R., Founder at SalesSync</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{t("auth.testimonial")}</p>
+              <p className="text-xs font-medium">{t("auth.testimonialAuthor")}</p>
             </div>
 
             <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link to="/login" className="text-primary hover:underline font-medium">Log in</Link>
+              {t("auth.hasAccount")}{" "}
+              <Link to="/login" className="text-primary hover:underline font-medium">{t("auth.login")}</Link>
             </p>
           </div>
         </div>

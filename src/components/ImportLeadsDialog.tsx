@@ -5,6 +5,7 @@ import { Upload, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { parseLeadsFile, type ParsedLead } from "@/lib/parseLeadsFile";
 import { useBulkCreateLeads } from "@/hooks/useLeads";
+import { useTranslation, Trans } from "react-i18next";
 
 interface Props {
   open: boolean;
@@ -17,6 +18,7 @@ interface Props {
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 const ImportLeadsDialog = ({ open, onOpenChange, campaignId, currentLeadCount, maxLeads }: Props) => {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ParsedLead[]>([]);
   const [parsing, setParsing] = useState(false);
@@ -29,7 +31,7 @@ const ImportLeadsDialog = ({ open, onOpenChange, campaignId, currentLeadCount, m
 
   const handleFile = async (f: File) => {
     if (f.size > MAX_FILE_SIZE) {
-      toast.error("File too large. Max 2 MB.");
+      toast.error(t("import.tooLarge"));
       return;
     }
     setFile(f);
@@ -37,11 +39,11 @@ const ImportLeadsDialog = ({ open, onOpenChange, campaignId, currentLeadCount, m
     try {
       const parsed = await parseLeadsFile(f);
       if (parsed.length === 0) {
-        toast.error("No valid rows found. Make sure your file has an 'email' column.");
+        toast.error(t("import.noRows"));
       }
       setRows(parsed);
     } catch (e: any) {
-      toast.error(e.message || "Failed to parse file");
+      toast.error(e.message || t("import.parseFailed"));
       setFile(null);
     } finally {
       setParsing(false);
@@ -57,14 +59,14 @@ const ImportLeadsDialog = ({ open, onOpenChange, campaignId, currentLeadCount, m
     try {
       await bulkCreate.mutateAsync({ campaign_id: campaignId, leads: toImport });
       if (skipped > 0) {
-        toast.success(`Imported ${toImport.length} of ${rows.length} leads. Upgrade to import the rest.`);
+        toast.success(t("import.importedPartial", { imported: toImport.length, total: rows.length }));
       } else {
-        toast.success(`Imported ${toImport.length} leads!`);
+        toast.success(t("import.imported", { count: toImport.length }));
       }
       reset();
       onOpenChange(false);
     } catch (e: any) {
-      toast.error(e.message || "Failed to import");
+      toast.error(e.message || t("import.importFailed"));
     }
   };
 
@@ -72,17 +74,19 @@ const ImportLeadsDialog = ({ open, onOpenChange, campaignId, currentLeadCount, m
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import leads from file</DialogTitle>
+          <DialogTitle>{t("import.title")}</DialogTitle>
           <DialogDescription>
-            Upload a CSV or Excel file. Required column: <code className="text-xs bg-muted px-1 py-0.5 rounded">email</code>. Optional: name, company, role, website, linkedin, notes.
+            <Trans i18nKey="import.desc">
+              Upload a CSV or Excel file. Required column: <code className="text-xs bg-muted px-1 py-0.5 rounded">email</code>. Optional: name, company, role, website, linkedin, notes.
+            </Trans>
           </DialogDescription>
         </DialogHeader>
 
         {!file && (
           <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-10 cursor-pointer hover:bg-muted/30 transition-colors">
             <Upload className="h-8 w-8 text-muted-foreground" />
-            <span className="text-sm font-medium">Click to upload</span>
-            <span className="text-xs text-muted-foreground">CSV, XLSX, or XLS · max 2 MB</span>
+            <span className="text-sm font-medium">{t("import.click")}</span>
+            <span className="text-xs text-muted-foreground">{t("import.fileTypes")}</span>
             <input
               type="file"
               accept=".csv,.xlsx,.xls"
@@ -97,27 +101,27 @@ const ImportLeadsDialog = ({ open, onOpenChange, campaignId, currentLeadCount, m
             <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
               <FileSpreadsheet className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium flex-1 truncate">{file.name}</span>
-              <Button variant="ghost" size="sm" onClick={reset}>Change</Button>
+              <Button variant="ghost" size="sm" onClick={reset}>{t("import.change")}</Button>
             </div>
 
-            {parsing && <p className="text-sm text-muted-foreground">Parsing…</p>}
+            {parsing && <p className="text-sm text-muted-foreground">{t("import.parsing")}</p>}
 
             {!parsing && rows.length > 0 && (
               <>
                 <div className="text-sm text-muted-foreground">
-                  Found <span className="font-medium text-foreground">{rows.length}</span> valid rows.
+                  {t("import.found")} <span className="font-medium text-foreground">{rows.length}</span> {t("import.validRows")}
                   {skipped > 0 && (
-                    <span className="text-destructive"> {skipped} will be skipped (lead limit reached).</span>
+                    <span className="text-destructive"> {t("import.skipped", { count: skipped })}</span>
                   )}
                 </div>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b bg-muted/50">
-                        <th className="text-left p-2 font-medium">Name</th>
-                        <th className="text-left p-2 font-medium">Email</th>
-                        <th className="text-left p-2 font-medium">Company</th>
-                        <th className="text-left p-2 font-medium">Role</th>
+                        <th className="text-left p-2 font-medium">{t("campaign.name")}</th>
+                        <th className="text-left p-2 font-medium">{t("campaign.email")}</th>
+                        <th className="text-left p-2 font-medium">{t("campaign.company")}</th>
+                        <th className="text-left p-2 font-medium">{t("campaign.role")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -133,7 +137,7 @@ const ImportLeadsDialog = ({ open, onOpenChange, campaignId, currentLeadCount, m
                   </table>
                 </div>
                 {rows.length > 5 && (
-                  <p className="text-xs text-muted-foreground">…and {rows.length - 5} more rows.</p>
+                  <p className="text-xs text-muted-foreground">{t("import.moreRows", { count: rows.length - 5 })}</p>
                 )}
               </>
             )}
@@ -141,12 +145,16 @@ const ImportLeadsDialog = ({ open, onOpenChange, campaignId, currentLeadCount, m
         )}
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
           <Button
             onClick={handleConfirm}
             disabled={toImport.length === 0 || bulkCreate.isPending || parsing}
           >
-            {bulkCreate.isPending ? "Importing…" : `Import ${toImport.length} lead${toImport.length === 1 ? "" : "s"}`}
+            {bulkCreate.isPending
+              ? t("import.importing")
+              : toImport.length === 1
+                ? t("import.importBtn", { count: toImport.length })
+                : t("import.importBtnPlural", { count: toImport.length })}
           </Button>
         </DialogFooter>
       </DialogContent>

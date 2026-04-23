@@ -9,11 +9,13 @@ import { toast } from "sonner";
 import { useCreateCampaign } from "@/hooks/useCampaigns";
 import { useUsage } from "@/hooks/useUsage";
 import UpgradeBanner from "@/components/UpgradeBanner";
+import { useTranslation } from "react-i18next";
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
   const createCampaign = useCreateCampaign();
   const { canCreateCampaign } = useUsage();
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     name: "",
     target_audience: "",
@@ -27,15 +29,15 @@ const CreateCampaign = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canCreateCampaign) {
-      toast.error("You've reached your campaign limit. Upgrade to create more.");
+      toast.error(t("createCampaign.limitReached"));
       return;
     }
     try {
       const data = await createCampaign.mutateAsync(form);
-      toast.success("Campaign created! Add leads to continue.");
+      toast.success(t("createCampaign.created"));
       navigate(`/campaign/${data.id}`);
     } catch (error: any) {
-      toast.error(error.message || "Failed to create campaign");
+      toast.error(error.message || t("createCampaign.createFailed"));
     }
   };
 
@@ -43,42 +45,42 @@ const CreateCampaign = () => {
     <Layout>
       <div className="container max-w-2xl py-12">
         <div className="mb-10">
-          <p className="text-sm text-muted-foreground mb-2 font-medium">Step 1 of 2</p>
-          <h1 className="text-3xl font-bold">Create a new campaign</h1>
-          <p className="text-muted-foreground mt-1">Tell MailLead.ai who you want to reach and what you're offering.</p>
+          <p className="text-sm text-muted-foreground mb-2 font-medium">{t("createCampaign.step")}</p>
+          <h1 className="text-3xl font-bold">{t("createCampaign.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("createCampaign.subtitle")}</p>
         </div>
         {!canCreateCampaign && (
           <div className="mb-6">
-            <UpgradeBanner message="You've reached your free limit. Upgrade to keep generating outreach." />
+            <UpgradeBanner message={t("createCampaign.limitBanner")} />
           </div>
         )}
         <div className="rounded-xl border bg-card p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Campaign name</Label>
-              <Input id="name" placeholder="e.g., SaaS Founders Q2 Outreach" value={form.name} onChange={(e) => update("name", e.target.value)} required />
+              <Label htmlFor="name">{t("createCampaign.name")}</Label>
+              <Input id="name" placeholder={t("createCampaign.namePh")} value={form.name} onChange={(e) => update("name", e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="audience">Target audience / ICP</Label>
-              <Textarea id="audience" placeholder="e.g., B2B SaaS founders, Series A-B, 20-200 employees" value={form.target_audience} onChange={(e) => update("target_audience", e.target.value)} required />
+              <Label htmlFor="audience">{t("createCampaign.audience")}</Label>
+              <Textarea id="audience" placeholder={t("createCampaign.audiencePh")} value={form.target_audience} onChange={(e) => update("target_audience", e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="product">What do you sell?</Label>
-              <Input id="product" placeholder="e.g., AI-powered cold email tool" value={form.product} onChange={(e) => update("product", e.target.value)} required />
+              <Label htmlFor="product">{t("createCampaign.product")}</Label>
+              <Input id="product" placeholder={t("createCampaign.productPh")} value={form.product} onChange={(e) => update("product", e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="offer">Your offer</Label>
-              <Input id="offer" placeholder="e.g., 14-day free trial + dedicated onboarding" value={form.offer} onChange={(e) => update("offer", e.target.value)} required />
+              <Label htmlFor="offer">{t("createCampaign.offer")}</Label>
+              <Input id="offer" placeholder={t("createCampaign.offerPh")} value={form.offer} onChange={(e) => update("offer", e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tone">Tone of voice</Label>
-              <Input id="tone" placeholder="e.g., Professional but friendly" value={form.tone} onChange={(e) => update("tone", e.target.value)} required />
+              <Label htmlFor="tone">{t("createCampaign.tone")}</Label>
+              <Input id="tone" placeholder={t("createCampaign.tonePh")} value={form.tone} onChange={(e) => update("tone", e.target.value)} required />
             </div>
             <div className="flex gap-3 pt-2">
               <Button type="submit" variant="hero" className="flex-1" disabled={createCampaign.isPending || !canCreateCampaign}>
-                {createCampaign.isPending ? "Creating..." : "Create campaign"}
+                {createCampaign.isPending ? t("createCampaign.creating") : t("createCampaign.createBtn")}
               </Button>
-              <Button type="button" variant="outline" onClick={() => navigate("/dashboard")}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => navigate("/dashboard")}>{t("common.cancel")}</Button>
             </div>
           </form>
         </div>
