@@ -8,7 +8,8 @@
     "edit": "Edit",
     "add": "Add",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "optional": "optional"
   },
   "nav": {
     "features": "Features",

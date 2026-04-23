@@ -5,7 +5,7 @@ import { useUsage } from "@/hooks/useUsage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
-import { User, CreditCard, BarChart3, Pencil, Check } from "lucide-react";
+import { User, CreditCard, BarChart3, Pencil, Check, Mail, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -148,6 +148,22 @@ const Settings = () => {
               </div>
             </div>
           </div>
+
+          <Link
+            to="/settings/email-accounts"
+            className="rounded-xl border bg-card p-6 flex items-center gap-3 card-hover hover:border-primary/50 transition-colors"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <Mail className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h2 className="font-semibold">{t("settings.emailAccounts")}</h2>
+              <p className="text-sm text-muted-foreground">
+                {t("settings.emailAccountsSub")}
+              </p>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </Link>
         </div>
       </div>
     </Layout>
