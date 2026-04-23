@@ -14,6 +14,7 @@ import CampaignDetails from "./pages/CampaignDetails";
 import Outreach from "./pages/Outreach";
 import Pricing from "./pages/Pricing";
 import Settings from "./pages/Settings";
+import EmailAccounts from "./pages/EmailAccounts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/campaign/:id" element={<ProtectedRoute><CampaignDetails /></ProtectedRoute>} />
             <Route path="/outreach/:id" element={<ProtectedRoute><Outreach /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/email-accounts" element={<ProtectedRoute><EmailAccounts /></ProtectedRoute>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
