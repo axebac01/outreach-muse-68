@@ -1,191 +1,116 @@
 
 
-## Anslut mejlkonton + skicka & ta emot mejl
+## Sequence Builder – multi-step kampanjer med leads, sekvenser, schema och avsändare
 
 ### Mål
-Användaren ska kunna ansluta en eller flera egna mejladresser till MailLead. Systemet ska sedan kunna **skicka** AI-genererade mejl från användarens egen adress och **ta emot svar** så de kan visas i appen och senare användas för sekvenslogik (paus vid svar, etc.).
+En ny kampanjtyp ("Sequence") där du i fyra steg bygger ett komplett utskick: **Leads → Sequence → Schedule → Sending**. Mejlen skickas automatiskt enligt schemat från dina anslutna mejladresser, med personliga variabler per lead.
 
-### Rekommenderad lösning: OAuth 2.0 först, SMTP/IMAP som fallback
-
-**Varför OAuth 2.0 är bättre än SMTP/IMAP för Gmail/Outlook:**
-- Inget hanterande av lösenord — användaren loggar in via Google/Microsoft
-- Gmail har slagit av "less secure apps" och kräver i praktiken App Passwords för SMTP, vilket är klumpigt för slutanvändaren
-- Bättre deliverability (mejl skickas via Gmails egna servrar → hamnar inte i spam)
-- Möjlighet att använda **Gmail Push (watch)** och **Microsoft Graph webhooks** för svar i realtid istället för att polla IMAP
-- Säkrare (revokable tokens, scopes, ingen lösenordslagring)
-
-**Strategi:**
-| Provider | Skicka | Ta emot |
-|---|---|---|
-| Gmail / Google Workspace | Gmail API via OAuth 2.0 | Gmail API + watch-webhook (Pub/Sub) eller polling |
-| Outlook / Microsoft 365 | Microsoft Graph via OAuth 2.0 | Graph subscriptions (webhook) eller polling |
-| Övrigt (Zoho, Fastmail, custom) | SMTP med lösenord/app-password | IMAP IDLE / polling |
-
-### Arkitektur
+### Wizard-flöde (`/sequence/:id`)
 
 ```text
-┌─────────────┐    OAuth     ┌──────────────────┐
-│   Frontend  │─────────────▶│ Google/MS consent│
-└─────────────┘              └──────────────────┘
-       │                              │
-       │ code                         │
-       ▼                              ▼
-┌──────────────────────────────────────────┐
-│  Edge Function: oauth-callback           │
-│  (token exchange, kryptera, spara)       │
-└──────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────┐    ┌────────────────────────┐
-│ email_accounts (DB) │◀──▶│ Edge: send-email       │
-│ (krypterade tokens) │    │ Edge: sync-inbox       │
-└─────────────────────┘    │ Edge: refresh-tokens   │
-       ▲                   │ Edge: oauth-webhook    │
-       │                   └────────────────────────┘
-       │
-┌──────────────┐
-│email_messages│  ← inkommande svar + utgående mejl
-└──────────────┘
+┌─────────┐   ┌──────────┐   ┌──────────┐   ┌─────────┐
+│  Leads  │ → │ Sequence │ → │ Schedule │ → │ Sending │ → Launch
+└─────────┘   └──────────┘   └──────────┘   └─────────┘
 ```
 
-### Steg 1 — Databas
+Sticky stepper i toppen, "Save & continue" / "Back" längst ner. Allt sparas löpande som draft – inget går iväg förrän användaren klickar **Launch** på sista steget.
 
-**Ny tabell `email_accounts`** (en användare kan ha flera anslutna adresser):
-- `id`, `user_id`, `email`, `provider` (`gmail`/`outlook`/`smtp`)
-- `display_name`
-- `auth_type` (`oauth`/`smtp`)
-- `access_token`, `refresh_token`, `token_expires_at` (krypterade via pgcrypto med en server-side nyckel — aldrig exponerade till klienten)
-- `smtp_host`, `smtp_port`, `imap_host`, `imap_port`, `smtp_username`, `smtp_password_enc` (endast för fallback)
-- `status` (`active`/`needs_reauth`/`error`), `last_synced_at`
-- `history_id` / `delta_token` (för Gmail/Graph inkrementell sync)
-- RLS: användaren ser bara sina egna konton; tokens läses aldrig från klienten — endast edge functions med service role.
+---
 
-**Ny tabell `email_messages`**:
-- `id`, `user_id`, `email_account_id`, `lead_id` (nullable — matchas på `From`-adress)
-- `direction` (`outbound`/`inbound`)
-- `provider_message_id`, `thread_id`, `in_reply_to`
-- `from_address`, `to_address`, `subject`, `body_text`, `body_html`
-- `sent_at`, `received_at`
-- `status` (`queued`/`sent`/`delivered`/`bounced`/`failed`)
-- RLS per `user_id`.
+### Steg 1 — Leads
+- **Manuellt**: rad-för-rad-tabell med fälten `email`, `full_name`, `first_name`, `last_name`, `role`, `phone`, `company`.
+- **CSV-uppladdning**: drag-and-drop → preview av första 5 raderna → **column mapping UI** (dropdown per kolumn → våra fält). Auto-detektering via header-namn där det går.
+- Visa antal giltiga / ogiltiga / dubletter. Skip rader utan `email`.
+- Bulk-insert i `sequence_leads` när användaren bekräftar.
 
-**Ändring i `leads`**: Index på `email` så vi snabbt kan matcha inkommande svar till rätt lead.
+### Steg 2 — Sequence Builder
+- Vertikal lista med "steps". Första steget = Email 1.
+- Per steg:
+  - **Subject** (om tom på steg 2+ → ärver från föregående och skickar som reply i samma tråd)
+  - **Body** (rich textarea med variabel-chip-picker: `{{first_name}}`, `{{last_name}}`, `{{full_name}}`, `{{company}}`, `{{role}}`, `{{email}}`, `{{phone}}`)
+  - **Wait X days after previous** (number input, döljs på steg 1)
+- Knapp **+ Add follow-up** längst ner.
+- Live preview-panel till höger som renderar mejlet med en vald lead's data.
+- Validering: minst 1 steg, body får inte vara tom, variabler matchas mot tillgängliga fält.
 
-### Steg 2 — OAuth-flöde (Gmail + Outlook)
+### Steg 3 — Schedule
+- **Timezone** (Select med alla IANA-zoner, default = browserns)
+- **Start date + time** (Shadcn Calendar + time picker)
+- **Sending window** (mån–fre, 09:00–17:00 default, togglas per veckodag)
+- Pausa vid svar: toggle (default på) – om en lead svarar pausas hens sekvens.
 
-**Edge Function `email-oauth-start`**
-- Tar emot `provider` (`gmail`/`outlook`) + `redirect_origin`
-- Returnerar consent-URL med rätt scopes:
-  - Gmail: `gmail.send`, `gmail.readonly`, `gmail.modify`
-  - Outlook: `Mail.Send`, `Mail.Read`, `offline_access`
-- Genererar `state`-token (lagras tillfälligt) för CSRF-skydd
+### Steg 4 — Sending
+- **Avsändar-konton**: lista alla anslutna `email_accounts` med checkboxar. Minst 1 måste väljas.
+- Vid flera valda: roteras round-robin per lead.
+- **Daily send limit per account** (number input, default **25**, varning vid >50 med tooltip om deliverability).
+- Räknar ut och visar: *"Med X leads och Y konton à 25/dag tar utskicket ~Z dagar."*
+- **Launch-knapp** (primary, hero-style) → sätter status `active` och första `scheduled_sends`-rad per lead.
 
-**Edge Function `email-oauth-callback`**
-- Tar emot `code` + `state`
-- Byter code mot access/refresh tokens
-- Hämtar användarens mejladress från provider (`/userinfo` eller `/me`)
-- Krypterar tokens med `pgp_sym_encrypt` och nyckel från Supabase secrets
-- Sparar i `email_accounts`
-- Sätter upp watch/subscription för inkommande mejl (se Steg 4)
+---
 
-**Krävda secrets (be användaren lägga till efter godkännande):**
-- `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`
-- `MICROSOFT_OAUTH_CLIENT_ID`, `MICROSOFT_OAUTH_CLIENT_SECRET`
-- `EMAIL_TOKEN_ENCRYPTION_KEY` (32-byte slumpad nyckel)
+### Database (ny migration)
 
-### Steg 3 — Skicka mejl
+| Tabell | Syfte |
+|---|---|
+| `sequences` | Kampanjmetadata: `id`, `user_id`, `name`, `status` (`draft`/`active`/`paused`/`completed`), `timezone`, `start_at`, `sending_days` (jsonb), `sending_window_start`, `sending_window_end`, `pause_on_reply` (bool), `daily_limit_per_account` (int), `created_at` |
+| `sequence_leads` | Leads-listan: `id`, `sequence_id`, `user_id`, `email`, `full_name`, `first_name`, `last_name`, `role`, `phone`, `company`, `status` (`pending`/`active`/`replied`/`completed`/`bounced`), `current_step` |
+| `sequence_steps` | Mejlmallar: `id`, `sequence_id`, `step_order`, `subject` (nullable), `body`, `wait_days` |
+| `sequence_senders` | Vilka konton som används: `id`, `sequence_id`, `email_account_id` |
+| `scheduled_sends` | Kö för utskick: `id`, `sequence_id`, `lead_id`, `step_id`, `email_account_id`, `scheduled_for`, `status` (`scheduled`/`sent`/`failed`/`skipped`), `sent_message_id` |
 
-**Edge Function `send-email`**
-- Input: `email_account_id`, `to`, `subject`, `body_html`, `body_text`, `lead_id`, `in_reply_to?`
-- Hämtar konto, dekrypterar token, refreshar om utgånget
-- Per provider:
-  - **Gmail**: `POST /gmail/v1/users/me/messages/send` med base64-encoded RFC 2822
-  - **Outlook**: `POST /me/sendMail` (Graph API)
-  - **SMTP**: använd `nodemailer`-kompatibel Deno-klient (t.ex. `denomailer`)
-- Loggar i `email_messages` med `direction='outbound'`, `thread_id`, `provider_message_id`
-- Hanterar fel: 401 → markera `needs_reauth`; 429 → returnera retry-after
+Alla får RLS `auth.uid() = user_id` (eller via `sequence_id` join för barntabeller).
 
-### Steg 4 — Ta emot svar
+### Edge functions (delvis senare)
 
-**Två lägen beroende på provider:**
+| Funktion | Ansvar |
+|---|---|
+| `launch-sequence` | Anropas vid Launch. Skapar första `scheduled_sends`-rad per lead enligt schema + roterar avsändare. |
+| `process-scheduled-sends` (cron, 1 min) | Hämtar `scheduled_sends` där `scheduled_for <= now()` & inom sending window. Anropar befintliga `send-email`. Skapar nästa steg-rad om sekvensen har fler steg. |
+| `pause-on-reply` (kallas av `sync-inbox` senare) | Markerar lead `replied` och tar bort kommande `scheduled_sends`. |
 
-**A) Webhook-baserat (Gmail Pub/Sub + Graph subscriptions)** — realtid
-- Vid OAuth-anslutning: registrera watch/subscription med callback-URL till `email-webhook`
-- Edge Function `email-webhook` tar emot notifikation, anropar `sync-inbox` för det kontot
-- Subscriptions måste förnyas (Gmail ~7 dagar, Graph ~3 dagar) → cron-jobb
+> Cron + `process-scheduled-sends` byggs i denna iteration som stub som triggas manuellt; full pg_cron-aktivering kan ske när IMAP-sync också är på plats.
 
-**B) Polling** — enklare, fungerar för IMAP & MVP
-- Cron-jobb (pg_cron) kör `sync-inbox` var 2:a minut för alla aktiva konton
-- Använder `historyId` (Gmail) / `delta` (Graph) / `UIDNEXT` (IMAP) för inkrementell hämtning
-
-**Edge Function `sync-inbox`**
-- Hämtar nya mejl sedan senaste sync
-- För varje mejl: matcha `from_address` → `leads.email` → koppla till `lead_id`
-- Spara i `email_messages` med `direction='inbound'`
-- Uppdatera `email_accounts.last_synced_at` + `history_id`
-- (Senare) Trigga sekvens-paus om svar kommer in från en lead i aktiv kampanj
-
-**MVP-rekommendation:** börja med **polling** för båda providers — enklare att felsöka, ingen Pub/Sub-setup. Lägg till webhooks i v2.
-
-### Steg 5 — Token refresh
-
-**Edge Function `refresh-email-tokens`** (kör via pg_cron varje 30 min)
-- Hittar konton vars `token_expires_at < now() + 10 min`
-- Refreshar med `refresh_token`
-- Vid fel → markera `needs_reauth`, visa varning i UI
-
-### Steg 6 — UI
-
-**Ny sida `/settings/email-accounts`** (länk från Settings):
-- Lista anslutna konton med provider-ikon, status-badge, senast synkad
-- "Anslut Gmail" / "Anslut Outlook" / "Anslut via SMTP" knappar
-- SMTP-formulär: host, port, användarnamn, lösenord, IMAP-host/port + "Testa anslutning"-knapp
-- Per konto: "Koppla från", "Återanslut" (om `needs_reauth`)
-- Översättningar (EN/SV) för alla strängar
-
-**Uppdaterad `Outreach.tsx`**:
-- Före "Approve & Send" — välj från vilket anslutet konto
-- Visa skickade mejl + svar i en thread-vy under varje lead
-
-### Steg 7 — Säkerhet
-
-- Tokens **aldrig** skickas till klienten — endast `email`, `provider`, `status` exponeras via SELECT
-- RLS-policy på `email_accounts` blockerar SELECT av token-kolumnerna (eller använd separat `email_account_secrets`-tabell utan RLS-läsning)
-- Kryptering: `pgp_sym_encrypt(token, key)` där `key` finns i Vault, aldrig i kod
-- OAuth `state` valideras vid callback
-- Rate limiting på `send-email` (max X mejl/min/användare baserat på plan)
-
-### Filer som skapas / ändras
+### Frontend-struktur
 
 | Fil | Ändring |
 |---|---|
-| `supabase/migrations/...` | Nya tabeller + RLS + pgcrypto + pg_cron |
-| `supabase/functions/email-oauth-start/index.ts` | **Ny** |
-| `supabase/functions/email-oauth-callback/index.ts` | **Ny** |
-| `supabase/functions/send-email/index.ts` | **Ny** |
-| `supabase/functions/sync-inbox/index.ts` | **Ny** |
-| `supabase/functions/refresh-email-tokens/index.ts` | **Ny** |
-| `supabase/functions/email-webhook/index.ts` | **Ny** (v2) |
-| `supabase/functions/test-smtp/index.ts` | **Ny** — validera SMTP-uppgifter |
-| `src/pages/EmailAccounts.tsx` | **Ny** sida |
-| `src/components/ConnectEmailDialog.tsx` | **Ny** |
-| `src/hooks/useEmailAccounts.ts` | **Ny** |
-| `src/hooks/useEmailMessages.ts` | **Ny** |
-| `src/pages/Outreach.tsx` | Lägg till kontoval + thread-vy |
-| `src/pages/Settings.tsx` | Länk till email-accounts |
-| `src/App.tsx` | Ny route `/settings/email-accounts` |
-| `src/i18n/locales/{en,sv}.json` | Nya översättningar |
+| `src/pages/SequenceBuilder.tsx` | **Ny** – wizard-shell med stepper, route-state per steg |
+| `src/pages/sequence/StepLeads.tsx` | **Ny** |
+| `src/pages/sequence/StepSequence.tsx` | **Ny** – inkl. `VariablePicker` och preview |
+| `src/pages/sequence/StepSchedule.tsx` | **Ny** |
+| `src/pages/sequence/StepSending.tsx` | **Ny** |
+| `src/components/CsvColumnMapper.tsx` | **Ny** – återanvändbar för CSV-mapping |
+| `src/components/sequence/SequenceStepCard.tsx` | **Ny** |
+| `src/components/sequence/EmailPreview.tsx` | **Ny** – renderar `{{var}}` med lead-data |
+| `src/lib/renderTemplate.ts` | **Ny** – ersätter `{{variable}}` mot lead-fält |
+| `src/hooks/useSequence.ts` | **Ny** – CRUD för sequence + steps + leads + senders |
+| `src/pages/Dashboard.tsx` | Lägg till "Sequence campaigns"-sektion + "New sequence"-knapp |
+| `src/App.tsx` | Routes: `/sequence/new`, `/sequence/:id/leads`, `/sequence/:id/sequence`, `/sequence/:id/schedule`, `/sequence/:id/sending` |
+| `src/i18n/locales/{en,sv}.json` | Översättningar för hela wizarden |
 
-### Föreslagen leveransordning (MVP först)
+### UX-detaljer
+- Stepper visar checkmark på färdiga steg, lås framåt-navigering tills steget är giltigt.
+- Auto-save (debounce 1 s) på alla fält → "Saved ✓" indikator.
+- Variabel-chip-picker över body-textarea: klick infogar `{{first_name}}` på cursor-position.
+- Tomma `first_name` faller automatiskt tillbaka på `full_name.split(' ')[0]` vid render.
+- "Send test email"-knapp på steg 2 → skickar ett enskilt mejl till användarens egen adress.
 
-1. **Fas 1 (MVP)**: DB-schema, SMTP/IMAP-fallback, UI för att ansluta konto, `send-email` via SMTP, `sync-inbox` via IMAP-polling
-2. **Fas 2**: Gmail OAuth + Gmail API send/read
-3. **Fas 3**: Outlook OAuth + Graph API
-4. **Fas 4**: Webhooks (Pub/Sub + Graph subscriptions) för realtid
-5. **Fas 5**: Sekvenser & schemaläggning (separat plan senare som du nämnde)
+### Översättningar (exempel)
+- "Sequence builder" / "Sekvensbyggare"
+- "Add follow-up" / "Lägg till uppföljning"
+- "Wait X days after previous" / "Vänta X dagar efter föregående"
+- "Daily limit per account" / "Dagligt tak per konto"
+- "Pause when lead replies" / "Pausa när lead svarar"
 
-### Frågor innan implementation
-1. Vill du att vi börjar med **Fas 1+2 (SMTP + Gmail OAuth)** i denna iteration, eller ska vi köra alla faser direkt?
-2. Ska vi använda **Lovables egna mejl-infrastruktur** (Resend-baserad, kräver verifierad domän) som ett tredje alternativ för användare utan eget mejlkonto? — Inte rekommenderat för cold outreach (deliverability via egen Gmail/Outlook är mycket bättre), men kan vara bra för transaktionella notifikationer.
-3. Behöver du stöd för **flera mejladresser per användare** redan i MVP, eller räcker en åt gången?
+### Gammal vs ny "campaign"
+Den befintliga `campaigns`-tabellen (AI-genererade engångsmejl) lämnas orörd. Den nya sequence-funktionen är en parallell entitet under `/sequence/...`. Dashboard får två tabbar: **AI Drafts** (befintligt) och **Sequences** (nytt).
+
+### Leveransordning
+1. DB-migration + hooks
+2. Wizard-shell + Steg 1 (Leads + CSV-mapping)
+3. Steg 2 (Sequence builder + variabler + preview)
+4. Steg 3 (Schedule)
+5. Steg 4 (Sending) + Launch
+6. `launch-sequence` + `process-scheduled-sends` edge functions
+7. Dashboard-integration + översättningar
 
