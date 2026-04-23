@@ -2,29 +2,32 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock, Star, Upload, Sparkles, Send } from "lucide-react";
-
-const features = [
-  { icon: Zap, title: "Personalized in seconds", description: "Generate unique emails for every lead based on their company, role, and background — no templates needed." },
-  { icon: Target, title: "3x more replies", description: "Outreach that's actually relevant gets opened, read, and replied to." },
-  { icon: Clock, title: "Hours saved, every day", description: "Stop researching and writing manually. MailLead.ai does the heavy lifting so you can focus on closing." },
-  { icon: Users, title: "Built for teams", description: "Manage campaigns, leads, and sequences in one place — whether you're a founder or a 50-person sales team." },
-  { icon: BarChart3, title: "Campaign overview", description: "See all your campaigns and generated outreach from a single dashboard." },
-  { icon: Mail, title: "Full email sequences", description: "Get a cold email plus two follow-ups generated for every single lead." },
-];
-
-const socialProof = [
-  { metric: "500+", label: "Active teams" },
-  { metric: "50K+", label: "Outreach emails sent" },
-  { metric: "3.2x", label: "Avg. reply rate lift" },
-];
-
-const howItWorks = [
-  { step: "1", icon: Upload, title: "Add your leads", description: "Paste or type your leads with their company, role, and any context you have." },
-  { step: "2", icon: Sparkles, title: "Generate personalized emails", description: "AI writes a unique cold email + two follow-ups tailored to each lead." },
-  { step: "3", icon: Send, title: "Copy, send, close", description: "Copy the emails, paste into your outreach tool, and start booking meetings." },
-];
+import { useTranslation } from "react-i18next";
 
 const Landing = () => {
+  const { t } = useTranslation();
+
+  const features = [
+    { icon: Zap, title: t("landing.f1Title"), description: t("landing.f1Desc") },
+    { icon: Target, title: t("landing.f2Title"), description: t("landing.f2Desc") },
+    { icon: Clock, title: t("landing.f3Title"), description: t("landing.f3Desc") },
+    { icon: Users, title: t("landing.f4Title"), description: t("landing.f4Desc") },
+    { icon: BarChart3, title: t("landing.f5Title"), description: t("landing.f5Desc") },
+    { icon: Mail, title: t("landing.f6Title"), description: t("landing.f6Desc") },
+  ];
+
+  const socialProof = [
+    { metric: "500+", label: t("landing.socialActive") },
+    { metric: "50K+", label: t("landing.socialSent") },
+    { metric: "3.2x", label: t("landing.socialLift") },
+  ];
+
+  const howItWorks = [
+    { step: "1", icon: Upload, title: t("landing.step1Title"), description: t("landing.step1Desc") },
+    { step: "2", icon: Sparkles, title: t("landing.step2Title"), description: t("landing.step2Desc") },
+    { step: "3", icon: Send, title: t("landing.step3Title"), description: t("landing.step3Desc") },
+  ];
+
   return (
     <Layout>
       {/* Hero */}
@@ -35,26 +38,26 @@ const Landing = () => {
           <div className="mx-auto max-w-3xl text-center space-y-8">
             <div className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm text-muted-foreground animate-fade-in">
               <Zap className="h-3.5 w-3.5" />
-              AI-powered outbound that actually gets replies
+              {t("landing.badge")}
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-7xl leading-[1.05] animate-fade-in">
-              <span className="text-primary">Book more meetings</span> with AI-written cold emails
+              <span className="text-primary">{t("landing.heroHighlight")}</span> {t("landing.heroRest")}
             </h1>
             <p className="mx-auto max-w-xl text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in">
-              Generate personalized cold emails and follow-ups for every lead in seconds. No templates. No research. Just hit send.
+              {t("landing.heroSub")}
             </p>
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center animate-fade-in">
               <Button variant="hero" size="lg" asChild>
                 <Link to="/signup" className="gap-2">
-                  Generate your first email — free
+                  {t("landing.ctaPrimary")}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button variant="outline" size="lg" asChild>
-                <Link to="/pricing">View pricing</Link>
+                <Link to="/pricing">{t("landing.ctaSecondary")}</Link>
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground animate-fade-in">No credit card required · Free forever up to 10 leads</p>
+            <p className="text-xs text-muted-foreground animate-fade-in">{t("landing.noCard")}</p>
           </div>
         </div>
       </section>
@@ -77,8 +80,8 @@ const Landing = () => {
       <section className="py-24">
         <div className="container">
           <div className="mx-auto max-w-2xl text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">From lead list to booked meeting in 3 steps</h2>
-            <p className="text-lg text-muted-foreground">No complex setup. No learning curve. Just results.</p>
+            <h2 className="text-3xl font-bold mb-4">{t("landing.howTitle")}</h2>
+            <p className="text-lg text-muted-foreground">{t("landing.howSub")}</p>
           </div>
           <div className="grid gap-8 sm:grid-cols-3 max-w-4xl mx-auto">
             {howItWorks.map((step) => (
@@ -101,8 +104,8 @@ const Landing = () => {
       <section id="features" className="py-24 border-t">
         <div className="container">
           <div className="mx-auto max-w-2xl text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Everything you need to scale outbound</h2>
-            <p className="text-lg text-muted-foreground">From lead import to personalized sequences — one workflow, zero busywork.</p>
+            <h2 className="text-3xl font-bold mb-4">{t("landing.featuresTitle")}</h2>
+            <p className="text-lg text-muted-foreground">{t("landing.featuresSub")}</p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
@@ -126,22 +129,18 @@ const Landing = () => {
               <div className="flex gap-1">
                 {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 fill-primary text-primary" />)}
               </div>
-              <blockquote className="text-lg font-medium leading-relaxed">
-                "We used to spend 3 hours writing emails for 10 leads. MailLead.ai does it in under a minute — and the reply rates are actually better."
-              </blockquote>
+              <blockquote className="text-lg font-medium leading-relaxed">"{t("landing.quote1")}"</blockquote>
               <div className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Sarah Chen</span> · Head of Sales, GrowthStack
+                <span className="font-medium text-foreground">{t("landing.quote1Author")}</span> · {t("landing.quote1Role")}
               </div>
             </div>
             <div className="space-y-6">
               <div className="flex gap-1">
                 {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 fill-primary text-primary" />)}
               </div>
-              <blockquote className="text-lg font-medium leading-relaxed">
-                "Our team booked 40% more meetings in the first month. The personalization is so good, prospects think we spent hours on each email."
-              </blockquote>
+              <blockquote className="text-lg font-medium leading-relaxed">"{t("landing.quote2")}"</blockquote>
               <div className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Marcus Rivera</span> · Founder, CloseFast
+                <span className="font-medium text-foreground">{t("landing.quote2Author")}</span> · {t("landing.quote2Role")}
               </div>
             </div>
           </div>
@@ -151,11 +150,11 @@ const Landing = () => {
       {/* CTA */}
       <section className="container py-24">
         <div className="mx-auto max-w-2xl text-center space-y-6">
-          <h2 className="text-3xl font-bold">Your competitors are already personalizing. Are you?</h2>
-          <p className="text-lg text-muted-foreground">Join hundreds of teams already using MailLead.ai to book more meetings.</p>
+          <h2 className="text-3xl font-bold">{t("landing.ctaTitle")}</h2>
+          <p className="text-lg text-muted-foreground">{t("landing.ctaSub")}</p>
           <Button variant="hero" size="lg" asChild>
             <Link to="/signup" className="gap-2">
-              Generate your first email — free
+              {t("landing.ctaPrimary")}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
@@ -165,7 +164,7 @@ const Landing = () => {
       {/* Mobile sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur p-3 sm:hidden z-50">
         <Button className="w-full" size="lg" asChild>
-          <Link to="/signup">Try free — no credit card needed</Link>
+          <Link to="/signup">{t("landing.mobileCta")}</Link>
         </Button>
       </div>
 
@@ -176,7 +175,7 @@ const Landing = () => {
             <Mail className="h-4 w-4" />
             MailLead.ai
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 MailLead.ai. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">{t("landing.footer")}</p>
         </div>
       </footer>
     </Layout>

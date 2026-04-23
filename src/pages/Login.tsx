@@ -7,9 +7,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,7 +25,7 @@ const Login = () => {
       toast.error(error.message);
       return;
     }
-    toast.success("Logged in successfully!");
+    toast.success(t("auth.loginSuccess"));
     navigate("/dashboard");
   };
 
@@ -36,25 +38,25 @@ const Login = () => {
               <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 mb-4">
                 <Mail className="h-5 w-5 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold">Welcome back</h1>
-              <p className="text-sm text-muted-foreground">Log in to your MailLead.ai account</p>
+              <h1 className="text-2xl font-bold">{t("auth.loginTitle")}</h1>
+              <p className="text-sm text-muted-foreground">{t("auth.loginSub")}</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Label htmlFor="email">{t("auth.email")}</Label>
+                <Input id="email" type="email" placeholder={t("auth.emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("auth.password")}</Label>
                 <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Logging in..." : "Log in"}
+                {loading ? t("auth.loggingIn") : t("auth.loginBtn")}
               </Button>
             </form>
             <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link>
+              {t("auth.noAccount")}{" "}
+              <Link to="/signup" className="text-primary hover:underline font-medium">{t("auth.signup")}</Link>
             </p>
           </div>
         </div>

@@ -10,11 +10,13 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCampaign } from "@/hooks/useCampaigns";
+import { useTranslation } from "react-i18next";
 
 const OutreachContent = ({ leadId, campaignId }: { leadId: string; campaignId: string }) => {
   const { data: outreach, isLoading } = useOutreachForLead(leadId);
   const approveOutreach = useApproveOutreach();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [regenerating, setRegenerating] = useState(false);
 
   const handleRegenerate = async () => {
@@ -25,10 +27,10 @@ const OutreachContent = ({ leadId, campaignId }: { leadId: string; campaignId: s
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Emails regenerated!");
+      toast.success(t("outreach.regenerated"));
       queryClient.invalidateQueries({ queryKey: ["outreach", leadId] });
     } catch (error: any) {
-      toast.error(error.message || "Failed to regenerate");
+      toast.error(error.message || t("outreach.regenerateFailed"));
     } finally {
       setRegenerating(false);
     }
@@ -54,7 +56,7 @@ const OutreachContent = ({ leadId, campaignId }: { leadId: string; campaignId: s
   if (!outreach) {
     return (
       <div className="rounded-xl border p-8 text-center text-muted-foreground">
-        No emails generated for this lead yet.
+        {t("outreach.noEmails")}
       </div>
     );
   }
@@ -62,9 +64,9 @@ const OutreachContent = ({ leadId, campaignId }: { leadId: string; campaignId: s
   const handleApprove = async () => {
     try {
       await approveOutreach.mutateAsync(outreach.id);
-      toast.success("Outreach approved!");
+      toast.success(t("outreach.approveSuccess"));
     } catch {
-      toast.error("Failed to approve");
+      toast.error(t("outreach.approveFailed"));
     }
   };
 
@@ -73,24 +75,24 @@ const OutreachContent = ({ leadId, campaignId }: { leadId: string; campaignId: s
       <div className="flex items-center justify-between">
         {outreach.status === "pending" && (
           <Button onClick={handleApprove} disabled={approveOutreach.isPending} className="gap-1.5" size="sm">
-            <Check className="h-4 w-4" /> Approve
+            <Check className="h-4 w-4" /> {t("outreach.approve")}
           </Button>
         )}
         {outreach.status === "approved" && (
           <div className="rounded-lg bg-success/10 text-success px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5">
-            <Check className="h-4 w-4" /> Approved
+            <Check className="h-4 w-4" /> {t("outreach.approved")}
           </div>
         )}
       </div>
       <EmailCard
-        title="Cold Email"
+        title={t("outreach.coldEmail")}
         content={outreach.cold_email || ""}
         subjectLine={outreach.subject_line || ""}
         onRegenerate={handleRegenerate}
         isRegenerating={regenerating}
       />
-      <EmailCard title="Follow-up #1" content={outreach.follow_up_1 || ""} onRegenerate={handleRegenerate} isRegenerating={regenerating} />
-      <EmailCard title="Follow-up #2" content={outreach.follow_up_2 || ""} onRegenerate={handleRegenerate} isRegenerating={regenerating} />
+      <EmailCard title={t("outreach.followUp1")} content={outreach.follow_up_1 || ""} onRegenerate={handleRegenerate} isRegenerating={regenerating} />
+      <EmailCard title={t("outreach.followUp2")} content={outreach.follow_up_2 || ""} onRegenerate={handleRegenerate} isRegenerating={regenerating} />
     </div>
   );
 };
@@ -99,6 +101,7 @@ const Outreach = () => {
   const { id } = useParams();
   const { data: leads, isLoading } = useLeads(id);
   const { data: campaign } = useCampaign(id);
+  const { t } = useTranslation();
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -131,16 +134,16 @@ const Outreach = () => {
         <div className="mb-8">
           {campaign && (
             <p className="text-sm text-muted-foreground mb-1">
-              <span className="font-medium text-foreground">{campaign.name}</span> · Outreach
+              <span className="font-medium text-foreground">{campaign.name}</span> · {t("outreach.breadcrumb")}
             </p>
           )}
-          <h1 className="text-3xl font-bold">Generated outreach</h1>
-          <p className="text-muted-foreground mt-1">Review, copy, and refine your email sequences. {leads?.length || 0} leads.</p>
+          <h1 className="text-3xl font-bold">{t("outreach.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("outreach.subtitle", { count: leads?.length || 0 })}</p>
         </div>
 
         <div className="flex gap-8">
           <div className="w-64 flex-shrink-0 space-y-1 border-r pr-6">
-            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">Leads</p>
+            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">{t("outreach.leadsLabel")}</p>
             {leads?.map((lead) => (
               <LeadButton key={lead.id} lead={lead} isSelected={selectedLeadId === lead.id} onClick={() => setSelectedLeadId(lead.id)} />
             ))}
@@ -151,7 +154,7 @@ const Outreach = () => {
               <OutreachContent leadId={selectedLeadId} campaignId={id} />
             ) : (
               <div className="rounded-xl border p-8 text-center text-muted-foreground">
-                Select a lead to view their outreach.
+                {t("outreach.selectLead")}
               </div>
             )}
           </div>
