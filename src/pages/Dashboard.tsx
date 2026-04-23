@@ -91,8 +91,6 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="drafts" className="mt-6">
-            {/* AI Drafts (campaigns) — fallthrough to existing rendering below */}
-          <TabsContent value="drafts" className="mt-6">
             {!canCreateCampaign && (
               <div className="mb-6">
                 <UpgradeBanner message={t("dashboard.upgradeUsed")} />
