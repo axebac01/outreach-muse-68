@@ -92,63 +92,57 @@ const Dashboard = () => {
 
           <TabsContent value="drafts" className="mt-6">
             {/* AI Drafts (campaigns) — fallthrough to existing rendering below */}
-            <DraftsList isLoading={isLoading} campaigns={campaigns} canCreateCampaign={canCreateCampaign} t={t} />
+          <TabsContent value="drafts" className="mt-6">
+            {!canCreateCampaign && (
+              <div className="mb-6">
+                <UpgradeBanner message={t("dashboard.upgradeUsed")} />
+              </div>
+            )}
+            {isLoading ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="rounded-xl border bg-card p-6 space-y-3">
+                    <div className="h-5 w-16 bg-muted animate-pulse rounded-full" />
+                    <div className="h-5 w-32 bg-muted animate-pulse rounded" />
+                    <div className="h-4 w-full bg-muted animate-pulse rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : !campaigns || campaigns.length === 0 ? (
+              <EmptyState
+                title={t("dashboard.emptyTitle")}
+                description={t("dashboard.emptyDesc")}
+                actionLabel={t("dashboard.emptyAction")}
+                actionHref="/campaign/new"
+              />
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {campaigns.map((c) => (
+                  <Link
+                    key={c.id}
+                    to={`/campaign/${c.id}`}
+                    className="group rounded-xl border bg-card p-6 space-y-3 card-hover hover:border-primary/20"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                        c.status === "generated" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
+                      }`}>
+                        {c.status === "generated" ? t("dashboard.statusGenerated") : t("dashboard.statusDraft")}
+                      </span>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <h3 className="font-semibold">{c.name}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{c.target_audience}</p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{t("dashboard.leadsCount", { count: (c as any).leads?.[0]?.count ?? 0 })}</span>
+                      <span>{new Date(c.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
-
-        {!canCreateCampaign && (
-          <div className="mb-6">
-            <UpgradeBanner message={t("dashboard.upgradeUsed")} />
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-xl border bg-card p-6 space-y-3">
-                <div className="h-5 w-16 bg-muted animate-pulse rounded-full" />
-                <div className="h-5 w-32 bg-muted animate-pulse rounded" />
-                <div className="h-4 w-full bg-muted animate-pulse rounded" />
-                <div className="flex justify-between">
-                  <div className="h-3 w-16 bg-muted animate-pulse rounded" />
-                  <div className="h-3 w-20 bg-muted animate-pulse rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : !campaigns || campaigns.length === 0 ? (
-          <EmptyState
-            title={t("dashboard.emptyTitle")}
-            description={t("dashboard.emptyDesc")}
-            actionLabel={t("dashboard.emptyAction")}
-            actionHref="/campaign/new"
-          />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {campaigns.map((c) => (
-              <Link
-                key={c.id}
-                to={`/campaign/${c.id}`}
-                className="group rounded-xl border bg-card p-6 space-y-3 card-hover hover:border-primary/20"
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
-                    c.status === "generated" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
-                  }`}>
-                    {c.status === "generated" ? t("dashboard.statusGenerated") : t("dashboard.statusDraft")}
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <h3 className="font-semibold">{c.name}</h3>
-                <p className="text-sm text-muted-foreground line-clamp-2">{c.target_audience}</p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{t("dashboard.leadsCount", { count: (c as any).leads?.[0]?.count ?? 0 })}</span>
-                  <span>{new Date(c.created_at).toLocaleDateString()}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
     </Layout>
   );
