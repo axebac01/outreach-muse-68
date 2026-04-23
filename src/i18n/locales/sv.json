@@ -9,7 +9,8 @@
     "add": "Lägg till",
     "copy": "Kopiera",
     "copied": "Kopierat",
-    "optional": "valfritt"
+    "optional": "valfritt",
+    "continue": "Fortsätt"
   },
   "nav": {
     "features": "Funktioner",
@@ -153,13 +154,85 @@
     "title": "Dina kampanjer",
     "subtitle": "Hantera och följ dina utskickskampanjer",
     "newBtn": "Ny kampanj",
+    "newSequence": "Ny sekvens",
     "upgradeUsed": "Du har använt din gratiskampanj. Uppgradera för att skapa obegränsade kampanjer och skala dina utskick.",
     "emptyTitle": "Inga kampanjer än",
     "emptyDesc": "Skapa din första kampanj för att börja generera personliga utskick.",
     "emptyAction": "Skapa kampanj",
+    "sequencesEmptyTitle": "Inga sekvenser än",
+    "sequencesEmptyDesc": "Bygg en mejlsekvens i flera steg och skicka från dina anslutna mejlkonton.",
     "statusGenerated": "Genererad",
     "statusDraft": "Utkast",
-    "leadsCount": "{{count}} leads"
+    "leadsCount": "{{count}} leads",
+    "tabs": {
+      "sequences": "Sekvenser",
+      "drafts": "AI-utkast"
+    }
+  },
+  "sequence": {
+    "savedAs": "Status: {{status}}",
+    "status": {
+      "draft": "Utkast",
+      "active": "Aktiv",
+      "paused": "Pausad",
+      "completed": "Slutförd"
+    },
+    "steps": {
+      "leads": "Leads",
+      "sequence": "Sekvens",
+      "schedule": "Schema",
+      "sending": "Avsändning"
+    },
+    "leads": {
+      "title": "Lägg till leads",
+      "subtitle": "Lägg till leads manuellt eller ladda upp en CSV / Excel-fil med dina prospekt.",
+      "uploadCsv": "Ladda upp fil",
+      "dropFile": "Klicka för att ladda upp CSV eller Excel",
+      "addManual": "Lägg till manuellt",
+      "addBtn": "Lägg till lead",
+      "mapColumns": "Mappa dina kolumner till lead-fält",
+      "listTitle": "Leads ({{count}})",
+      "empty": "Inga leads än. Lägg till några manuellt eller ladda upp en fil."
+    },
+    "builder": {
+      "title": "Bygg din sekvens",
+      "subtitle": "Skriv dina mejl och uppföljningar. Använd variabler för att personalisera varje meddelande per lead.",
+      "addFollowUp": "Lägg till uppföljning",
+      "needBody": "Lägg till minst ett mejl med en text innan du fortsätter."
+    },
+    "schedule": {
+      "title": "Schema",
+      "subtitle": "Välj när och hur ofta sekvensen skickar mejl.",
+      "startTitle": "Starttid",
+      "timezone": "Tidszon",
+      "startAt": "Starta",
+      "windowTitle": "Sändningsfönster",
+      "windowStart": "Från",
+      "windowEnd": "Till",
+      "replies": "Svarshantering",
+      "pauseOnReply": "Pausa när lead svarar",
+      "pauseOnReplyDesc": "Stoppa fortsatta uppföljningar för leads som svarar.",
+      "days": {
+        "mon": "Mån", "tue": "Tis", "wed": "Ons", "thu": "Tor", "fri": "Fre", "sat": "Lör", "sun": "Sön"
+      }
+    },
+    "sending": {
+      "title": "Avsändning",
+      "subtitle": "Välj vilka inkorgar som ska skicka och sätt dagliga gränser per konto.",
+      "accountsTitle": "Avsändarkonton",
+      "noAccounts": "Inga anslutna mejlkonton än.",
+      "connectAccount": "Anslut ett mejlkonto",
+      "limitTitle": "Sändningsgränser",
+      "dailyLimit": "Dagligt tak per konto",
+      "recommended": "Rekommenderat: 25 mejl per konto och dag för bästa leverans.",
+      "warning": "Att skicka över 50 mejl per dag och konto kan skada din leverans och få inkorgen flaggad.",
+      "estimate": "Med {{leads}} leads över {{accounts}} konto(n) à {{limit}}/dag tar kampanjen ~{{days}} dag(ar).",
+      "launch": "Starta sekvens",
+      "launching": "Startar...",
+      "launched": "Sekvens startad! {{count}} mejl schemalagda.",
+      "needSender": "Välj minst ett avsändarkonto.",
+      "needLeads": "Lägg till några leads först."
+    }
   },
   "createCampaign": {
     "step": "Steg 1 av 2",
