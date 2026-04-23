@@ -50,6 +50,178 @@ export type Database = {
         }
         Relationships: []
       }
+      email_accounts: {
+        Row: {
+          access_token_enc: string | null
+          auth_type: string
+          created_at: string
+          display_name: string | null
+          email: string
+          history_id: string | null
+          id: string
+          imap_host: string | null
+          imap_last_uid: number | null
+          imap_password_enc: string | null
+          imap_port: number | null
+          imap_secure: boolean | null
+          imap_username: string | null
+          last_synced_at: string | null
+          provider: string
+          refresh_token_enc: string | null
+          smtp_host: string | null
+          smtp_password_enc: string | null
+          smtp_port: number | null
+          smtp_secure: boolean | null
+          smtp_username: string | null
+          status: string
+          status_message: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token_enc?: string | null
+          auth_type: string
+          created_at?: string
+          display_name?: string | null
+          email: string
+          history_id?: string | null
+          id?: string
+          imap_host?: string | null
+          imap_last_uid?: number | null
+          imap_password_enc?: string | null
+          imap_port?: number | null
+          imap_secure?: boolean | null
+          imap_username?: string | null
+          last_synced_at?: string | null
+          provider: string
+          refresh_token_enc?: string | null
+          smtp_host?: string | null
+          smtp_password_enc?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_username?: string | null
+          status?: string
+          status_message?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token_enc?: string | null
+          auth_type?: string
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          history_id?: string | null
+          id?: string
+          imap_host?: string | null
+          imap_last_uid?: number | null
+          imap_password_enc?: string | null
+          imap_port?: number | null
+          imap_secure?: boolean | null
+          imap_username?: string | null
+          last_synced_at?: string | null
+          provider?: string
+          refresh_token_enc?: string | null
+          smtp_host?: string | null
+          smtp_password_enc?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_username?: string | null
+          status?: string
+          status_message?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_messages: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          created_at: string
+          direction: string
+          email_account_id: string
+          error_message: string | null
+          from_address: string
+          id: string
+          in_reply_to: string | null
+          lead_id: string | null
+          provider_message_id: string | null
+          received_at: string | null
+          sent_at: string | null
+          status: string
+          subject: string | null
+          thread_id: string | null
+          to_address: string
+          user_id: string
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          direction: string
+          email_account_id: string
+          error_message?: string | null
+          from_address: string
+          id?: string
+          in_reply_to?: string | null
+          lead_id?: string | null
+          provider_message_id?: string | null
+          received_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          thread_id?: string | null
+          to_address: string
+          user_id: string
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          direction?: string
+          email_account_id?: string
+          error_message?: string | null
+          from_address?: string
+          id?: string
+          in_reply_to?: string | null
+          lead_id?: string | null
+          provider_message_id?: string | null
+          received_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          thread_id?: string | null
+          to_address?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_messages_email_account_id_fkey"
+            columns: ["email_account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_messages_email_account_id_fkey"
+            columns: ["email_account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_outreach: {
         Row: {
           cold_email: string | null
@@ -191,7 +363,72 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      email_accounts_safe: {
+        Row: {
+          auth_type: string | null
+          created_at: string | null
+          display_name: string | null
+          email: string | null
+          id: string | null
+          imap_host: string | null
+          imap_port: number | null
+          imap_secure: boolean | null
+          imap_username: string | null
+          last_synced_at: string | null
+          provider: string | null
+          smtp_host: string | null
+          smtp_port: number | null
+          smtp_secure: boolean | null
+          smtp_username: string | null
+          status: string | null
+          status_message: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          auth_type?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          id?: string | null
+          imap_host?: string | null
+          imap_port?: number | null
+          imap_secure?: boolean | null
+          imap_username?: string | null
+          last_synced_at?: string | null
+          provider?: string | null
+          smtp_host?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_username?: string | null
+          status?: string | null
+          status_message?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          auth_type?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          id?: string | null
+          imap_host?: string | null
+          imap_port?: number | null
+          imap_secure?: boolean | null
+          imap_username?: string | null
+          last_synced_at?: string | null
+          provider?: string | null
+          smtp_host?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_username?: string | null
+          status?: string | null
+          status_message?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
