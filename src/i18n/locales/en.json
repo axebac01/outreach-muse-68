@@ -9,7 +9,8 @@
     "add": "Add",
     "copy": "Copy",
     "copied": "Copied",
-    "optional": "optional"
+    "optional": "optional",
+    "continue": "Continue"
   },
   "nav": {
     "features": "Features",
@@ -153,13 +154,85 @@
     "title": "Your campaigns",
     "subtitle": "Manage and track your outreach campaigns",
     "newBtn": "New campaign",
+    "newSequence": "New sequence",
     "upgradeUsed": "You've used your free campaign. Upgrade to create unlimited campaigns and scale your outreach.",
     "emptyTitle": "No campaigns yet",
     "emptyDesc": "Create your first campaign to start generating personalized outreach.",
     "emptyAction": "Create campaign",
+    "sequencesEmptyTitle": "No sequences yet",
+    "sequencesEmptyDesc": "Build a multi-step email sequence and send it from your connected inboxes.",
     "statusGenerated": "Generated",
     "statusDraft": "Draft",
-    "leadsCount": "{{count}} leads"
+    "leadsCount": "{{count}} leads",
+    "tabs": {
+      "sequences": "Sequences",
+      "drafts": "AI Drafts"
+    }
+  },
+  "sequence": {
+    "savedAs": "Status: {{status}}",
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed"
+    },
+    "steps": {
+      "leads": "Leads",
+      "sequence": "Sequence",
+      "schedule": "Schedule",
+      "sending": "Sending"
+    },
+    "leads": {
+      "title": "Add leads",
+      "subtitle": "Manually add leads or upload a CSV / Excel file with your prospects.",
+      "uploadCsv": "Upload file",
+      "dropFile": "Click to upload CSV or Excel",
+      "addManual": "Add manually",
+      "addBtn": "Add lead",
+      "mapColumns": "Map your columns to lead fields",
+      "listTitle": "Leads ({{count}})",
+      "empty": "No leads yet. Add some manually or upload a file."
+    },
+    "builder": {
+      "title": "Build your sequence",
+      "subtitle": "Write your emails and follow-ups. Use variables to personalize each message per lead.",
+      "addFollowUp": "Add follow-up",
+      "needBody": "Add at least one email with a body before continuing."
+    },
+    "schedule": {
+      "title": "Schedule",
+      "subtitle": "Choose when and how often the sequence sends emails.",
+      "startTitle": "Start time",
+      "timezone": "Timezone",
+      "startAt": "Start at",
+      "windowTitle": "Sending window",
+      "windowStart": "From",
+      "windowEnd": "To",
+      "replies": "Reply handling",
+      "pauseOnReply": "Pause when lead replies",
+      "pauseOnReplyDesc": "Stop further follow-ups for any lead who replies.",
+      "days": {
+        "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun"
+      }
+    },
+    "sending": {
+      "title": "Sending",
+      "subtitle": "Pick which inboxes to send from and set per-account daily limits.",
+      "accountsTitle": "Sender accounts",
+      "noAccounts": "No connected email accounts yet.",
+      "connectAccount": "Connect an email account",
+      "limitTitle": "Sending limits",
+      "dailyLimit": "Daily limit per account",
+      "recommended": "Recommended: 25 emails per account per day for best deliverability.",
+      "warning": "Sending more than 50 emails per day per account can hurt your deliverability and risk your inbox being flagged.",
+      "estimate": "With {{leads}} leads across {{accounts}} account(s) at {{limit}}/day, this campaign will take ~{{days}} day(s).",
+      "launch": "Launch sequence",
+      "launching": "Launching...",
+      "launched": "Sequence launched! {{count}} emails scheduled.",
+      "needSender": "Select at least one sender account.",
+      "needLeads": "Add some leads first."
+    }
   },
   "createCampaign": {
     "step": "Step 1 of 2",

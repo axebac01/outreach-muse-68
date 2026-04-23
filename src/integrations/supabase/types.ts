@@ -340,6 +340,281 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_sends: {
+        Row: {
+          created_at: string
+          email_account_id: string
+          error_message: string | null
+          id: string
+          lead_id: string
+          scheduled_for: string
+          sent_message_id: string | null
+          sequence_id: string
+          status: string
+          step_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_account_id: string
+          error_message?: string | null
+          id?: string
+          lead_id: string
+          scheduled_for: string
+          sent_message_id?: string | null
+          sequence_id: string
+          status?: string
+          step_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_account_id?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string
+          scheduled_for?: string
+          sent_message_id?: string | null
+          sequence_id?: string
+          status?: string
+          step_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_sends_email_account_id_fkey"
+            columns: ["email_account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_sends_email_account_id_fkey"
+            columns: ["email_account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_sends_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "sequence_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_sends_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_sends_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "sequence_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequence_leads: {
+        Row: {
+          company: string | null
+          created_at: string
+          current_step: number
+          email: string
+          first_name: string | null
+          full_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          role: string | null
+          sequence_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          current_step?: number
+          email: string
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          role?: string | null
+          sequence_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          current_step?: number
+          email?: string
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          role?: string | null
+          sequence_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequence_leads_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequence_senders: {
+        Row: {
+          created_at: string
+          email_account_id: string
+          id: string
+          sequence_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_account_id: string
+          id?: string
+          sequence_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_account_id?: string
+          id?: string
+          sequence_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequence_senders_email_account_id_fkey"
+            columns: ["email_account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sequence_senders_email_account_id_fkey"
+            columns: ["email_account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sequence_senders_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequence_steps: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sequence_id: string
+          step_order: number
+          subject: string | null
+          updated_at: string
+          user_id: string
+          wait_days: number
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          sequence_id: string
+          step_order: number
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+          wait_days?: number
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sequence_id?: string
+          step_order?: number
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+          wait_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequence_steps_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequences: {
+        Row: {
+          created_at: string
+          daily_limit_per_account: number
+          id: string
+          name: string
+          pause_on_reply: boolean
+          sending_days: Json
+          sending_window_end: string
+          sending_window_start: string
+          start_at: string | null
+          status: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_limit_per_account?: number
+          id?: string
+          name?: string
+          pause_on_reply?: boolean
+          sending_days?: Json
+          sending_window_end?: string
+          sending_window_start?: string
+          start_at?: string | null
+          status?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_limit_per_account?: number
+          id?: string
+          name?: string
+          pause_on_reply?: boolean
+          sending_days?: Json
+          sending_window_end?: string
+          sending_window_start?: string
+          start_at?: string | null
+          status?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       usage_tracking: {
         Row: {
           action: string

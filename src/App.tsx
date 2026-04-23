@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +15,11 @@ import Outreach from "./pages/Outreach";
 import Pricing from "./pages/Pricing";
 import Settings from "./pages/Settings";
 import EmailAccounts from "./pages/EmailAccounts";
+import SequenceBuilder from "./pages/SequenceBuilder";
+import StepLeads from "./pages/sequence/StepLeads";
+import StepSequence from "./pages/sequence/StepSequence";
+import StepSchedule from "./pages/sequence/StepSchedule";
+import StepSending from "./pages/sequence/StepSending";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +39,13 @@ const App = () => (
             <Route path="/campaign/new" element={<ProtectedRoute><CreateCampaign /></ProtectedRoute>} />
             <Route path="/campaign/:id" element={<ProtectedRoute><CampaignDetails /></ProtectedRoute>} />
             <Route path="/outreach/:id" element={<ProtectedRoute><Outreach /></ProtectedRoute>} />
+            <Route path="/sequence/:id" element={<ProtectedRoute><SequenceBuilder /></ProtectedRoute>}>
+              <Route index element={<Navigate to="leads" replace />} />
+              <Route path="leads" element={<StepLeads />} />
+              <Route path="sequence" element={<StepSequence />} />
+              <Route path="schedule" element={<StepSchedule />} />
+              <Route path="sending" element={<StepSending />} />
+            </Route>
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/settings/email-accounts" element={<ProtectedRoute><EmailAccounts /></ProtectedRoute>} />
             <Route path="/pricing" element={<Pricing />} />
