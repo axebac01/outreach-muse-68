@@ -27,7 +27,7 @@ const SequenceBuilder = () => {
   // /sequence/new → create + redirect
   useEffect(() => {
     if (id === "new") {
-      createSeq.mutateAsync().then((s) => {
+      createSeq.mutateAsync(undefined).then((s) => {
         navigate(`/sequence/${s.id}/leads`, { replace: true });
       });
     }
