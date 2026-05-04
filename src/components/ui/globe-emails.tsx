@@ -112,7 +112,7 @@ export function GlobeEmails({ className = "", speed = 0.004 }: GlobeEmailsProps)
       const width = canvas.offsetWidth;
       if (width === 0 || globe) return;
 
-      globe = createGlobe(canvas, {
+      const opts = {
         devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
         width: width * 2,
         height: width * 2,
@@ -122,9 +122,9 @@ export function GlobeEmails({ className = "", speed = 0.004 }: GlobeEmailsProps)
         diffuse: 1.2,
         mapSamples: 16000,
         mapBrightness: 4,
-        baseColor: [0.95, 0.97, 1],
-        markerColor: [0.13, 0.45, 0.95],
-        glowColor: [0.75, 0.85, 1],
+        baseColor: [0.95, 0.97, 1] as [number, number, number],
+        markerColor: [0.13, 0.45, 0.95] as [number, number, number],
+        glowColor: [0.75, 0.85, 1] as [number, number, number],
         markers: cities.map((m) => ({ location: m.location, size: 0.06 })),
         onRender: (state: Record<string, number>) => {
           if (!isPausedRef.current && isVisibleRef.current) {
@@ -135,7 +135,9 @@ export function GlobeEmails({ className = "", speed = 0.004 }: GlobeEmailsProps)
           state.width = width * 2;
           state.height = width * 2;
         },
-      });
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      globe = createGlobe(canvas, opts as any);
 
       setTimeout(() => {
         if (canvas) canvas.style.opacity = "1";
