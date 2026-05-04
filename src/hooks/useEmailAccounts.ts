@@ -15,6 +15,8 @@ export type EmailAccount = {
   smtp_port: number | null;
   imap_host: string | null;
   imap_port: number | null;
+  signature: string | null;
+  sender_name: string | null;
   created_at: string;
 };
 
@@ -26,13 +28,27 @@ export const useEmailAccounts = () => {
       const { data, error } = await supabase
         .from("email_accounts_safe")
         .select(
-          "id,email,display_name,provider,auth_type,status,status_message,last_synced_at,smtp_host,smtp_port,imap_host,imap_port,created_at",
+          "id,email,display_name,provider,auth_type,status,status_message,last_synced_at,smtp_host,smtp_port,imap_host,imap_port,signature,sender_name,created_at",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as EmailAccount[];
     },
     enabled: !!user,
+  });
+};
+
+export const useUpdateEmailAccount = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<EmailAccount, "signature" | "sender_name">> }) => {
+      const { error } = await supabase
+        .from("email_accounts")
+        .update(patch)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["email_accounts"] }),
   });
 };
 
