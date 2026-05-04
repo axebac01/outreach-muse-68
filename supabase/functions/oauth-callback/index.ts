@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       .from("email_accounts")
       .select("id, refresh_token_enc")
       .eq("user_id", verified.user_id)
-      .eq("provider", "google")
+      .eq("provider", "gmail")
       .eq("provider_account_id", userInfo.sub)
       .maybeSingle();
 
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       user_id: verified.user_id,
       email: userInfo.email,
       display_name: userInfo.name ?? null,
-      provider: "google",
+      provider: "gmail",
       provider_account_id: userInfo.sub,
       auth_type: "oauth",
       status: "active",
@@ -115,9 +115,13 @@ Deno.serve(async (req) => {
     );
   } catch (err: any) {
     console.error("oauth-callback error", err);
-    return new Response(JSON.stringify({ error: err?.message ?? "Failed" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Return 200 with error payload so the client can read it cleanly
+    return new Response(
+      JSON.stringify({ ok: false, error: err?.message ?? "Failed" }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
