@@ -5,6 +5,10 @@ import {
   decryptToken,
   getValidGoogleAccessToken,
 } from "../_shared/oauth.ts";
+import {
+  signUnsubscribeToken,
+  buildUnsubscribeUrl,
+} from "../_shared/unsubscribe.ts";
 
 function buildRfc2822(opts: {
   from: string;
@@ -13,6 +17,7 @@ function buildRfc2822(opts: {
   bodyText?: string;
   bodyHtml?: string;
   inReplyTo?: string;
+  extraHeaders?: string[];
 }): string {
   const boundary = "boundary_" + crypto.randomUUID().replace(/-/g, "");
   const headers: string[] = [
@@ -21,6 +26,7 @@ function buildRfc2822(opts: {
     `Subject: ${opts.subject}`,
     "MIME-Version: 1.0",
   ];
+  if (opts.extraHeaders) headers.push(...opts.extraHeaders);
   if (opts.inReplyTo) {
     headers.push(`In-Reply-To: ${opts.inReplyTo}`);
     headers.push(`References: ${opts.inReplyTo}`);
