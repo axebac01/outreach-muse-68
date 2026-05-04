@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock, Star, Upload, Sparkles, Send } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { GlobeEmails } from "@/components/ui/globe-emails";
 
 const Landing = () => {
   const { t } = useTranslation();
@@ -33,8 +34,7 @@ const Landing = () => {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/5 rounded-full blur-3xl animate-pulse pointer-events-none" />
-        <div className="container relative py-24 md:py-40">
+        <div className="container relative py-20 md:py-28">
           <div className="mx-auto max-w-3xl text-center space-y-8">
             <div className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm text-muted-foreground animate-fade-in">
               <Zap className="h-3.5 w-3.5" />
@@ -58,6 +58,10 @@ const Landing = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground animate-fade-in">{t("landing.noCard")}</p>
+          </div>
+
+          <div className="mx-auto mt-12 w-full max-w-lg md:max-w-xl animate-fade-in">
+            <GlobeEmails />
           </div>
         </div>
       </section>
