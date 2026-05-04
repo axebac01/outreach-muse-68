@@ -59,11 +59,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const [{ data: leads }, { data: steps }, { data: senders }] = await Promise.all([
-      admin.from("sequence_leads").select("id").eq("sequence_id", sequenceId).eq("status", "pending"),
+    const [{ data: leadsRaw }, { data: steps }, { data: senders }, { data: unsubs }] = await Promise.all([
+      admin.from("sequence_leads").select("id,email").eq("sequence_id", sequenceId).eq("status", "pending"),
       admin.from("sequence_steps").select("*").eq("sequence_id", sequenceId).order("step_order"),
       admin.from("sequence_senders").select("email_account_id").eq("sequence_id", sequenceId),
+      admin.from("unsubscribes").select("email").eq("user_id", user.id),
     ]);
+
+    const unsubSet = new Set((unsubs ?? []).map((u: any) => String(u.email).toLowerCase()));
+    const leads = (leadsRaw ?? []).filter((l: any) => !unsubSet.has(String(l.email ?? "").toLowerCase()));
 
     if (!leads || leads.length === 0) {
       return new Response(JSON.stringify({ error: "No pending leads" }), {
