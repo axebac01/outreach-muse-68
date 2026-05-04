@@ -1,26 +1,82 @@
-1. Rebuild the label positioning in `src/components/ui/globe-emails.tsx` around cobe’s native bindable markers instead of the current custom `project()` math.
-   - Add each marker’s `id` to the `createGlobe(..., { markers })` config.
-   - Remove the `projected` state, the per-frame `setProjected(...)`, and the guessed sphere radius math.
-   - Keep the globe rotation / drag behavior exactly as-is.
+# Plan: Variabler, signaturer och unsubscribe
 
-2. Attach each label card to its real marker using cobe’s CSS anchor API.
-   - Render each label as an absolutely positioned overlay element.
-   - Anchor it to `--cobe-{id}` so the browser positions the card from the actual marker location produced by cobe.
-   - Use `var(--cobe-visible-{id})` for opacity (and optionally blur/scale) so labels fade out automatically when a marker rotates behind the globe.
-   - Keep the existing card design, percentages, and progress bars.
+## 1. Databas
 
-3. Fine-tune the visual offset so the cards sit just above each marker instead of hugging the outer edges.
-   - Use anchor-based top/center alignment rather than manual `left/top` percentages.
-   - Add a small vertical gap and keep the dot/connector under the card.
-   - If needed, slightly reduce card width on smaller screens so labels don’t collide.
+**Ny migration:**
+- `email_accounts`: lägg till kolumn `signature text` (HTML/text-signatur per ansluten avsändaradress) och `sender_name text` (visningsnamn).
+- Ny tabell `unsubscribes`:
+  - `id uuid pk`, `user_id uuid not null`, `email text not null` (lowercase), `sequence_id uuid nullable`, `created_at timestamptz default now()`
+  - Unik på (`user_id`, `email`)
+  - RLS: användare ser/raderar bara egna rader. Insert tillåts även för publika via service role från edge function.
 
-4. Verify the landing hero behavior end-to-end.
-   - Auto-rotation: labels should move with the globe continuously.
-   - Drag interaction: labels should stay glued to the marker while dragging.
-   - Backside visibility: labels should fade when their marker is behind the globe.
-   - No regression to the continents / globe styling.
+## 2. Variabelsystem (`src/lib/renderTemplate.ts`)
 
-Technical details
-- The current implementation is failing because it approximates the globe as a flat 2D circle with a hardcoded `radius = 0.38`. That does not match cobe’s real render output, which also depends on its own projection, glow, margins, scaling, and marker placement logic.
-- cobe already ships the exact mechanism needed here: bindable markers with CSS anchors and visibility variables. Using that means the labels follow the same coordinates cobe is actually drawing, instead of a guessed projection.
-- Result: the labels will no longer sit near the container edges or “float” independently; they will be attached to the markers on the spinning globe itself.
+Utöka `LeadVars` → `RenderVars` med fält för avsändare och unsubscribe-länk. Nya variabler:
+
+- **Lead**: `first_name`, `last_name`, `full_name`, `company`, `role`, `email`, `phone` (befintliga)
+- **Avsändare**: `sender_name`, `sender_email`, `sender_signature`
+- **System**: `unsubscribe` (renderas som `<a href="...">Unsubscribe</a>` när länk finns, annars tom)
+
+Gruppera i `AVAILABLE_VARIABLES` som `{ group: "lead" | "sender" | "system", key, label }` så UI kan rendera grupperade badges.
+
+## 3. UI
+
+**`src/components/sequence/SequenceStepCard.tsx`:**
+- Gruppera variabel-badges i tre rader (Lead / Avsändare / System) med små rubriker.
+- Varning under body om mejlet saknar `{{unsubscribe}}` (gult Alert).
+
+**`src/components/sequence/EmailPreview.tsx`:**
+- Skicka in dummy-värden för avsändarvariabler och en `#` unsubscribe-länk för förhandsvisning.
+
+**`src/pages/EmailAccounts.tsx`:**
+- Lägg till "Redigera signatur"-knapp/dialog per mejlkonto med fälten `sender_name` och `signature` (Textarea).
+- Spara via uppdatering på `email_accounts`.
+
+## 4. Unsubscribe edge function
+
+Ny `supabase/functions/unsubscribe/index.ts` (publik, ingen JWT-check):
+- GET `?t=<token>` där token = base64url(`user_id:email`) + HMAC (signerad med `EMAIL_TOKEN_ENCRYPTION_KEY` som redan finns).
+- Verifierar HMAC, slår upp/insertar i `unsubscribes` via service role.
+- Returnerar enkel HTML-bekräftelsesida (svensk + engelsk text).
+- POST samma path → används för `List-Unsubscribe-Post` (one-click).
+
+Helper `supabase/functions/_shared/unsubscribe.ts`:
+- `signUnsubscribeToken(userId, email)` → token-sträng
+- `verifyUnsubscribeToken(token)` → `{ userId, email } | null`
+- `buildUnsubscribeUrl(userId, email)` → full URL till edge function
+
+## 5. Sändningsflödet
+
+**`supabase/functions/launch-sequence/index.ts`:**
+- Innan en lead schemaläggs: kolla `unsubscribes` för (`user_id`, `lower(email)`). Om finns → hoppa över / sätt status `unsubscribed`.
+
+**`supabase/functions/send-email/index.ts`:**
+- Samma kontroll precis innan send (säkerhetsnät).
+- Hämta `signature` + `sender_name` från `email_accounts`.
+- Bygg `RenderVars` med avsändardata + `unsubscribe`-URL via helper.
+- Rendera subject + body via samma `renderTemplate` (porta logiken till en delad helper i `_shared/renderTemplate.ts` så frontend och edge function ger identiskt resultat).
+- Lägg till headers:
+  - `List-Unsubscribe: <mailto:unsub@...>, <https://.../functions/v1/unsubscribe?t=...>`
+  - `List-Unsubscribe-Post: List-Unsubscribe=One-Click`
+- Sätt `From`-namn från `sender_name` om satt.
+- Auto-append: om body saknar `{{unsubscribe}}` och inte innehåller "unsubscribe"-länk → lägg automatiskt till en liten footer "Unsubscribe" i botten.
+
+## 6. Tekniska detaljer
+
+- HMAC: `crypto.subtle` + `EMAIL_TOKEN_ENCRYPTION_KEY` (SHA-256, hex-trunc 16 bytes).
+- Token-format: `base64url(payload).hex(hmac)` där payload = `${userId}|${email}`.
+- `supabase/config.toml`: lägg till `[functions.unsubscribe] verify_jwt = false`.
+- Delad render-logik: ny `supabase/functions/_shared/renderTemplate.ts` (Deno-kompatibel kopia av frontend-versionen, exporterar samma funktion).
+
+## 7. i18n
+
+Lägg till svenska + engelska strängar för:
+- Variabel-grupprubriker
+- Varning "Mejlet saknar avregistreringslänk"
+- Signatur-dialog i EmailAccounts
+- Unsubscribe-bekräftelsesidan (i edge function, hårdkodat båda språk)
+
+## Att inte göra nu
+- Open/click tracking (egen sprint senare)
+- Bounce-hantering (egen sprint)
+- Custom unsubscribe-landningssida i appen (edge function returnerar HTML direkt räcker)
