@@ -1,13 +1,15 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Mail, Plus, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useEmailAccounts,
   useDeleteEmailAccount,
+  type EmailAccount,
 } from "@/hooks/useEmailAccounts";
 import ConnectEmailDialog from "@/components/ConnectEmailDialog";
+import EditSignatureDialog from "@/components/EditSignatureDialog";
 import { toast } from "sonner";
 
 const EmailAccounts = () => {
@@ -15,6 +17,7 @@ const EmailAccounts = () => {
   const { data: accounts, isLoading } = useEmailAccounts();
   const del = useDeleteEmailAccount();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<EmailAccount | null>(null);
 
   const handleDelete = async (id: string) => {
     try {
@@ -103,14 +106,24 @@ const EmailAccounts = () => {
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(acc.id)}
-                    disabled={del.isPending}
-                  >
-                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditing(acc)}
+                      title="Edit signature"
+                    >
+                      <PenLine className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(acc.id)}
+                      disabled={del.isPending}
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -125,6 +138,11 @@ const EmailAccounts = () => {
       </div>
 
       <ConnectEmailDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <EditSignatureDialog
+        account={editing}
+        open={!!editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+      />
     </Layout>
   );
 };

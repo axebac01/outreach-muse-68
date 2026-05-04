@@ -5,8 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Mail } from "lucide-react";
-import { AVAILABLE_VARIABLES } from "@/lib/renderTemplate";
+import { Trash2, Mail, AlertTriangle } from "lucide-react";
+import { VARIABLE_DEFS, hasUnsubscribeToken } from "@/lib/renderTemplate";
 import type { SequenceStep } from "@/hooks/useSequence";
 
 interface Props {
@@ -113,20 +113,28 @@ export const SequenceStepCard = ({ step, index, inheritedSubject, onChange, onDe
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs">Body</Label>
-            <div className="flex flex-wrap gap-1 justify-end">
-              {AVAILABLE_VARIABLES.map((v) => (
-                <Badge
-                  key={v}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-primary/10 hover:text-primary text-xs"
-                  onClick={() => insertVariable(v)}
-                >
-                  {`{{${v}}}`}
-                </Badge>
-              ))}
-            </div>
+          <Label className="text-xs">Body</Label>
+          <div className="space-y-1.5 rounded-md border border-dashed bg-muted/20 p-2">
+            {(["lead", "sender", "system"] as const).map((group) => (
+              <div key={group} className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-14 shrink-0">
+                  {group === "lead" ? "Lead" : group === "sender" ? "Sender" : "System"}
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {VARIABLE_DEFS.filter((v) => v.group === group).map((v) => (
+                    <Badge
+                      key={v.key}
+                      variant="secondary"
+                      className="cursor-pointer hover:bg-primary/10 hover:text-primary text-xs"
+                      onClick={() => insertVariable(v.key)}
+                      title={v.label}
+                    >
+                      {`{{${v.key}}}`}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
           <Textarea
             ref={bodyRef}
@@ -138,6 +146,14 @@ export const SequenceStepCard = ({ step, index, inheritedSubject, onChange, onDe
               queueSave({ body: e.target.value });
             }}
           />
+          {body && !hasUnsubscribeToken(body) && (
+            <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-2 text-xs text-warning-foreground">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-warning" />
+              <span>
+                This email is missing <code className="font-mono">{`{{unsubscribe}}`}</code>. An unsubscribe link will be appended automatically, but adding one yourself improves deliverability.
+              </span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

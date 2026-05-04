@@ -1,1 +1,4 @@
 project_id = "xnhxokvtcuwfyxaulaxc"
+
+[functions.unsubscribe]
+verify_jwt = false
