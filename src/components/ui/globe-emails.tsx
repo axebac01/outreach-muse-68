@@ -26,9 +26,54 @@ const defaultMarkers: BarMarker[] = [
 
 interface ProjectedMarker {
   id: string;
-  x: number;
-  y: number;
+  x: number; // 0..1 across canvas
+  y: number; // 0..1 down canvas
   visible: boolean;
+}
+
+// Replicates cobe's internal lat/lon -> screen projection so labels
+// stay glued to the actual rendered markers (rather than guessing a
+// flat-circle radius, which is what made labels drift to the edges).
+function projectMarker(
+  lat: number,
+  lon: number,
+  phi: number, // cobe's `phi` (longitude spin)
+  theta: number, // cobe's `theta` (axial tilt)
+  markerElevation: number
+): ProjectedMarker {
+  // Lat/lon -> 3D unit-sphere point (matches cobe's `U`)
+  const latR = (lat * Math.PI) / 180;
+  const lonR = (lon * Math.PI) / 180 - Math.PI;
+  const o = Math.cos(latR);
+  let x = -o * Math.cos(lonR);
+  let y = Math.sin(latR);
+  let z = o * Math.sin(lonR);
+
+  // Cobe places markers at radius 0.8 + markerElevation
+  const r = 0.8 + markerElevation;
+  x *= r;
+  y *= r;
+  z *= r;
+
+  // Cobe's projection (matches its internal `O` function).
+  // i = sin(phi), a = cos(phi), o2 = sin(theta), r2 = cos(theta)
+  const sinPhi = Math.sin(phi);
+  const cosPhi = Math.cos(phi);
+  const sinTheta = Math.sin(theta);
+  const cosTheta = Math.cos(theta);
+
+  const c = cosPhi * x + sinPhi * z;
+  const s = sinPhi * sinTheta * x + cosTheta * y - cosPhi * sinTheta * z;
+  const depth = -sinPhi * cosTheta * x + sinTheta * y + cosPhi * cosTheta * z;
+
+  // Square canvas + scale=1 + offset=[0,0]: screen = (c+1)/2, (-s+1)/2
+  const sx = (c + 1) / 2;
+  const sy = (-s + 1) / 2;
+
+  // Visible when in front of the sphere (depth >= 0) and inside its disc
+  const visible = depth >= 0 && c * c + s * s < 0.64;
+
+  return { id: "", x: sx, y: sy, visible };
 }
 
 export function GlobeEmails({
@@ -90,6 +135,7 @@ export function GlobeEmails({
     let animationId = 0;
     let phi = 0;
     const baseTheta = 0.25;
+    const markerElevation = 0.05;
     let frame = 0;
 
     const init = () => {
@@ -109,43 +155,12 @@ export function GlobeEmails({
         baseColor: [0.95, 0.97, 1],
         markerColor: [0.13, 0.45, 0.95],
         glowColor: [0.75, 0.85, 1],
-        markers: markers.map((m) => ({ location: m.location, size: 0.05 })),
+        markerElevation,
+        markers: markers.map((m) => ({
+          location: m.location,
+          size: 0.05,
+        })),
       });
-
-      const project = (currentPhi: number, currentTheta: number) => {
-        // Visual sphere radius as fraction of container (cobe leaves margin/glow).
-        const radius = 0.38;
-        const cx = 0.5;
-        const cy = 0.5;
-
-        return markers.map((m) => {
-          const lat = (m.location[0] * Math.PI) / 180;
-          const lon = (m.location[1] * Math.PI) / 180;
-
-          // cobe spins so that increasing phi rotates east-to-west.
-          // Offset by -π/2 so phi=0 puts lon=0 facing the camera.
-          const adjLon = lon - currentPhi - Math.PI / 2;
-
-          // Point on unit sphere
-          const x3 = Math.cos(lat) * Math.cos(adjLon);
-          const y3 = Math.sin(lat);
-          const z3 = Math.cos(lat) * Math.sin(adjLon);
-
-          // Apply theta tilt around X axis
-          const cosT = Math.cos(currentTheta);
-          const sinT = Math.sin(currentTheta);
-          const y3t = y3 * cosT - z3 * sinT;
-          const z3t = y3 * sinT + z3 * cosT;
-
-          // Front-facing when z3t > small threshold
-          const visible = z3t > 0.05;
-
-          const x = cx + x3 * radius;
-          const y = cy - y3t * radius;
-
-          return { id: m.id, x, y, visible };
-        });
-      };
 
       const animate = () => {
         if (!isPausedRef.current) {
@@ -160,7 +175,18 @@ export function GlobeEmails({
 
         frame++;
         if (frame % 2 === 0) {
-          setProjected(project(renderPhi, renderTheta));
+          setProjected(
+            markers.map((m) => {
+              const p = projectMarker(
+                m.location[0],
+                m.location[1],
+                renderPhi,
+                renderTheta,
+                markerElevation
+              );
+              return { ...p, id: m.id };
+            })
+          );
         }
 
         animationId = requestAnimationFrame(animate);
