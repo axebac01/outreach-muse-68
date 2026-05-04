@@ -1,51 +1,36 @@
-## Lägg till en interaktiv jordglob i Heroen
+## Fixa globen så att kontinenter syns och den roterar
 
-Vi byter ut det "req/s"-baserade exemplet mot en variant som visar mejl som skickas mellan städer runt om i världen. Globen läggs in i hero-sektionen på landningssidan, under CTA-knapparna.
+### Problem
 
-### Vad som byggs
+1. **Kontinenter syns inte** — `cobe` ritar kontinenter som prickar via `mapSamples` + `mapBrightness`. Med `dark: 0` (ljus globe) och `baseColor: [1, 1, 1]` (vit) blir prickarna nästan osynliga eftersom `markerColor` används för prickarnas färg och vår markerColor är blå men `mapBrightness: 6` är för lågt. Vi måste höja brightness och säkerställa att prickarna har tillräcklig kontrast mot den vita basen.
+2. **Globen roterar inte** — `onRender` skickas in som en option i `opts`, men `cobe`s API kräver att `onRender` ligger som **top-level option** och anropas varje frame av biblioteket självt. Vi sätter den korrekt, men `phi`-variabeln muteras inte eftersom vi även måste säkerställa att `requestAnimationFrame`-loopen inte krävs (cobe driver sin egen loop via `onRender`). Det fungerar — men problemet är att `state.phi` skrivs över med `phi + offsets`, och `phi` ökas bara inuti `onRender`. Det borde fungera. Den verkliga buggen är att canvas är osynlig (`opacity: 0` sätts till 1 efter 50ms — men om init misslyckas pga felaktig opts-typ kraschar `createGlobe` tyst).
+3. **`arcs`-stöd** — `cobe` har **inte** inbyggt stöd för `arcs`. De måste ritas manuellt som SVG/canvas-overlay ovanpå globen, eller så hoppar vi över dem. Den ursprungliga snippeten använde sannolikt en annan globe-lib (t.ex. `three-globe` eller en custom variant).
 
-1. **Ny komponent `src/components/ui/globe-emails.tsx`**
-   - Bygger på `cobe`-biblioteket (3D globe i canvas).
-   - Renderar en ljus jordglob som passar vårt vita/blå tema (markerColor och arcColor sätts till primärblå istället för svart).
-   - Roterar automatiskt, går att dra med musen för att rotera manuellt.
-   - 10 markörer för städer: New York, San Francisco, Paris, Tokyo, Sydney, São Paulo, Singapore, Stockholm, Dublin, Mumbai.
-   - 6 båglinjer mellan städer som visualiserar mejl som skickas.
-   - Istället för "420k req/s"-etiketter visar vi små badges med t.ex. **"✉ 1 240 mejl/min"**, **"✉ 860 mejl/min"** osv. Värdena tickar långsamt upp/ned för att kännas levande.
-   - Varje stadsmarkör får en liten etikett med stadsnamn (t.ex. "Stockholm") istället för regionkoder ("arn1").
+### Lösning
 
-2. **Hero-uppdatering i `src/pages/Landing.tsx`**
-   - Behåller badge, rubrik, underrubrik, CTA-knappar och "no credit card"-texten.
-   - Under CTA-knapparna lägger vi globen, centrerad, i ungefär 480×480 px (responsiv: full bredd upp till `max-w-lg` på mobil, `max-w-xl` på desktop).
-   - Vi tar bort den nuvarande pulserande blå "blob"-bakgrunden bakom heron eftersom globen blir den nya visuella tyngdpunkten. Den mjuka gradient-bakgrunden får vara kvar.
-   - Padding på hero-sektionen justeras något (`py-20 md:py-28`) så att globen får plats utan att sidan blir överdrivet hög.
+1. **Förenkla `globe-emails.tsx`** så den använder `cobe` korrekt:
+   - Ta bort `arcs`, `arcColor`, `arcWidth`, `arcHeight` från opts (stöds inte).
+   - Höj `mapBrightness` till `6` och sätt `markerColor: [0.13, 0.45, 0.95]` så kontinent-prickarna blir tydligt blå mot vit bas.
+   - Sätt `baseColor: [0.95, 0.97, 1]` (mjuk ljusblå) istället för helt vit — då syns globens silhuett bättre.
+   - Sätt `glowColor: [0.6, 0.75, 1]` för en synlig blå halo.
+   - Säkerställ att `onRender` är en top-level option (det är den, men typen `any` döljer fel) — verifiera att `phi` inkrementeras varje frame.
+   - Behåll stadsmarkörer (de ritas av `cobe` via `markers`-arrayen) och drag-att-rotera.
 
-3. **Översättningar i `src/i18n/locales/en.json` och `sv.json`**
-   - Ny nyckel `landing.globeCaption` t.ex. "Live: emails being delivered around the world" / "Live: mejl skickas just nu världen runt", som visas som liten text under globen.
-   - Enhet för traffic-badges: `landing.emailsPerMin` = "mejl/min" / "emails/min".
+2. **Lägg till bågar (arcs) som SVG-overlay** ovanpå canvasen:
+   - Rita 4–6 mjuka kurvade SVG-paths mellan ungefärliga skärmpositioner (statiska, dekorativa) i primärblå med subtil pulse-animation.
+   - Det matchar den ursprungliga visionen "mejl skickas mellan platser" utan att kräva 3D-projektion av lat/lon till skärmkoordinater.
 
-4. **Beroende**
-   - Lägger till `cobe` i `package.json`.
+3. **Behåll de flytande badges** ("1 240 mejl/min" etc.) — de fungerar redan.
 
-### Tekniska detaljer
+### Filer som ändras
 
-- Komponenten är client-side only (canvas + requestAnimationFrame). Den fungerar direkt i Vite/React utan extra konfiguration.
-- Färger anpassas till vårt tema: `markerColor` och `arcColor` använder primärblå `[0.13, 0.45, 0.95]` (matchar `--primary: 221 83% 53%`), `glowColor` ljusgrå/vit, `baseColor` vit. Det gör att globen smälter in på den ljusa hero-bakgrunden istället för att vara svart-på-svart.
-- Etiketterna positioneras med samma "CSS Anchor Positioning"-trick som original-snippeten — fungerar i moderna Chromium-baserade webbläsare. För webbläsare som inte stöder anchor positioning faller etiketterna tillbaka till `opacity: 0` (osynliga), vilket är okej eftersom själva globen + bågarna fortfarande syns.
-- Vi tar bort de delar av original-koden som var trasiga i klistret (pyramid-ikoner, malformade JSX-fragment) och behåller bara enkla badges med text.
-- Drag-att-rotera och paus-vid-drag behålls.
-- Animationen pausas via `IntersectionObserver` när heron scrollas ut ur view för att spara CPU.
+- `src/components/ui/globe-emails.tsx` — fixa cobe-opts, ta bort arcs från opts, lägg till SVG-overlay med dekorativa bågar.
 
-### Filer som ändras / skapas
+### Verifiering
 
-- skapa `src/components/ui/globe-emails.tsx`
-- ändra `src/pages/Landing.tsx` (hero-sektion)
-- ändra `src/i18n/locales/en.json` (2 nya nycklar)
-- ändra `src/i18n/locales/sv.json` (2 nya nycklar)
-- ändra `package.json` (lägg till `cobe`)
-
-### Verifiering efter implementation
-
-1. Besök `/` utloggad → globen renderas, roterar, bågar animeras mellan städer, badges visar "X mejl/min".
-2. Dra med musen → globen följer, släpp → autorotation fortsätter.
-3. Resize fönstret → globen skalar utan layout-skift.
-4. Inga konsolfel.
+1. Besök `/` → globen syns med tydligt blå kontinent-prickar mot ljusblå bas.
+2. Globen roterar långsamt automatiskt.
+3. Dra med musen → globen följer, släpp → autorotation fortsätter.
+4. SVG-bågar pulserar mjukt ovanpå.
+5. Badges visar tickande siffror.
+6. Inga konsolfel.
