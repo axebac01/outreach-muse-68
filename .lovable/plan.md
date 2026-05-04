@@ -1,43 +1,30 @@
-# Åtgärda Gmail OAuth callback-fel
+# Redirecta inloggade användare bort från publika sidor
 
 ## Problem
-OAuth-flödet mot Google fungerar (token-utbyte och userinfo lyckas), men sista steget — att spara kontot i `email_accounts` — kraschar med:
-
-```
-new row for relation "email_accounts" violates check constraint "email_accounts_provider_check"
-```
-
-Frontend ser detta som "Edge function returned a non-2xx status code".
-
-## Rotorsak
-DB-constraintet på `email_accounts.provider` tillåter värdena:
-- `'gmail'`, `'outlook'`, `'smtp'`
-
-Men edge-funktionen `oauth-callback` (och `oauth-start` / `send-email`) skriver `provider = 'google'`. Mismatch → insert avvisas.
+När en inloggad användare besöker `/` (landningssidan), `/login` eller `/signup` visas dessa sidor ändå. Navbaren visar "Logga ut" eftersom sessionen finns — men man hamnar i fel kontext (publik sida med inloggad header).
 
 ## Lösning
-Standardisera på `'gmail'` (matchar befintligt constraint och är mer beskrivande för Gmail-konton specifikt; Outlook blir `'outlook'` när vi lägger till Microsoft).
+Skapa en `PublicOnlyRoute`-wrapper som speglar `ProtectedRoute`: om användaren är inloggad → redirect till `/dashboard`. Annars rendera barnen normalt.
+
+Wrappa `/`, `/login` och `/signup` med den. `/pricing` lämnas öppen (inloggade ska kunna se prisplanen).
 
 ### Ändringar
 
-1. **`supabase/functions/oauth-callback/index.ts`**
-   - Byt `provider: "google"` → `provider: "gmail"` i både upsert-payload och `.eq("provider", ...)`-lookup.
-   - Behåll `verified.provider === "google"` som inkommande request-parameter (det är vad `oauth-start` skickar och vad state-tokenen innehåller) — men mappa till `"gmail"` när vi skriver till DB.
+1. **Ny fil `src/components/PublicOnlyRoute.tsx`**
+   - Använder `useAuth()`. 
+   - Medan `loading` är true: rendera ingenting (eller en lätt spinner) så vi inte flashar fel UI.
+   - Om `user` finns: `<Navigate to="/dashboard" replace />`.
+   - Annars: rendera `children`.
 
-2. **`supabase/functions/send-email/index.ts`**
-   - Byt `account.provider === "google"` → `account.provider === "gmail"` i Gmail-grenen.
+2. **`src/App.tsx`**
+   - Wrappa `Landing`, `Login`, `Signup` i `<PublicOnlyRoute>`.
 
-3. **Robustare felhantering i `oauth-callback`**
-   - Returnera 200 med `{ ok: false, error: "..." }` istället för 400 vid DB-fel, så `OAuthCallback.tsx` kan visa ett tydligt felmeddelande istället för en generisk "non-2xx"-toast. Klienten kollar redan `data?.error`.
-
-4. **`src/pages/OAuthCallback.tsx`**
-   - Efter lyckad anslutning: redirect till `/email-accounts` (nya standalone-sidan) istället för `/settings/email-accounts`.
-
-### Inga DB-migrationer behövs
-Constraintet `('gmail','outlook','smtp')` är redan rätt — vi anpassar koden till det, inte tvärtom.
+### Inte i scope
+- `/pricing` förblir publik (inloggade ska kunna besöka den).
+- `/oauth/callback` förblir publik (krävs för OAuth-redirect).
+- Navbar-logiken ändras inte — den blir korrekt automatiskt eftersom inloggade aldrig längre är på `/`.
 
 ## Verifiering
-1. Klicka "Anslut med Google" på `/email-accounts`.
-2. Slutför Google-consent.
-3. Förvänta: callback-sidan visar "Account connected!" och redirectar till `/email-accounts`, där det nya kontot listas.
-4. Kontrollera `email_accounts`-raden: `provider = 'gmail'`, `auth_type = 'oauth'`, `status = 'active'`.
+1. Logga in, gå manuellt till `/` → redirectas direkt till `/dashboard`.
+2. Logga in, gå till `/login` eller `/signup` → redirectas till `/dashboard`.
+3. Logga ut → `/` visar landningssidan med "Logga in"/"Registrera dig" i navbaren.
