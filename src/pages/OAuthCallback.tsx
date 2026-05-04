@@ -43,7 +43,7 @@ const OAuthCallback = () => {
         }
         setStatus("ok");
         setMessage(data.email);
-        setTimeout(() => navigate("/settings/email-accounts"), 1500);
+        setTimeout(() => navigate("/email-accounts"), 1500);
       } catch (e: any) {
         setStatus("error");
         setMessage(e?.message || "Failed to connect account");
@@ -87,7 +87,7 @@ const OAuthCallback = () => {
             <p className="text-sm text-muted-foreground break-words">
               {message}
             </p>
-            <Button onClick={() => navigate("/settings/email-accounts")}>
+            <Button onClick={() => navigate("/email-accounts")}>
               {t("common.back")}
             </Button>
           </>

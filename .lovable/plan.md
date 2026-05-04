@@ -1,45 +1,43 @@
-## Mål
-Lyfta ut "Mejlkonton" till en egen toppnivå-sida i det inloggade läget, så den ligger som en egen sektion i navigeringen (inte gömd inne i Inställningar).
+# Åtgärda Gmail OAuth callback-fel
 
-## Vad som finns idag
-- Sidan `EmailAccounts.tsx` finns redan på route `/settings/email-accounts` och nås via ett kort i `Settings.tsx`.
-- I `Navbar.tsx` (inloggat läge) finns idag: Dashboard | Ny kampanj | ⚙ Settings | Språk | Logga ut.
-- Ingen synlig topp-nivå-länk till mejlkonton.
+## Problem
+OAuth-flödet mot Google fungerar (token-utbyte och userinfo lyckas), men sista steget — att spara kontot i `email_accounts` — kraschar med:
 
-## Ändringar
-
-### 1. Ny route: `/email-accounts`
-- I `src/App.tsx`: lägg till `<Route path="/email-accounts" element={<ProtectedRoute><EmailAccounts /></ProtectedRoute>} />`.
-- Behåll `/settings/email-accounts` som redirect till `/email-accounts` så gamla länkar inte går sönder.
-
-### 2. Uppdatera `EmailAccounts.tsx`
-- Ta bort "tillbaka till Settings"-länken högst upp (sidan är inte längre en undersida).
-- Justera `Link to="/settings"` → ta bort breadcrumben helt, eller byt till en enkel rubrik-only header.
-
-### 3. Navigering i `Navbar.tsx` (inloggat läge)
-Lägg till en egen länk "Mejlkonton" i app-headern, mellan "Ny kampanj" och Settings-ikonen:
 ```
-Dashboard | Ny kampanj | Mejlkonton | ⚙ | 🌐 | Logga ut
+new row for relation "email_accounts" violates check constraint "email_accounts_provider_check"
 ```
-- Använd `Mail`-ikonen + text, eller bara textlänk i samma stil som "Dashboard".
-- Markera aktiv route via `useLocation` (samma mönster som redan används med `isApp`).
-- Inkludera `/email-accounts` i `isApp`-checken så app-headern visas på sidan.
 
-### 4. Uppdatera `Settings.tsx`
-- Ta bort kortet "Mejlkonton" som länkar till `/settings/email-accounts` (det blir en egen sida nu) — eller behåll som genväg. **Förslag:** ta bort, eftersom användaren uttryckligen vill ha det som egen sektion.
+Frontend ser detta som "Edge function returned a non-2xx status code".
 
-### 5. Översättningar (`src/i18n/locales/sv.json` + `en.json`)
-- Lägg till `nav.emailAccounts` ("Mejlkonton" / "Email accounts").
+## Rotorsak
+DB-constraintet på `email_accounts.provider` tillåter värdena:
+- `'gmail'`, `'outlook'`, `'smtp'`
 
-## Filer som ändras
-- `src/App.tsx` — ny route + redirect
-- `src/components/Navbar.tsx` — ny nav-länk + utöka `isApp`
-- `src/pages/EmailAccounts.tsx` — ta bort breadcrumb
-- `src/pages/Settings.tsx` — ta bort mejlkonton-kortet
-- `src/i18n/locales/sv.json`, `en.json` — ny nav-nyckel
+Men edge-funktionen `oauth-callback` (och `oauth-start` / `send-email`) skriver `provider = 'google'`. Mismatch → insert avvisas.
 
-## Frågor innan jag bygger
-1. Vill du **behålla** genvägen i Settings också, eller ta bort den helt nu när det är en egen toppnivå-sida?
-2. Ska nav-länken visa **ikon + text** ("📧 Mejlkonton") eller bara **text** i samma stil som "Dashboard"?
+## Lösning
+Standardisera på `'gmail'` (matchar befintligt constraint och är mer beskrivande för Gmail-konton specifikt; Outlook blir `'outlook'` när vi lägger till Microsoft).
 
-Om du bara säger "kör" tar jag bort genvägen i Settings och använder text-länk (matchar Dashboard-stilen).
+### Ändringar
+
+1. **`supabase/functions/oauth-callback/index.ts`**
+   - Byt `provider: "google"` → `provider: "gmail"` i både upsert-payload och `.eq("provider", ...)`-lookup.
+   - Behåll `verified.provider === "google"` som inkommande request-parameter (det är vad `oauth-start` skickar och vad state-tokenen innehåller) — men mappa till `"gmail"` när vi skriver till DB.
+
+2. **`supabase/functions/send-email/index.ts`**
+   - Byt `account.provider === "google"` → `account.provider === "gmail"` i Gmail-grenen.
+
+3. **Robustare felhantering i `oauth-callback`**
+   - Returnera 200 med `{ ok: false, error: "..." }` istället för 400 vid DB-fel, så `OAuthCallback.tsx` kan visa ett tydligt felmeddelande istället för en generisk "non-2xx"-toast. Klienten kollar redan `data?.error`.
+
+4. **`src/pages/OAuthCallback.tsx`**
+   - Efter lyckad anslutning: redirect till `/email-accounts` (nya standalone-sidan) istället för `/settings/email-accounts`.
+
+### Inga DB-migrationer behövs
+Constraintet `('gmail','outlook','smtp')` är redan rätt — vi anpassar koden till det, inte tvärtom.
+
+## Verifiering
+1. Klicka "Anslut med Google" på `/email-accounts`.
+2. Slutför Google-consent.
+3. Förvänta: callback-sidan visar "Account connected!" och redirectar till `/email-accounts`, där det nya kontot listas.
+4. Kontrollera `email_accounts`-raden: `provider = 'gmail'`, `auth_type = 'oauth'`, `status = 'active'`.

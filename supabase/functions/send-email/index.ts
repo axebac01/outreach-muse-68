@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
     let providerMessageId: string | null = null;
 
     try {
-      if (account.auth_type === "oauth" && account.provider === "google") {
+      if (account.auth_type === "oauth" && account.provider === "gmail") {
         const r = await sendViaGmail(
           admin,
           account,
