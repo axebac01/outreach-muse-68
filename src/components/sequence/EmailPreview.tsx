@@ -1,4 +1,4 @@
-import { renderTemplate, type LeadVars } from "@/lib/renderTemplate";
+import { renderTemplate, type RenderVars, type LeadVars } from "@/lib/renderTemplate";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
 }
 
 export const EmailPreview = ({ subject, body, lead, inheritedSubject }: Props) => {
-  const sample: LeadVars = lead ?? {
+  const sample: RenderVars = {
     first_name: "Alex",
     last_name: "Smith",
     full_name: "Alex Smith",
@@ -17,6 +17,11 @@ export const EmailPreview = ({ subject, body, lead, inheritedSubject }: Props) =
     role: "Head of Sales",
     email: "alex@acme.com",
     phone: "+46 70 123 45 67",
+    ...(lead ?? {}),
+    sender_name: "Your Name",
+    sender_email: "you@yourdomain.com",
+    sender_signature: "Your Name\nYour Company",
+    unsubscribe_url: "#unsubscribe-preview",
   };
 
   const finalSubject = subject?.trim() ? subject : inheritedSubject;
