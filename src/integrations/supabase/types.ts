@@ -66,7 +66,10 @@ export type Database = {
           imap_secure: boolean | null
           imap_username: string | null
           last_synced_at: string | null
+          oauth_scopes: string | null
           provider: string
+          provider_account_id: string | null
+          provider_delta_link: string | null
           refresh_token_enc: string | null
           smtp_host: string | null
           smtp_password_enc: string | null
@@ -94,7 +97,10 @@ export type Database = {
           imap_secure?: boolean | null
           imap_username?: string | null
           last_synced_at?: string | null
+          oauth_scopes?: string | null
           provider: string
+          provider_account_id?: string | null
+          provider_delta_link?: string | null
           refresh_token_enc?: string | null
           smtp_host?: string | null
           smtp_password_enc?: string | null
@@ -122,7 +128,10 @@ export type Database = {
           imap_secure?: boolean | null
           imap_username?: string | null
           last_synced_at?: string | null
+          oauth_scopes?: string | null
           provider?: string
+          provider_account_id?: string | null
+          provider_delta_link?: string | null
           refresh_token_enc?: string | null
           smtp_host?: string | null
           smtp_password_enc?: string | null
@@ -706,7 +715,14 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      decrypt_secret: {
+        Args: { ciphertext: string; key: string }
+        Returns: string
+      }
+      encrypt_secret: {
+        Args: { key: string; plaintext: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
