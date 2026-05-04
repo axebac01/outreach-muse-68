@@ -1,9 +1,8 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Mail, Plus, Trash2, ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import {
   useEmailAccounts,
   useDeleteEmailAccount,
@@ -29,12 +28,6 @@ const EmailAccounts = () => {
   return (
     <Layout>
       <div className="container py-12 max-w-3xl">
-        <Link
-          to="/settings"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" /> {t("common.back")}
-        </Link>
         <div className="flex items-start justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">{t("emailAccounts.title")}</h1>
