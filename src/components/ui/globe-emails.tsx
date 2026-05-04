@@ -1,10 +1,10 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import createGlobe from "cobe";
 import { useTranslation } from "react-i18next";
 
 interface BarMarker {
   id: string;
-  location: [number, number];
+  location: [number, number]; // [lat, lon] in degrees
   value: number;
   label: string;
 }
@@ -24,6 +24,13 @@ const defaultMarkers: BarMarker[] = [
   { id: "sfo", location: [37.77, -122.42], value: 83, label: "San Francisco" },
 ];
 
+interface ProjectedMarker {
+  id: string;
+  x: number;
+  y: number;
+  visible: boolean;
+}
+
 export function GlobeEmails({
   markers = defaultMarkers,
   className = "",
@@ -31,11 +38,16 @@ export function GlobeEmails({
 }: GlobeEmailsProps) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const pointerInteracting = useRef<{ x: number; y: number } | null>(null);
   const dragOffset = useRef({ phi: 0, theta: 0 });
   const phiOffsetRef = useRef(0);
   const thetaOffsetRef = useRef(0);
   const isPausedRef = useRef(false);
+
+  const [projected, setProjected] = useState<ProjectedMarker[]>(
+    markers.map((m) => ({ id: m.id, x: 0.5, y: 0.5, visible: false }))
+  );
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     pointerInteracting.current = { x: e.clientX, y: e.clientY };
@@ -77,6 +89,8 @@ export function GlobeEmails({
     let globe: ReturnType<typeof createGlobe> | null = null;
     let animationId = 0;
     let phi = 0;
+    const baseTheta = 0.25;
+    let frame = 0;
 
     const init = () => {
       const width = canvas.offsetWidth;
@@ -87,7 +101,7 @@ export function GlobeEmails({
         width: width * 2,
         height: width * 2,
         phi: 0,
-        theta: 0.25,
+        theta: baseTheta,
         dark: 0,
         diffuse: 1.2,
         mapSamples: 16000,
@@ -98,19 +112,57 @@ export function GlobeEmails({
         markers: markers.map((m) => ({ location: m.location, size: 0.05 })),
       });
 
+      const project = (currentPhi: number, currentTheta: number) => {
+        // Visual sphere radius as fraction of container (cobe leaves margin/glow).
+        const radius = 0.38;
+        const cx = 0.5;
+        const cy = 0.5;
+
+        return markers.map((m) => {
+          const lat = (m.location[0] * Math.PI) / 180;
+          const lon = (m.location[1] * Math.PI) / 180;
+
+          // cobe spins so that increasing phi rotates east-to-west.
+          // Offset by -π/2 so phi=0 puts lon=0 facing the camera.
+          const adjLon = lon - currentPhi - Math.PI / 2;
+
+          // Point on unit sphere
+          const x3 = Math.cos(lat) * Math.cos(adjLon);
+          const y3 = Math.sin(lat);
+          const z3 = Math.cos(lat) * Math.sin(adjLon);
+
+          // Apply theta tilt around X axis
+          const cosT = Math.cos(currentTheta);
+          const sinT = Math.sin(currentTheta);
+          const y3t = y3 * cosT - z3 * sinT;
+          const z3t = y3 * sinT + z3 * cosT;
+
+          // Front-facing when z3t > small threshold
+          const visible = z3t > 0.05;
+
+          const x = cx + x3 * radius;
+          const y = cy - y3t * radius;
+
+          return { id: m.id, x, y, visible };
+        });
+      };
+
       const animate = () => {
-        if (!isPausedRef.current && globe) {
+        if (!isPausedRef.current) {
           phi += speed;
-          globe.update({
-            phi: phi + phiOffsetRef.current + dragOffset.current.phi,
-            theta: 0.25 + thetaOffsetRef.current + dragOffset.current.theta,
-          });
-        } else if (globe) {
-          globe.update({
-            phi: phi + phiOffsetRef.current + dragOffset.current.phi,
-            theta: 0.25 + thetaOffsetRef.current + dragOffset.current.theta,
-          });
         }
+        const renderPhi = phi + phiOffsetRef.current + dragOffset.current.phi;
+        const renderTheta =
+          baseTheta + thetaOffsetRef.current + dragOffset.current.theta;
+        if (globe) {
+          globe.update({ phi: renderPhi, theta: renderTheta });
+        }
+
+        frame++;
+        if (frame % 2 === 0) {
+          setProjected(project(renderPhi, renderTheta));
+        }
+
         animationId = requestAnimationFrame(animate);
       };
       animate();
@@ -137,20 +189,8 @@ export function GlobeEmails({
     };
   }, [markers, speed]);
 
-  // Static screen-space positions for the bar overlays (since cobe markers
-  // don't expose live screen coordinates). These float around the globe
-  // as decorative live-stat indicators.
-  const barPositions = [
-    "top-[12%] left-[6%]",
-    "top-[18%] right-[4%]",
-    "top-[48%] left-[2%]",
-    "bottom-[26%] right-[2%]",
-    "bottom-[10%] left-[14%]",
-    "bottom-[14%] right-[18%]",
-  ];
-
   return (
-    <div className={`relative w-full ${className}`}>
+    <div ref={containerRef} className={`relative w-full ${className}`}>
       <style>{`
         @keyframes bar-fill-anim {
           from { width: 0%; }
@@ -173,34 +213,49 @@ export function GlobeEmails({
         />
 
         <div className="pointer-events-none absolute inset-0">
-          {markers.map((m, i) => (
-            <div
-              key={m.id}
-              className={`absolute ${barPositions[i % barPositions.length]} animate-fade-in`}
-              style={{ animationDelay: `${i * 120}ms` }}
-            >
-              <div className="flex min-w-[110px] flex-col gap-1 rounded-md border bg-background/95 px-2.5 py-1.5 shadow-sm backdrop-blur">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {m.label}
-                  </span>
-                  <span className="text-[11px] font-semibold tabular-nums text-foreground">
-                    {m.value}%
-                  </span>
+          {markers.map((m, i) => {
+            const p = projected[i];
+            if (!p) return null;
+            return (
+              <div
+                key={m.id}
+                className="absolute"
+                style={{
+                  left: `${p.x * 100}%`,
+                  top: `${p.y * 100}%`,
+                  transform: "translate(-50%, calc(-100% - 14px))",
+                  opacity: p.visible ? 1 : 0,
+                  transition: "opacity 0.35s ease",
+                  willChange: "left, top, opacity",
+                }}
+              >
+                <div className="flex min-w-[110px] flex-col gap-1 rounded-md border bg-background/95 px-2.5 py-1.5 shadow-sm backdrop-blur">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {m.label}
+                    </span>
+                    <span className="text-[11px] font-semibold tabular-nums text-foreground">
+                      {m.value}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        width: `${m.value}%`,
+                        animation: `bar-fill-anim 1.2s ease-out forwards`,
+                        ["--bar-value" as string]: `${m.value}%`,
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{
-                      width: `${m.value}%`,
-                      animation: `bar-fill-anim 1.2s ease-out forwards`,
-                      ["--bar-value" as string]: `${m.value}%`,
-                    }}
-                  />
-                </div>
+                <div
+                  className="absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary))]"
+                  style={{ top: "calc(100% + 6px)" }}
+                />
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

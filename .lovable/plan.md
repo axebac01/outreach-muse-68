@@ -1,36 +1,33 @@
-## Fixa globen så att kontinenter syns och den roterar
+## Få stadskorten att följa globen när den snurrar
 
 ### Problem
-
-1. **Kontinenter syns inte** — `cobe` ritar kontinenter som prickar via `mapSamples` + `mapBrightness`. Med `dark: 0` (ljus globe) och `baseColor: [1, 1, 1]` (vit) blir prickarna nästan osynliga eftersom `markerColor` används för prickarnas färg och vår markerColor är blå men `mapBrightness: 6` är för lågt. Vi måste höja brightness och säkerställa att prickarna har tillräcklig kontrast mot den vita basen.
-2. **Globen roterar inte** — `onRender` skickas in som en option i `opts`, men `cobe`s API kräver att `onRender` ligger som **top-level option** och anropas varje frame av biblioteket självt. Vi sätter den korrekt, men `phi`-variabeln muteras inte eftersom vi även måste säkerställa att `requestAnimationFrame`-loopen inte krävs (cobe driver sin egen loop via `onRender`). Det fungerar — men problemet är att `state.phi` skrivs över med `phi + offsets`, och `phi` ökas bara inuti `onRender`. Det borde fungera. Den verkliga buggen är att canvas är osynlig (`opacity: 0` sätts till 1 efter 50ms — men om init misslyckas pga felaktig opts-typ kraschar `createGlobe` tyst).
-3. **`arcs`-stöd** — `cobe` har **inte** inbyggt stöd för `arcs`. De måste ritas manuellt som SVG/canvas-overlay ovanpå globen, eller så hoppar vi över dem. Den ursprungliga snippeten använde sannolikt en annan globe-lib (t.ex. `three-globe` eller en custom variant).
+Korten ("New York 87%" osv.) ligger på fasta skärmpositioner (`top-left`, `bottom-right` osv.) — de står stilla medan globen roterar. De är inte ankrade till sina städer.
 
 ### Lösning
+Projicera varje stads `[lat, lon]` → 3D-punkt på enhetssfär → 2D-skärmkoordinater varje frame, med samma `phi` (rotation) och `theta` (lutning) som vi skickar till `globe.update()`. Då följer korten städerna exakt.
 
-1. **Förenkla `globe-emails.tsx`** så den använder `cobe` korrekt:
-   - Ta bort `arcs`, `arcColor`, `arcWidth`, `arcHeight` från opts (stöds inte).
-   - Höj `mapBrightness` till `6` och sätt `markerColor: [0.13, 0.45, 0.95]` så kontinent-prickarna blir tydligt blå mot vit bas.
-   - Sätt `baseColor: [0.95, 0.97, 1]` (mjuk ljusblå) istället för helt vit — då syns globens silhuett bättre.
-   - Sätt `glowColor: [0.6, 0.75, 1]` för en synlig blå halo.
-   - Säkerställ att `onRender` är en top-level option (det är den, men typen `any` döljer fel) — verifiera att `phi` inkrementeras varje frame.
-   - Behåll stadsmarkörer (de ritas av `cobe` via `markers`-arrayen) och drag-att-rotera.
+### Tekniska detaljer
+1. **Matematik per frame** (i animations-loopen):
+   - `lat → radianer`, `lon → radianer`
+   - Justera longitud med aktuell `phi`: `adjLon = lon - phi - π/2`
+   - 3D-punkt: `x = cos(lat)·cos(adjLon)`, `y = sin(lat)`, `z = cos(lat)·sin(adjLon)`
+   - Applicera `theta`-tilt runt X-axeln på (y, z)
+   - Synlig om `z > 0.05` (på framsidan av sfären)
+   - Skärm-koord: `screenX = 0.5 + x·radius`, `screenY = 0.5 - y·radius` (radius ≈ 0.38 av container-bredden — empirisk passform till cobes synliga sfär)
 
-2. **Lägg till bågar (arcs) som SVG-overlay** ovanpå canvasen:
-   - Rita 4–6 mjuka kurvade SVG-paths mellan ungefärliga skärmpositioner (statiska, dekorativa) i primärblå med subtil pulse-animation.
-   - Det matchar den ursprungliga visionen "mejl skickas mellan platser" utan att kräva 3D-projektion av lat/lon till skärmkoordinater.
+2. **State-uppdatering**: `setProjected()` med array av `{ id, x, y, visible }` varannan frame (throttling, ~30 fps räcker för smidig anchoring utan att överbelasta React).
 
-3. **Behåll de flytande badges** ("1 240 mejl/min" etc.) — de fungerar redan.
+3. **Rendering**: Varje kort positioneras absolut med `left: x%`, `top: y%`, `transform: translate(-50%, calc(-100% - 10px))` så det sitter ovanför stadens punkt. `opacity: 0` när staden är på baksidan av globen, `opacity: 1` på framsidan, med 0.35s fade-transition.
+
+4. **Liten prick-konnektor** under varje kort som markerar exakt stadsposition på globen.
+
+5. **Behåller** drag-att-rotera, paus-vid-drag, alla nuvarande färger och stil.
 
 ### Filer som ändras
-
-- `src/components/ui/globe-emails.tsx` — fixa cobe-opts, ta bort arcs från opts, lägg till SVG-overlay med dekorativa bågar.
+- `src/components/ui/globe-emails.tsx` — lägg till projicering + state, byt fasta positioner mot dynamiska.
 
 ### Verifiering
-
-1. Besök `/` → globen syns med tydligt blå kontinent-prickar mot ljusblå bas.
-2. Globen roterar långsamt automatiskt.
-3. Dra med musen → globen följer, släpp → autorotation fortsätter.
-4. SVG-bågar pulserar mjukt ovanpå.
-5. Badges visar tickande siffror.
-6. Inga konsolfel.
+1. Globen roterar → korten glider med städerna i samma takt.
+2. När en stad försvinner runt baksidan → kortet fadear ut. När den kommer fram igen → fadear in.
+3. Drag med musen → korten följer direkt.
+4. Inga märkbara hack/lag i animationen.
