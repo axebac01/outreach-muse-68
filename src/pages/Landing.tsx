@@ -2,6 +2,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock, Star, Upload, Sparkles, Send } from "lucide-react";
+import logo from "@/assets/maillead-logo.png";
 import { useTranslation } from "react-i18next";
 import { GlobeEmails } from "@/components/ui/globe-emails";
 
@@ -175,9 +176,8 @@ const Landing = () => {
       {/* Footer */}
       <footer className="border-t py-8">
         <div className="container flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Mail className="h-4 w-4" />
-            MailLead.ai
+          <div className="flex items-center text-sm text-muted-foreground">
+            <img src={logo} alt="MailLead" className="h-7 w-auto" />
           </div>
           <p className="text-xs text-muted-foreground">{t("landing.footer")}</p>
         </div>
