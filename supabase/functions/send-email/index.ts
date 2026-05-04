@@ -68,22 +68,23 @@ function base64UrlEncode(s: string): string {
 async function sendViaGmail(
   admin: ReturnType<typeof createClient>,
   account: any,
+  fromAddr: string,
   toAddr: string,
   subject: string,
   bodyHtml: string | undefined,
   bodyText: string | undefined,
   inReplyTo: string | undefined,
+  extraHeaders: string[],
 ): Promise<{ messageId: string | null }> {
   const accessToken = await getValidGoogleAccessToken(admin, account);
   const rfc = buildRfc2822({
-    from: account.display_name
-      ? `${account.display_name} <${account.email}>`
-      : account.email,
+    from: fromAddr,
     to: toAddr,
     subject,
     bodyText: bodyText ?? undefined,
     bodyHtml: bodyHtml ?? undefined,
     inReplyTo,
+    extraHeaders,
   });
   const raw = base64UrlEncode(rfc);
   const res = await fetch(
