@@ -71,6 +71,8 @@ export type Database = {
           provider_account_id: string | null
           provider_delta_link: string | null
           refresh_token_enc: string | null
+          sender_name: string | null
+          signature: string | null
           smtp_host: string | null
           smtp_password_enc: string | null
           smtp_port: number | null
@@ -102,6 +104,8 @@ export type Database = {
           provider_account_id?: string | null
           provider_delta_link?: string | null
           refresh_token_enc?: string | null
+          sender_name?: string | null
+          signature?: string | null
           smtp_host?: string | null
           smtp_password_enc?: string | null
           smtp_port?: number | null
@@ -133,6 +137,8 @@ export type Database = {
           provider_account_id?: string | null
           provider_delta_link?: string | null
           refresh_token_enc?: string | null
+          sender_name?: string | null
+          signature?: string | null
           smtp_host?: string | null
           smtp_password_enc?: string | null
           smtp_port?: number | null
@@ -620,6 +626,33 @@ export type Database = {
           status?: string
           timezone?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      unsubscribes: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          sequence_id: string | null
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          sequence_id?: string | null
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          sequence_id?: string | null
+          source?: string | null
           user_id?: string
         }
         Relationships: []
