@@ -14,6 +14,8 @@ const Navbar = () => {
   const isApp = location.pathname.startsWith("/dashboard") ||
     location.pathname.startsWith("/campaign") ||
     location.pathname.startsWith("/outreach") ||
+    location.pathname.startsWith("/email-accounts") ||
+    location.pathname.startsWith("/sequence") ||
     location.pathname.startsWith("/settings");
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -82,6 +84,7 @@ const Navbar = () => {
         ) : (
           <div className="flex items-center gap-1">
             <Button variant="ghost" asChild><Link to="/dashboard">{t("nav.dashboard")}</Link></Button>
+            <Button variant="ghost" asChild><Link to="/email-accounts">{t("nav.emailAccounts")}</Link></Button>
             <div className="w-px h-5 bg-border mx-1" />
             <Button asChild><Link to="/campaign/new">{t("nav.newCampaign")}</Link></Button>
             <Button variant="ghost" size="icon" asChild>

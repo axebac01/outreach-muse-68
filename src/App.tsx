@@ -48,7 +48,8 @@ const App = () => (
               <Route path="sending" element={<StepSending />} />
             </Route>
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/settings/email-accounts" element={<ProtectedRoute><EmailAccounts /></ProtectedRoute>} />
+            <Route path="/email-accounts" element={<ProtectedRoute><EmailAccounts /></ProtectedRoute>} />
+            <Route path="/settings/email-accounts" element={<Navigate to="/email-accounts" replace />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
