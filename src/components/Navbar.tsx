@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Mail, Menu, X, LogOut, Settings } from "lucide-react";
+import { Menu, X, LogOut, Settings } from "lucide-react";
+import logo from "@/assets/maillead-logo.png";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -27,11 +28,8 @@ const Navbar = () => {
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg shadow-[0_1px_3px_0_hsl(var(--foreground)/0.04)]">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5 font-bold text-lg">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Mail className="h-4 w-4 text-primary-foreground" />
-          </div>
-          MailLead.ai
+        <Link to="/" className="flex items-center" aria-label="MailLead">
+          <img src={logo} alt="MailLead" className="h-9 w-auto" />
         </Link>
 
         {!isApp ? (
