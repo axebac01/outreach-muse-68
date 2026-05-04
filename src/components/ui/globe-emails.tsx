@@ -126,7 +126,7 @@ export function GlobeEmails({ className = "", speed = 0.003 }: GlobeEmailsProps)
       const width = canvas.offsetWidth;
       if (width === 0 || globe) return;
 
-      globe = createGlobe(canvas, {
+      const opts: any = {
         devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
         width: width * 2,
         height: width * 2,
@@ -140,11 +140,8 @@ export function GlobeEmails({ className = "", speed = 0.003 }: GlobeEmailsProps)
         markerColor: [0.13, 0.45, 0.95],
         glowColor: [0.85, 0.9, 1],
         markers: cities.map((m) => ({ location: m.location, size: 0.05 })),
-        // @ts-expect-error - cobe supports arcs in newer versions
         arcs: arcs.map((a) => ({ from: a.from, to: a.to })),
-        // @ts-expect-error - cobe supports arcColor
         arcColor: [0.13, 0.45, 0.95],
-        // @ts-expect-error - cobe supports arcWidth/Height
         arcWidth: 0.6,
         arcHeight: 0.3,
         opacity: 0.95,
@@ -155,7 +152,8 @@ export function GlobeEmails({ className = "", speed = 0.003 }: GlobeEmailsProps)
           state.width = width * 2;
           state.height = width * 2;
         },
-      });
+      };
+      globe = createGlobe(canvas, opts);
 
       setTimeout(() => {
         if (canvas) canvas.style.opacity = "1";
