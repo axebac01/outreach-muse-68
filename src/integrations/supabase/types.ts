@@ -693,6 +693,8 @@ export type Database = {
           imap_username: string | null
           last_synced_at: string | null
           provider: string | null
+          sender_name: string | null
+          signature: string | null
           smtp_host: string | null
           smtp_port: number | null
           smtp_secure: boolean | null
@@ -714,6 +716,8 @@ export type Database = {
           imap_username?: string | null
           last_synced_at?: string | null
           provider?: string | null
+          sender_name?: string | null
+          signature?: string | null
           smtp_host?: string | null
           smtp_port?: number | null
           smtp_secure?: boolean | null
@@ -735,6 +739,8 @@ export type Database = {
           imap_username?: string | null
           last_synced_at?: string | null
           provider?: string | null
+          sender_name?: string | null
+          signature?: string | null
           smtp_host?: string | null
           smtp_port?: number | null
           smtp_secure?: boolean | null
