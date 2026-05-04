@@ -14,7 +14,12 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface Props {
   open: boolean;
@@ -51,6 +56,25 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tested, setTested] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [smtpOpen, setSmtpOpen] = useState(false);
+
+  const handleGoogleConnect = async () => {
+    setOauthLoading(true);
+    try {
+      const redirect_uri = `${window.location.origin}/oauth/callback`;
+      const { data, error } = await supabase.functions.invoke("oauth-start", {
+        body: { provider: "google", redirect_uri },
+      });
+      if (error || data?.error || !data?.url) {
+        throw new Error(error?.message || data?.error || "Failed to start");
+      }
+      window.location.href = data.url;
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to start Google sign-in");
+      setOauthLoading(false);
+    }
+  };
 
   const [form, setForm] = useState({
     email: "",

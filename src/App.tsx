@@ -15,6 +15,7 @@ import Outreach from "./pages/Outreach";
 import Pricing from "./pages/Pricing";
 import Settings from "./pages/Settings";
 import EmailAccounts from "./pages/EmailAccounts";
+import OAuthCallback from "./pages/OAuthCallback";
 import SequenceBuilder from "./pages/SequenceBuilder";
 import StepLeads from "./pages/sequence/StepLeads";
 import StepSequence from "./pages/sequence/StepSequence";
@@ -48,6 +49,7 @@ const App = () => (
             </Route>
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/settings/email-accounts" element={<ProtectedRoute><EmailAccounts /></ProtectedRoute>} />
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
