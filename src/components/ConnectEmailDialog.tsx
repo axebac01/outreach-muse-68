@@ -362,6 +362,8 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               {t("emailAccounts.testFirst")}
             </p>
           )}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </DialogContent>
     </Dialog>
