@@ -170,6 +170,46 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Block sending to unsubscribed recipients
+    const toLower = String(to).toLowerCase();
+    const { data: unsub } = await admin
+      .from("unsubscribes")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("email", toLower)
+      .maybeSingle();
+    if (unsub) {
+      return new Response(
+        JSON.stringify({ error: "Recipient is unsubscribed", skipped: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Build From with per-account sender_name override
+    const fromName = account.sender_name || account.display_name;
+    const fromAddr = fromName ? `${fromName} <${account.email}>` : account.email;
+
+    // Unsubscribe token + headers
+    const unsubToken = await signUnsubscribeToken(userId, toLower);
+    const unsubUrl = buildUnsubscribeUrl(unsubToken);
+    const extraHeaders = [
+      `List-Unsubscribe: <${unsubUrl}>`,
+      `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
+    ];
+
+    // Auto-append unsubscribe footer if missing in body
+    const ensureUnsub = (html: string | undefined, text: string | undefined) => {
+      const hasInHtml = html && /unsubscribe/i.test(html);
+      const hasInText = text && /unsubscribe/i.test(text);
+      const footerHtml = `<p style="margin-top:24px;font-size:12px;color:#888">If you no longer wish to receive these emails, <a href="${unsubUrl}">unsubscribe here</a>.</p>`;
+      const footerText = `\n\nUnsubscribe: ${unsubUrl}`;
+      return {
+        html: html ? (hasInHtml ? html : html + footerHtml) : undefined,
+        text: text ? (hasInText ? text : text + footerText) : (html ? undefined : footerText.trim()),
+      };
+    };
+    const finalBody = ensureUnsub(body_html, body_text);
+
     let status = "sent";
     let errorMessage: string | null = null;
     let providerMessageId: string | null = null;
@@ -179,11 +219,13 @@ Deno.serve(async (req) => {
         const r = await sendViaGmail(
           admin,
           account,
+          fromAddr,
           to,
           subject,
-          body_html,
-          body_text,
+          finalBody.html,
+          finalBody.text,
           in_reply_to,
+          extraHeaders,
         );
         providerMessageId = r.messageId;
       } else if (account.auth_type === "smtp") {
@@ -198,14 +240,16 @@ Deno.serve(async (req) => {
         });
         try {
           const result = await client.send({
-            from: account.display_name
-              ? `${account.display_name} <${account.email}>`
-              : account.email,
+            from: fromAddr,
             to,
             subject,
-            content: body_text || "",
-            html: body_html || undefined,
+            content: finalBody.text || "",
+            html: finalBody.html || undefined,
             inReplyTo: in_reply_to || undefined,
+            headers: {
+              "List-Unsubscribe": `<${unsubUrl}>`,
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
           });
           providerMessageId = (result as any)?.messageId ?? null;
         } finally {
