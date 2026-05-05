@@ -194,7 +194,9 @@ Deno.serve(async (req) => {
     // Unsubscribe token + headers
     const unsubToken = await signUnsubscribeToken(userId, toLower);
     const unsubUrl = buildUnsubscribeUrl(unsubToken);
+    const localMessageId = `<${crypto.randomUUID()}@maillead.local>`;
     const extraHeaders = [
+      `Message-ID: ${localMessageId}`,
       `List-Unsubscribe: <${unsubUrl}>`,
       `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
     ];
