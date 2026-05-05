@@ -488,6 +488,7 @@ const FinalStep = ({
   name,
   domain,
   scrapeState,
+  scrapeReason,
   companyData,
   fallbackDesc,
   onFallbackChange,
@@ -497,6 +498,7 @@ const FinalStep = ({
   name: string;
   domain: string | null;
   scrapeState: "idle" | "loading" | "done" | "failed";
+  scrapeReason: string | null;
   companyData: CompanyData | null;
   fallbackDesc: string;
   onFallbackChange: (v: string) => void;
@@ -508,14 +510,16 @@ const FinalStep = ({
   }
 
   if (scrapeState === "failed") {
+    const subtitle =
+      scrapeReason === "no_credits"
+        ? "Automatisk analys är tillfälligt otillgänglig. Skriv kort vad företaget gör så fortsätter vi."
+        : "Vi kunde inte läsa in din hemsida automatiskt just nu. Skriv kort vad företaget gör så fortsätter vi.";
     return (
       <div className="space-y-6 text-left">
         <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-center">
           Perfekt {name}, en sista grej.
         </h1>
-        <p className="text-muted-foreground text-center">
-          Vi kunde inte hämta info från sidan – beskriv kort vad ditt företag gör så fixar vi resten.
-        </p>
+        <p className="text-muted-foreground text-center">{subtitle}</p>
         <Textarea
           autoFocus
           value={fallbackDesc}
