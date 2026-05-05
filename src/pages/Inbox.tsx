@@ -380,6 +380,49 @@ const Inbox = () => {
   );
 };
 
+const sentimentDotClass = (s: string | null | undefined) => {
+  switch (s) {
+    case "positive": return "bg-green-500";
+    case "negative": return "bg-destructive";
+    case "neutral": return "bg-yellow-500";
+    case "auto_reply": return "bg-blue-400";
+    case "unsubscribe_request": return "bg-orange-500";
+    default: return "bg-muted-foreground/30";
+  }
+};
+
+const SENTIMENT_LABEL: Record<string, string> = {
+  positive: "Positivt",
+  negative: "Negativt",
+  neutral: "Neutralt",
+  auto_reply: "Auto-svar",
+  unsubscribe_request: "Avregistrering",
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  interested: "Intresserad",
+  not_interested: "Ej intresserad",
+  question: "Fråga",
+  meeting_request: "Mötesförfrågan",
+  objection: "Invändning",
+  out_of_office: "Frånvaro",
+  wrong_person: "Fel person",
+  other: "Övrigt",
+};
+
+const categoryLabel = (c: string | null | undefined) => (c ? CATEGORY_LABEL[c] ?? c : "");
+
+const SentimentBadge = ({ sentiment }: { sentiment: string | null | undefined }) => {
+  if (!sentiment) return null;
+  const label = SENTIMENT_LABEL[sentiment] ?? sentiment;
+  return (
+    <Badge variant="outline" className="text-[10px] gap-1.5">
+      <span className={`h-1.5 w-1.5 rounded-full ${sentimentDotClass(sentiment)}`} />
+      {label}
+    </Badge>
+  );
+};
+
 const ThreadRow = ({ thread, accounts, active, onClick }: {
   thread: InboxThread;
   accounts: { id: string; email: string }[];
@@ -397,7 +440,13 @@ const ThreadRow = ({ thread, accounts, active, onClick }: {
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <div className={`text-sm truncate ${unread ? "font-semibold" : ""}`}>{otherParticipant}</div>
+            <div className="flex items-center gap-1.5">
+              {thread.last_sentiment && (
+                <span className={`h-2 w-2 rounded-full shrink-0 ${sentimentDotClass(thread.last_sentiment)}`}
+                  title={SENTIMENT_LABEL[thread.last_sentiment] ?? thread.last_sentiment} />
+              )}
+              <div className={`text-sm truncate ${unread ? "font-semibold" : ""}`}>{otherParticipant}</div>
+            </div>
             <div className={`text-sm truncate ${unread ? "font-medium" : "text-muted-foreground"}`}>
               {thread.subject || "(utan ämne)"}
             </div>
@@ -410,6 +459,9 @@ const ThreadRow = ({ thread, accounts, active, onClick }: {
               {formatDistanceToNow(new Date(thread.last_message_at), { addSuffix: false, locale: sv })}
             </span>
             {unread && <Badge className="h-4 min-w-4 px-1 text-[10px]">{thread.unread_count}</Badge>}
+            {thread.last_category && (
+              <span className="text-[9px] text-muted-foreground truncate max-w-[80px]">{categoryLabel(thread.last_category)}</span>
+            )}
           </div>
         </div>
       </button>
