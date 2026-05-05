@@ -453,6 +453,7 @@ const Onboarding = () => {
               name={answers.name}
               domain={getDomain(answers.company_url ?? "")}
               scrapeState={scrapeState}
+              scrapeReason={scrapeReason}
               companyData={companyData}
               fallbackDesc={fallbackDesc}
               onFallbackChange={setFallbackDesc}
