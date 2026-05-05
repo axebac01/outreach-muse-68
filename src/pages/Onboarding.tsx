@@ -128,6 +128,7 @@ const Onboarding = () => {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [scrapeState, setScrapeState] = useState<"idle" | "loading" | "done" | "failed">("idle");
+  const [scrapeReason, setScrapeReason] = useState<string | null>(null);
   const [fallbackDesc, setFallbackDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -179,27 +180,40 @@ const Onboarding = () => {
     if (scrapedFor.current === url) return;
     scrapedFor.current = url;
     setScrapeState("loading");
+    setScrapeReason(null);
+
+    const failWith = (reason: string) => {
+      setScrapeReason(reason);
+      setScrapeState("failed");
+    };
 
     const timeout = new Promise<{ timeout: true }>((resolve) =>
       setTimeout(() => resolve({ timeout: true }), SCRAPE_TIMEOUT_MS),
     );
     const call = supabase.functions
       .invoke("analyze-company", { body: { url } })
-      .then((r) => ({ ...r, timeout: false as const }));
+      .then((r) => ({ ...r, timeout: false as const }))
+      .catch((err) => ({ error: err, data: null, timeout: false as const }));
 
-    Promise.race([call, timeout]).then((res: any) => {
-      if (res.timeout) {
-        setScrapeState("failed");
-        return;
-      }
-      const { data, error } = res;
-      if (error || !data?.ok) {
-        setScrapeState("failed");
-        return;
-      }
-      setCompanyData(data);
-      setScrapeState("done");
-    });
+    Promise.race([call, timeout])
+      .then((res: any) => {
+        if (res.timeout) {
+          failWith("timeout");
+          return;
+        }
+        const { data, error } = res;
+        if (error) {
+          failWith("invoke_error");
+          return;
+        }
+        if (!data || data.ok === false || data.fallback === true) {
+          failWith(data?.reason ?? "scrape_failed");
+          return;
+        }
+        setCompanyData(data);
+        setScrapeState("done");
+      })
+      .catch(() => failWith("unknown"));
   };
 
   const validateStep = (): boolean => {
@@ -439,6 +453,7 @@ const Onboarding = () => {
               name={answers.name}
               domain={getDomain(answers.company_url ?? "")}
               scrapeState={scrapeState}
+              scrapeReason={scrapeReason}
               companyData={companyData}
               fallbackDesc={fallbackDesc}
               onFallbackChange={setFallbackDesc}
@@ -473,6 +488,7 @@ const FinalStep = ({
   name,
   domain,
   scrapeState,
+  scrapeReason,
   companyData,
   fallbackDesc,
   onFallbackChange,
@@ -482,6 +498,7 @@ const FinalStep = ({
   name: string;
   domain: string | null;
   scrapeState: "idle" | "loading" | "done" | "failed";
+  scrapeReason: string | null;
   companyData: CompanyData | null;
   fallbackDesc: string;
   onFallbackChange: (v: string) => void;
@@ -493,14 +510,16 @@ const FinalStep = ({
   }
 
   if (scrapeState === "failed") {
+    const subtitle =
+      scrapeReason === "no_credits"
+        ? "Automatisk analys är tillfälligt otillgänglig. Skriv kort vad företaget gör så fortsätter vi."
+        : "Vi kunde inte läsa in din hemsida automatiskt just nu. Skriv kort vad företaget gör så fortsätter vi.";
     return (
       <div className="space-y-6 text-left">
         <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-center">
           Perfekt {name}, en sista grej.
         </h1>
-        <p className="text-muted-foreground text-center">
-          Vi kunde inte hämta info från sidan – beskriv kort vad ditt företag gör så fixar vi resten.
-        </p>
+        <p className="text-muted-foreground text-center">{subtitle}</p>
         <Textarea
           autoFocus
           value={fallbackDesc}
