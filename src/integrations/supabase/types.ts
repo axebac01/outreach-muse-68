@@ -443,6 +443,93 @@ export type Database = {
           },
         ]
       }
+      inbound_companies: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          domain: string
+          first_seen_at: string
+          id: string
+          industry: string | null
+          is_known_lead: boolean
+          last_seen_at: string
+          logo_url: string | null
+          matched_lead_id: string | null
+          name: string | null
+          size: string | null
+          updated_at: string
+          user_id: string
+          visit_count: number
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          domain: string
+          first_seen_at?: string
+          id?: string
+          industry?: string | null
+          is_known_lead?: boolean
+          last_seen_at?: string
+          logo_url?: string | null
+          matched_lead_id?: string | null
+          name?: string | null
+          size?: string | null
+          updated_at?: string
+          user_id: string
+          visit_count?: number
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          domain?: string
+          first_seen_at?: string
+          id?: string
+          industry?: string | null
+          is_known_lead?: boolean
+          last_seen_at?: string
+          logo_url?: string | null
+          matched_lead_id?: string | null
+          name?: string | null
+          size?: string | null
+          updated_at?: string
+          user_id?: string
+          visit_count?: number
+        }
+        Relationships: []
+      }
+      inbound_notifications: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          lead_id: string | null
+          message: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          lead_id?: string | null
+          message: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          lead_id?: string | null
+          message?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       integration_api_keys: {
         Row: {
           created_at: string
@@ -926,6 +1013,42 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_sites: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          is_active: boolean
+          name: string | null
+          require_consent: boolean
+          site_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          require_consent?: boolean
+          site_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          require_consent?: boolean
+          site_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       unsubscribes: {
         Row: {
           created_at: string
@@ -971,6 +1094,105 @@ export type Database = {
           created_at?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      visitors: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          email: string | null
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          lead_id: string | null
+          site_id: string
+          updated_at: string
+          user_id: string
+          visit_count: number
+          visitor_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          lead_id?: string | null
+          site_id: string
+          updated_at?: string
+          user_id: string
+          visit_count?: number
+          visitor_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          lead_id?: string | null
+          site_id?: string
+          updated_at?: string
+          user_id?: string
+          visit_count?: number
+          visitor_id?: string
+        }
+        Relationships: []
+      }
+      visits: {
+        Row: {
+          city: string | null
+          company_id: string | null
+          country: string | null
+          created_at: string
+          id: string
+          path: string | null
+          referrer: string | null
+          site_id: string
+          url: string
+          user_agent: string | null
+          user_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          visitor_id: string
+        }
+        Insert: {
+          city?: string | null
+          company_id?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          path?: string | null
+          referrer?: string | null
+          site_id: string
+          url: string
+          user_agent?: string | null
+          user_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          visitor_id: string
+        }
+        Update: {
+          city?: string | null
+          company_id?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          path?: string | null
+          referrer?: string | null
+          site_id?: string
+          url?: string
+          user_agent?: string | null
+          user_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          visitor_id?: string
         }
         Relationships: []
       }
