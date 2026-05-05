@@ -66,6 +66,9 @@ const StepSequence = () => {
           <Button variant="outline" onClick={() => navigate(`/sequence/${id}/leads`)}>
             <ArrowLeft className="h-4 w-4" /> {t("common.back")}
           </Button>
+          <Button variant="outline" onClick={() => setAiOpen(true)} className="gap-2">
+            <Sparkles className="h-4 w-4 text-primary" /> Generera med AI
+          </Button>
           <Button onClick={handleContinue}>
             {t("common.continue")} <ArrowRight className="h-4 w-4" />
           </Button>
