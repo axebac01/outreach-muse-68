@@ -23,6 +23,8 @@ import StepSequence from "./pages/sequence/StepSequence";
 import StepSchedule from "./pages/sequence/StepSchedule";
 import StepSending from "./pages/sequence/StepSending";
 import Analytics from "./pages/Analytics";
+import Onboarding from "./pages/Onboarding";
+import OnboardingGate from "@/components/OnboardingGate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

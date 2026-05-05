@@ -187,7 +187,7 @@ const Onboarding = () => {
     if (scrapeState === "failed" && fallbackDesc.trim()) {
       payload.company_description = fallbackDesc.trim();
     }
-    const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update(payload as any).eq("id", user.id);
     setSubmitting(false);
     if (error) {
       toast.error("Kunde inte spara. Försök igen.");
