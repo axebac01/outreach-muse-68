@@ -265,6 +265,11 @@
       "replies": "Reply handling",
       "pauseOnReply": "Pause when lead replies",
       "pauseOnReplyDesc": "Stop further follow-ups for any lead who replies.",
+      "pickDate": "Pick a date",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "nextMonday": "Next Monday",
+      "clear": "Clear",
       "days": {
         "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun"
       }
