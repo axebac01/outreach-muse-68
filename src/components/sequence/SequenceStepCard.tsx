@@ -28,6 +28,38 @@ export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChan
   const [waitDays, setWaitDays] = useState(step.wait_days ?? (index === 0 ? 0 : 3));
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [improveOpen, setImproveOpen] = useState(false);
+  const [improveText, setImproveText] = useState("");
+  const [improving, setImproving] = useState(false);
+
+  const handleImprove = async () => {
+    if (!improveText.trim()) return;
+    setImproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("improve-step", {
+        body: { subject, body, instruction: improveText.trim(), is_last: !!isLast },
+      });
+      if (error || !data?.ok) {
+        const status = (error as any)?.context?.status;
+        if (status === 402) toast.error("Slut på AI-credits.");
+        else if (status === 429) toast.error("AI är upptagen, försök igen.");
+        else toast.error("Kunde inte förbättra steget.");
+        setImproving(false);
+        return;
+      }
+      setSubject(data.subject ?? subject);
+      setBody(data.body ?? body);
+      onChange({ subject: data.subject ?? subject, body: data.body ?? body });
+      toast.success("Steget uppdaterat");
+      setImproveOpen(false);
+      setImproveText("");
+    } catch (e) {
+      console.error(e);
+      toast.error("Något gick fel.");
+    } finally {
+      setImproving(false);
+    }
+  };
 
   useEffect(() => {
     setSubject(step.subject ?? "");
