@@ -52,7 +52,7 @@ export interface InboxMessage {
   ai_analysis_error: string | null;
 }
 
-export const useInboxThreads = (filters: { accountId?: string; sequenceId?: string; onlyUnread?: boolean } = {}) => {
+export const useInboxThreads = (filters: { accountId?: string; sequenceId?: string; onlyUnread?: boolean; sentiment?: string } = {}) => {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["inbox_threads", user?.id, filters],
@@ -67,6 +67,7 @@ export const useInboxThreads = (filters: { accountId?: string; sequenceId?: stri
       if (filters.accountId) q = q.eq("email_account_id", filters.accountId);
       if (filters.sequenceId) q = q.eq("sequence_id", filters.sequenceId);
       if (filters.onlyUnread) q = q.gt("unread_count", 0);
+      if (filters.sentiment) q = q.eq("last_sentiment", filters.sentiment);
       const { data, error } = await q;
       if (error) throw error;
       return data as InboxThread[];
