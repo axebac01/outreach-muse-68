@@ -22,6 +22,7 @@ import StepLeads from "./pages/sequence/StepLeads";
 import StepSequence from "./pages/sequence/StepSequence";
 import StepSchedule from "./pages/sequence/StepSchedule";
 import StepSending from "./pages/sequence/StepSending";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
             </Route>
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/email-accounts" element={<ProtectedRoute><EmailAccounts /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/settings/email-accounts" element={<Navigate to="/email-accounts" replace />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/pricing" element={<Pricing />} />
