@@ -1,32 +1,70 @@
-# Användarvänlig datum-/tidsväljare i Schema-steget
+# Ny navigation + Analys-dashboard
 
-Ersätt den nuvarande `<input type="datetime-local">` på `Kampanj → Schema → Starta` (`src/pages/sequence/StepSchedule.tsx`) med en kombinerad **kalender-popover + tidsväljare**, så användaren kan klicka sig fram visuellt i stället för att skriva `åååå-mm-dd --:--`.
+## 1. Navigation (`src/components/Navbar.tsx`)
+Ersätt nuvarande inloggat-läge-länkar:
 
-## UI
+- **Kampanjer** → `/dashboard` (befintlig sida; "Ny kampanj"-knappen finns redan inne på den sidan)
+- **Mejlkonton** → `/email-accounts`
+- **Analys** → `/analytics` (ny)
 
-I "Starta"-kortet, ersätt det enda fältet med två sida-vid-sida-kontroller (samma rad, `grid sm:grid-cols-[1fr_140px] gap-2`):
+Ta bort `Ny kampanj`-knappen ur navbaren. Behåll Settings-ikon, språkväljare och Logga ut. Lägg `analytics` i `isApp`-prefix-listan.
 
-1. **Datumknapp** — `Button variant="outline"` med `CalendarIcon` + lokaliserat datum (`format(date, "PPP", { locale: sv|enUS })`) eller placeholder "Välj datum". Öppnar `Popover` som innehåller shadcn `Calendar` (`mode="single"`, `disabled={d => d < today}`, `initialFocus`, `className="p-3 pointer-events-auto"`, `locale={sv|enUS}`, `weekStartsOn={1}`).
-2. **Tidsfält** — `Input type="time"` (steg 5 min) med samma höjd som knappen. Defaultar till `09:00` om inget satt.
+## 2. i18n
+Lägg till i `nav`-blocket i `sv.json` och `en.json`:
+- `campaigns`: "Kampanjer" / "Campaigns"
+- `analytics`: "Analys" / "Analytics"
 
-Snabbgenvägar under fälten: tre små chip-knappar — "Idag", "Imorgon", "Nästa måndag" — som sätter datumet i ett klick. En liten "Rensa"-länk till höger om värdet är satt.
+Lägg till nytt `analytics`-block med strängar för titlar, statkort och tomstate (se nedan).
 
-Resultatet sparas via samma `update.mutate({ start_at })` (ISO-sträng) — tid + datum kombineras lokalt och konverteras till ISO. Tom = `null`.
+## 3. Ny sida: `/analytics` (`src/pages/Analytics.tsx`)
+Registrera i `src/App.tsx` som skyddad route (`<ProtectedRoute>`).
 
-## i18n
+### Datakälla
+Aggregera klientside från befintliga tabeller via Supabase-klienten — ingen ny tabell behövs.
 
-Lägg till nycklar i `sv.json` och `en.json` under `sequence.schedule`:
-- `pickDate` ("Välj datum" / "Pick a date")
-- `time` ("Tid" / "Time")
-- `today`, `tomorrow`, `nextMonday`, `clear`
+- `scheduled_sends` (filtrerat på `user_id` via RLS): grupperat på `status` ger `pending`, `sent`, `failed`, `skipped` osv.
+- `sequence_leads`: grupperat på `status` ger leads-state (`active`, `replied`, `bounced`, `unsubscribed`, `done`).
+- `sequences`: räkna `active` vs övriga.
+- `unsubscribes`: total per användare.
 
-## Tekniskt
+Allt hämtas i en `useAnalytics()`-hook (`src/hooks/useAnalytics.ts`) som kör 4 parallella selects och returnerar sammanslagna siffror. Använd `select('status', { count: 'exact', head: true })` per status för exakta tal när data växer; för MVP räcker att hämta `select('status, sequence_id, created_at')` och aggregera i JS.
 
-- Använd befintliga `@/components/ui/calendar`, `@/components/ui/popover`, `date-fns` (redan i projektet) och `date-fns/locale` för sv/enUS-formatering.
-- Locale väljs via `i18n.language.startsWith("sv")`.
-- Inga nya beroenden, inga schema-/DB-ändringar.
+### Layout
+Container med titel "Analys" + underrubrik "Sammanfattning från alla kampanjer".
+
+**Tidsperiod-filter** (chip-knappar): 24h / 7d / 30d / Allt — default 7d. Filtrerar på `created_at`.
+
+**KPI-rad (4 kort)**, semantiska tokens (`bg-card`, `text-primary`, `text-success`, `text-destructive`, `text-muted-foreground`):
+1. **Skickade** — `count(scheduled_sends where status='sent')` med liten delta vs föregående period.
+2. **Svar** — `count(sequence_leads where status='replied')` + svarsfrekvens (svar / skickade).
+3. **Studsade / misslyckade** — `count(scheduled_sends where status in ('failed','bounced'))`.
+4. **Avregistreringar** — `count(unsubscribes)`.
+
+**Andra raden (3 kort):**
+- Aktiva sekvenser (`sequences where status='active'`) / totalt
+- Schemalagda kommande sändningar (`scheduled_sends where status='pending' and scheduled_for >= now()`)
+- Totalt antal leads i sekvenser
+
+**Diagram (recharts, redan installerat):**
+- *Aktivitet över tid* — `<AreaChart>` med två serier (Skickade, Svar) per dag inom vald period. Pivotera `scheduled_sends.created_at`/`status='sent'` och `sequence_leads.created_at`/`status='replied'` per dag i JS.
+- *Topp 5 kampanjer* — `<BarChart>` horisontell, sorterat på antal skickade. Joina via `sequence_id` → `sequences.name`.
+
+**Tabell – Senaste aktivitet** (sista 10 raderna): tid, kampanj, lead-mejl, status-badge (färgkodad: skickat=success, svar=primary, fel=destructive). Hämtas via `scheduled_sends` med `select('*, sequence:sequences(name), lead:sequence_leads(email)')` ordered by `created_at desc limit 10`.
+
+### Tomstate
+Om inga `scheduled_sends` finns: visa centrerat `<EmptyState>` "Ingen data ännu — starta en kampanj för att se siffror här" med CTA till `/dashboard`.
+
+### Stil
+Återanvänd befintlig "card-hover" / `rounded-xl border bg-card p-6` mönstret från Dashboard. Inga nya färger — endast semantiska tokens. Skelett-loading med pulserande `bg-muted`-block i 200ms-skugga, samma stil som Dashboard.
 
 ## Filer som ändras
-- `src/pages/sequence/StepSchedule.tsx`
-- `src/i18n/locales/sv.json`
-- `src/i18n/locales/en.json`
+- `src/components/Navbar.tsx` — länkar
+- `src/App.tsx` — ny route
+- `src/i18n/locales/sv.json`, `src/i18n/locales/en.json` — nav + analytics-strängar
+- `src/hooks/useAnalytics.ts` — ny hook
+- `src/pages/Analytics.tsx` — ny sida
+
+## Inte med nu
+- Per-kampanj djupanalys (finns redan på kampanjsidan)
+- Open/click-tracking (finns inte i datamodellen ännu)
+- Export till CSV

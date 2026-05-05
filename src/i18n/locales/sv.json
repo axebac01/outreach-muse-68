@@ -51,7 +51,9 @@
   "nav": {
     "features": "Funktioner",
     "pricing": "Priser",
-    "dashboard": "Översikt",
+    "dashboard": "Kampanjer",
+    "campaigns": "Kampanjer",
+    "analytics": "Analys",
     "newCampaign": "Ny kampanj",
     "emailAccounts": "Mejlkonton",
     "login": "Logga in",
