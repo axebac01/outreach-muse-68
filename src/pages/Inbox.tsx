@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Inbox as InboxIcon, RefreshCw, Send, Loader2, Mail, MailOpen, ArrowDown, ArrowUp, Search } from "lucide-react";
+import { Inbox as InboxIcon, RefreshCw, Send, Loader2, Mail, MailOpen, ArrowDown, ArrowUp, Search, Sparkles, Ban, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -28,11 +28,14 @@ const Inbox = () => {
 
   const [accountId, setAccountId] = useState<string>("all");
   const [onlyUnread, setOnlyUnread] = useState(false);
+  const [sentimentFilter, setSentimentFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
+  const [replyTouched, setReplyTouched] = useState(false);
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["email_accounts_simple", user?.id],
@@ -50,6 +53,7 @@ const Inbox = () => {
   const { data: threads = [], isLoading } = useInboxThreads({
     accountId: accountId === "all" ? undefined : accountId,
     onlyUnread,
+    sentiment: sentimentFilter === "all" ? undefined : sentimentFilter,
   });
 
   const filteredThreads = useMemo(() => {
