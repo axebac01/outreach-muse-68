@@ -82,6 +82,7 @@ const StepSequence = () => {
               key={s.id}
               step={s}
               index={i}
+              isLast={i === steps.length - 1}
               inheritedSubject={i > 0 ? steps[i - 1]?.subject ?? null : null}
               onChange={(patch) => upsertStep.mutate({ ...s, ...patch, step_order: s.step_order })}
               onDelete={steps.length > 1 ? () => deleteStep.mutate(s.id) : undefined}

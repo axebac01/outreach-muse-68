@@ -5,25 +5,61 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Mail, AlertTriangle } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Trash2, Mail, AlertTriangle, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { VARIABLE_DEFS, hasUnsubscribeToken } from "@/lib/renderTemplate";
 import type { SequenceStep } from "@/hooks/useSequence";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   step: Partial<SequenceStep> & { step_order: number };
   index: number;
+  isLast?: boolean;
   inheritedSubject?: string | null;
   onChange: (patch: Partial<SequenceStep>) => void;
   onDelete?: () => void;
   onFocus?: () => void;
 }
 
-export const SequenceStepCard = ({ step, index, inheritedSubject, onChange, onDelete, onFocus }: Props) => {
+export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChange, onDelete, onFocus }: Props) => {
   const [subject, setSubject] = useState(step.subject ?? "");
   const [body, setBody] = useState(step.body ?? "");
   const [waitDays, setWaitDays] = useState(step.wait_days ?? (index === 0 ? 0 : 3));
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [improveOpen, setImproveOpen] = useState(false);
+  const [improveText, setImproveText] = useState("");
+  const [improving, setImproving] = useState(false);
+
+  const handleImprove = async () => {
+    if (!improveText.trim()) return;
+    setImproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("improve-step", {
+        body: { subject, body, instruction: improveText.trim(), is_last: !!isLast },
+      });
+      if (error || !data?.ok) {
+        const status = (error as any)?.context?.status;
+        if (status === 402) toast.error("Slut på AI-credits.");
+        else if (status === 429) toast.error("AI är upptagen, försök igen.");
+        else toast.error("Kunde inte förbättra steget.");
+        setImproving(false);
+        return;
+      }
+      setSubject(data.subject ?? subject);
+      setBody(data.body ?? body);
+      onChange({ subject: data.subject ?? subject, body: data.body ?? body });
+      toast.success("Steget uppdaterat");
+      setImproveOpen(false);
+      setImproveText("");
+    } catch (e) {
+      console.error(e);
+      toast.error("Något gick fel.");
+    } finally {
+      setImproving(false);
+    }
+  };
 
   useEffect(() => {
     setSubject(step.subject ?? "");
@@ -60,23 +96,56 @@ export const SequenceStepCard = ({ step, index, inheritedSubject, onChange, onDe
   return (
     <Card onFocus={onFocus}>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <Mail className="h-4 w-4" />
             </div>
-            <div>
-              <div className="font-medium">Email {index + 1}</div>
-              {index > 0 && (
-                <div className="text-xs text-muted-foreground">Sent after previous step</div>
-              )}
+            <div className="min-w-0">
+              <div className="font-medium flex items-center gap-2">
+                Email {index + 1}
+                {isLast && (
+                  hasUnsubscribeToken(body)
+                    ? <Badge variant="secondary" className="gap-1 text-[10px]"><CheckCircle2 className="h-3 w-3 text-success" /> Unsubscribe</Badge>
+                    : <Badge variant="destructive" className="gap-1 text-[10px]"><AlertTriangle className="h-3 w-3" /> Saknar unsubscribe</Badge>
+                )}
+              </div>
+              {index > 0 && <div className="text-xs text-muted-foreground">Skickas efter föregående steg</div>}
             </div>
           </div>
-          {onDelete && (
-            <Button variant="ghost" size="icon" onClick={onDelete}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            <Popover open={improveOpen} onOpenChange={setImproveOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-8">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" /> Förbättra
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-2">
+                  <Label className="text-xs">Hur ska AI:n förbättra steget?</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {["Gör kortare", "Mer direkt", "Lägg till proof", "Mer personlig"].map(s => (
+                      <button key={s} type="button" onClick={() => setImproveText(s)}
+                        className="text-[11px] px-2 py-0.5 rounded-full border hover:border-primary hover:bg-primary/5">
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <Textarea value={improveText} onChange={(e) => setImproveText(e.target.value)}
+                    placeholder="t.ex. gör tonen mer avslappnad" className="min-h-[60px] text-sm" />
+                  <Button size="sm" onClick={handleImprove} disabled={!improveText.trim() || improving} className="w-full gap-1.5">
+                    {improving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    Förbättra
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            {onDelete && (
+              <Button variant="ghost" size="icon" onClick={onDelete}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

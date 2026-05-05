@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,12 +17,21 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+const TEMPLATES: { id: string; label: string; goal: string }[] = [
+  { id: "meeting", label: "Boka möte", goal: "Boka korta intro-möten med beslutsfattare för att presentera vår lösning." },
+  { id: "partnership", label: "Erbjud partnerskap", goal: "Erbjuda partnerskap/samarbete till relevanta bolag i samma ekosystem." },
+  { id: "reengage", label: "Re-engage gamla leads", goal: "Återaktivera leads som tidigare visat intresse men aldrig konverterade." },
+  { id: "event", label: "Event-inbjudan", goal: "Bjuda in målgruppen till ett event/webinar vi arrangerar." },
+  { id: "demo", label: "Boka demo", goal: "Få bokade produktdemos med rätt persona." },
+];
+
 export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, onOpenChange }: Props) => {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [goal, setGoal] = useState("");
-  const [stepCount, setStepCount] = useState("4");
-  const [tone, setTone] = useState("");
+  const [goal, setGoal] = useState(() => localStorage.getItem("ai_seq_goal") ?? "");
+  const [stepCount, setStepCount] = useState(() => localStorage.getItem("ai_seq_steps") ?? "4");
+  const [tone, setTone] = useState(() => localStorage.getItem("ai_seq_tone") ?? "professionell men personlig");
+  const [length, setLength] = useState(() => localStorage.getItem("ai_seq_length") ?? "medel");
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
@@ -35,30 +43,28 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
       const ok = window.confirm("Detta ersätter dina befintliga steg. Fortsätta?");
       if (!ok) return;
     }
+    localStorage.setItem("ai_seq_goal", goal);
+    localStorage.setItem("ai_seq_steps", stepCount);
+    localStorage.setItem("ai_seq_tone", tone);
+    localStorage.setItem("ai_seq_length", length);
+
     setLoading(true);
     try {
+      const fullTone = `${tone}, längd: ${length}`;
       const { data, error } = await supabase.functions.invoke("generate-sequence", {
         body: {
           sequence_id: sequenceId,
           goal: goal.trim(),
           step_count: Number(stepCount),
-          tone: tone.trim(),
+          tone: fullTone,
         },
       });
 
       if (error) {
-        const ctx: any = (error as any).context;
-        const status = ctx?.status;
+        const status = (error as any).context?.status;
         if (status === 402) toast.error("Slut på AI-credits — fyll på i Inställningar.");
         else if (status === 429) toast.error("AI är upptagen, försök igen om en stund.");
-        else if (status === 400 && ctx?.body) {
-          try {
-            const b = JSON.parse(await ctx.body.text?.());
-            toast.error(b?.message || "Något saknas — slutför onboardingen.");
-          } catch {
-            toast.error("Något gick fel.");
-          }
-        } else toast.error("Kunde inte generera kampanj.");
+        else toast.error("Kunde inte generera kampanj.");
         setLoading(false);
         return;
       }
@@ -69,10 +75,7 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
         return;
       }
 
-      // Wipe existing steps
       await supabase.from("sequence_steps").delete().eq("sequence_id", sequenceId);
-
-      // Insert generated
       const rows = data.steps.map((s: any) => ({
         sequence_id: sequenceId,
         user_id: user!.id,
@@ -92,7 +95,6 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
       qc.invalidateQueries({ queryKey: ["sequence_steps", sequenceId] });
       setLoading(false);
       onOpenChange(false);
-      setGoal("");
     } catch (e) {
       console.error(e);
       toast.error("Något gick fel.");
@@ -109,7 +111,7 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
             Generera kampanj med AI
           </DialogTitle>
           <DialogDescription>
-            AI:n använder din företagsbeskrivning, dina leads och målet du anger för att bygga hela sekvensen.
+            Vi använder din företagsbeskrivning, dina leads och målet du anger för att bygga hela sekvensen.
           </DialogDescription>
         </DialogHeader>
 
@@ -119,13 +121,9 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
               <span className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
               <span className="absolute inset-0 animate-spin" style={{ animationDuration: "4s" }}>
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <span
-                    key={i}
+                  <span key={i}
                     className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary"
-                    style={{
-                      transform: `rotate(${i * 45}deg) translateY(-28px)`,
-                      opacity: 0.3 + (i / 8) * 0.7,
-                    }}
+                    style={{ transform: `rotate(${i * 45}deg) translateY(-28px)`, opacity: 0.3 + (i / 8) * 0.7 }}
                   />
                 ))}
               </span>
@@ -134,6 +132,21 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Snabbval</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => setGoal(tpl.goal)}
+                    className="text-xs px-2.5 py-1 rounded-full border hover:border-primary hover:bg-primary/5 transition-colors"
+                  >
+                    {tpl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>Vad vill du åstadkomma?</Label>
               <Textarea
@@ -144,35 +157,45 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
                 className="min-h-[100px]"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label>Antal steg</Label>
+                <Label>Steg</Label>
                 <Select value={stepCount} onValueChange={setStepCount}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="3">3 steg</SelectItem>
-                    <SelectItem value="4">4 steg</SelectItem>
-                    <SelectItem value="5">5 steg</SelectItem>
-                    <SelectItem value="6">6 steg</SelectItem>
+                    {["3","4","5","6"].map(n => <SelectItem key={n} value={n}>{n} steg</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Tonalitet (valfritt)</Label>
-                <Input
-                  value={tone}
-                  onChange={(e) => setTone(e.target.value)}
-                  placeholder="t.ex. avslappnad"
-                />
+                <Label>Längd</Label>
+                <Select value={length} onValueChange={setLength}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kort">Kort</SelectItem>
+                    <SelectItem value="medel">Medel</SelectItem>
+                    <SelectItem value="lång">Lång</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ton</Label>
+                <Select value={tone} onValueChange={setTone}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="avslappnad">Avslappnad</SelectItem>
+                    <SelectItem value="professionell men personlig">Professionell</SelectItem>
+                    <SelectItem value="direkt och rakt på sak">Direkt</SelectItem>
+                    <SelectItem value="formell">Formell</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Avbryt
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Avbryt</Button>
           <Button onClick={handleGenerate} disabled={loading || !goal.trim()} className="gap-2">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             Generera
