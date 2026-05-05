@@ -15,13 +15,14 @@ import { toast } from "sonner";
 interface Props {
   step: Partial<SequenceStep> & { step_order: number };
   index: number;
+  isLast?: boolean;
   inheritedSubject?: string | null;
   onChange: (patch: Partial<SequenceStep>) => void;
   onDelete?: () => void;
   onFocus?: () => void;
 }
 
-export const SequenceStepCard = ({ step, index, inheritedSubject, onChange, onDelete, onFocus }: Props) => {
+export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChange, onDelete, onFocus }: Props) => {
   const [subject, setSubject] = useState(step.subject ?? "");
   const [body, setBody] = useState(step.body ?? "");
   const [waitDays, setWaitDays] = useState(step.wait_days ?? (index === 0 ? 0 : 3));
