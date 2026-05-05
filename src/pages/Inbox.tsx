@@ -110,8 +110,8 @@ const Inbox = () => {
       toast.error("Hittar ingen mottagare för svaret");
       return;
     }
-    const subject = (selected.subject ?? "").startsWith("Re:")
-      ? selected.subject
+    const subject = /^re:/i.test(selected.subject ?? "")
+      ? (selected.subject ?? "")
       : `Re: ${selected.subject ?? ""}`.trim();
     setSending(true);
     try {
@@ -157,7 +157,7 @@ const Inbox = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_360px_1fr] gap-4 h-[calc(100vh-220px)] min-h-[500px]">
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] xl:grid-cols-[280px_360px_1fr] gap-4 h-[calc(100vh-220px)] min-h-[500px]">
           {/* Filters */}
           <div className="space-y-4 rounded-lg border p-3 bg-card overflow-y-auto">
             <div className="space-y-2">
@@ -212,7 +212,7 @@ const Inbox = () => {
           </div>
 
           {/* Conversation */}
-          <div className="rounded-lg border bg-card overflow-hidden flex flex-col xl:col-auto lg:hidden xl:flex">
+          <div className="rounded-lg border bg-card overflow-hidden hidden lg:flex flex-col lg:col-span-2 xl:col-span-1">
             {!selected ? (
               <div className="flex-1 grid place-items-center text-sm text-muted-foreground p-6 text-center">
                 Välj en konversation för att läsa och svara.

@@ -140,16 +140,19 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
   let leadId: string | null = null;
   let sequenceId: string | null = null;
   const fromEmail = extractEmail(p.from);
-  if (p.in_reply_to) {
+  let priorThreadKey: string | null = null;
+  const refIds = [p.in_reply_to, ...p.references].filter(Boolean) as string[];
+  if (refIds.length > 0) {
     const { data: prior } = await admin
       .from("email_messages")
       .select("lead_id, sequence_id, thread_key")
       .eq("user_id", account.user_id)
-      .eq("message_id_header", p.in_reply_to)
+      .in("message_id_header", refIds)
       .maybeSingle();
     if (prior) {
       leadId = prior.lead_id ?? null;
       sequenceId = prior.sequence_id ?? null;
+      priorThreadKey = prior.thread_key ?? null;
     }
   }
   if (!leadId) {
@@ -162,7 +165,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     if (lead) leadId = lead.id;
   }
 
-  const threadKey = p.thread_id || p.references[0] || p.in_reply_to || `subj:${normalizeSubject(p.subject)}:${fromEmail}`;
+  const threadKey = priorThreadKey || p.thread_id || p.references[0] || p.in_reply_to || `subj:${normalizeSubject(p.subject)}:${fromEmail}`;
 
   const receivedAt = (() => {
     const d = new Date(p.date);
@@ -238,13 +241,14 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
   }
 
   // Pause sequence on reply if configured
-  if (sequenceId && leadId) {
+  if (sequenceId) {
     const { data: seq } = await admin.from("sequences")
       .select("pause_on_reply").eq("id", sequenceId).maybeSingle();
     if (seq?.pause_on_reply) {
       await admin.from("sequence_leads")
         .update({ status: "replied" })
-        .eq("sequence_id", sequenceId).eq("id", leadId);
+        .eq("sequence_id", sequenceId)
+        .ilike("email", fromEmail);
     }
   }
 }
@@ -274,7 +278,7 @@ Deno.serve(async (req) => {
     const errors: { account: string; error: string }[] = [];
     for (const acc of accounts ?? []) {
       try {
-        if (acc.auth_type === "oauth" && acc.provider === "google") {
+        if (acc.auth_type === "oauth" && (acc.provider === "gmail" || acc.provider === "google")) {
           totalNew += await syncGmail(admin, acc);
         } else {
           // IMAP path not yet implemented in this iteration
