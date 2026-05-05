@@ -141,6 +141,8 @@ Deno.serve(async (req) => {
       body_html,
       body_text,
       lead_id,
+      sequence_id,
+      thread_key: clientThreadKey,
       in_reply_to,
     } = await req.json();
 
