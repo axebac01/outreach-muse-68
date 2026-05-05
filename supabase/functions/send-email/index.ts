@@ -120,19 +120,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const isInternal = authHeader === `Bearer ${SERVICE_KEY}`;
+
+    const payload = await req.json();
+    let userId: string;
+    if (isInternal) {
+      if (!payload?.internal_user_id) {
+        return new Response(JSON.stringify({ error: "internal_user_id required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = payload.internal_user_id;
+    } else {
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: userData, error: userErr } = await userClient.auth.getUser();
+      if (userErr || !userData.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = userData.user.id;
     }
-    const userId = userData.user.id;
 
     const {
       email_account_id,
@@ -144,7 +157,7 @@ Deno.serve(async (req) => {
       sequence_id,
       thread_key: clientThreadKey,
       in_reply_to,
-    } = await req.json();
+    } = payload;
 
     if (!email_account_id || !to || !subject) {
       return new Response(JSON.stringify({ error: "Missing fields" }), {
