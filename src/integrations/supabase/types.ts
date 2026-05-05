@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      bounces: {
+        Row: {
+          bounced_at: string
+          email: string
+          hard: boolean
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          bounced_at?: string
+          email: string
+          hard?: boolean
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          bounced_at?: string
+          email?: string
+          hard?: boolean
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           created_at: string
@@ -47,6 +74,39 @@ export type Database = {
           target_audience?: string | null
           tone?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      email_account_sending_limits: {
+        Row: {
+          created_at: string
+          daily_cap_override: number | null
+          email_account_id: string
+          id: string
+          updated_at: string
+          user_id: string
+          warmup_enabled: boolean
+          warmup_started_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_cap_override?: number | null
+          email_account_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          warmup_enabled?: boolean
+          warmup_started_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_cap_override?: number | null
+          email_account_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          warmup_enabled?: boolean
+          warmup_started_at?: string
         }
         Relationships: []
       }

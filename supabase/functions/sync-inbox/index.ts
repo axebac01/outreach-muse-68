@@ -135,11 +135,57 @@ async function syncGmail(admin: any, account: any) {
   return inserted;
 }
 
+function detectBounce(p: ParsedMessage, fromEmail: string): { isBounce: boolean; bouncedEmail: string | null; reason: string | null } {
+  const subject = (p.subject || "").toLowerCase();
+  const isFromMailer = /mailer-daemon|postmaster|mail-daemon/i.test(fromEmail);
+  const subjectMatches = /^(undeliverable|undelivered|delivery (status notification|failure|incomplete)|mail delivery (failed|failure|notification)|returned mail|failure notice)/i.test(subject);
+  if (!isFromMailer && !subjectMatches) return { isBounce: false, bouncedEmail: null, reason: null };
+  const body = `${p.body_text || ""}\n${p.body_html || ""}`;
+  const m = body.match(/(?:Final-Recipient|Original-Recipient|To|recipient)[^\n<]*[<:\s]\s*([A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,})/i)
+    || body.match(/<([A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,})>/i);
+  const bouncedEmail = m ? m[1].toLowerCase() : null;
+  const reasonMatch = body.match(/(?:Diagnostic-Code|Status|reason)[^\n]{0,200}/i);
+  return { isBounce: true, bouncedEmail, reason: reasonMatch ? reasonMatch[0].slice(0, 500) : subject };
+}
+
+async function cancelScheduledForLead(admin: any, sequenceId: string | null, leadId: string | null, userId: string, email?: string) {
+  if (leadId && sequenceId) {
+    await admin.from("scheduled_sends")
+      .update({ status: "cancelled" })
+      .eq("sequence_id", sequenceId).eq("lead_id", leadId).eq("status", "scheduled");
+  } else if (email) {
+    const { data: sLeads } = await admin.from("sequence_leads")
+      .select("id, sequence_id").eq("user_id", userId).ilike("email", email);
+    for (const sl of sLeads || []) {
+      await admin.from("scheduled_sends")
+        .update({ status: "cancelled" })
+        .eq("sequence_id", sl.sequence_id).eq("lead_id", sl.id).eq("status", "scheduled");
+    }
+  }
+}
+
 async function persistInbound(admin: any, account: any, p: ParsedMessage, providerMessageId: string) {
   // Try to match a previous outbound to attach lead_id/sequence_id
   let leadId: string | null = null;
   let sequenceId: string | null = null;
   const fromEmail = extractEmail(p.from);
+
+  // Bounce detection — handle and short-circuit
+  const bounce = detectBounce(p, fromEmail);
+  if (bounce.isBounce && bounce.bouncedEmail) {
+    await admin.from("bounces").insert({
+      user_id: account.user_id,
+      email: bounce.bouncedEmail,
+      reason: bounce.reason,
+      hard: true,
+    });
+    await admin.from("sequence_leads")
+      .update({ status: "bounced" })
+      .eq("user_id", account.user_id)
+      .ilike("email", bounce.bouncedEmail);
+    await cancelScheduledForLead(admin, null, null, account.user_id, bounce.bouncedEmail);
+    // still record the bounce email in messages for visibility
+  }
   let priorThreadKey: string | null = null;
   const refIds = [p.in_reply_to, ...p.references].filter(Boolean) as string[];
   if (refIds.length > 0) {
@@ -253,7 +299,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     });
   }
 
-  // Pause sequence on reply if configured
+  // Pause sequence on reply if configured + cancel scheduled
   if (sequenceId) {
     const { data: seq } = await admin.from("sequences")
       .select("pause_on_reply").eq("id", sequenceId).maybeSingle();
@@ -262,6 +308,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
         .update({ status: "replied" })
         .eq("sequence_id", sequenceId)
         .ilike("email", fromEmail);
+      await cancelScheduledForLead(admin, sequenceId, leadId, account.user_id, fromEmail);
     }
   }
 }

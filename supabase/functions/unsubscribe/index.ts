@@ -63,11 +63,22 @@ Deno.serve(async (req) => {
   );
 
   // Mark any active sequence_leads for this user/email as unsubscribed
-  await admin
+  const { data: sLeads } = await admin
     .from("sequence_leads")
     .update({ status: "unsubscribed" })
     .eq("user_id", verified.userId)
-    .eq("email", verified.email.toLowerCase());
+    .eq("email", verified.email.toLowerCase())
+    .select("id, sequence_id");
+
+  // Cancel pending scheduled sends for these leads
+  for (const sl of sLeads || []) {
+    await admin
+      .from("scheduled_sends")
+      .update({ status: "cancelled" })
+      .eq("sequence_id", sl.sequence_id)
+      .eq("lead_id", sl.id)
+      .eq("status", "scheduled");
+  }
 
   if (req.method === "POST") {
     return new Response(JSON.stringify({ ok: true }), {
