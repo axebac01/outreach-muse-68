@@ -383,6 +383,89 @@ export type Database = {
           },
         ]
       }
+      integration_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      lead_import_log: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          inserted_count: number
+          payload_count: number
+          skipped_count: number
+          source: string | null
+          target_id: string | null
+          target_type: string | null
+          user_id: string
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          inserted_count?: number
+          payload_count?: number
+          skipped_count?: number
+          source?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          user_id: string
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          inserted_count?: number
+          payload_count?: number
+          skipped_count?: number
+          source?: string | null
+          target_id?: string | null
+          target_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_import_log_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "integration_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           campaign_id: string

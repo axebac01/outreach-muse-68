@@ -1,89 +1,128 @@
-# AI-kategorisering & förslag på svar i Unibox
+# Integration: Importera leads från Company Intel Hub
 
-Lägger till automatisk sentiment-analys, kategorisering och AI-genererat svarsförslag för varje inkommande mejl. Allt körs på backend via Lovable AI (gemini-3-flash-preview), cachas i databasen och visas direkt när användaren öppnar tråden.
+Vi bygger en enkel **API-key-baserad** integration. Den här appen (outreach) exponerar en publik edge function som tar emot leads. Den andra appen (Company Intel Hub) skickar leads dit via en knapp "Skicka till Outreach".
 
-## Datamodell
+Två separata jobb: först bygger vi mottagarsidan här. Sen får du en färdig prompt att klistra in i det andra projektet.
 
-Migration på `email_messages` (lägg till nullable kolumner — endast inbound fylls i):
-- `sentiment` text — `positive` | `negative` | `neutral` | `auto_reply` | `unsubscribe_request`
-- `category` text — t.ex. `interested`, `not_interested`, `question`, `meeting_request`, `objection`, `out_of_office`, `wrong_person`, `other`
-- `language` text — ISO-kod (`sv`, `en`, …) detekterad från mejlets text
-- `suggested_reply` text — AI-genererat svarsförslag (bara för positiva svar som behöver respons)
-- `ai_analyzed_at` timestamptz — när analysen kördes
-- `ai_analysis_error` text — fellogg om något brast
+---
 
-Speglas i `email_threads` så listvyn kan visa badge utan extra join:
-- `last_sentiment` text
-- `last_category` text
+## Del 1 – Vad vi bygger i DENNA app
 
-## Edge function: `analyze-inbound-email`
+### 1. Databas
+Ny tabell `integration_api_keys`:
+- `id`, `user_id` (FK auth.users), `name` (t.ex. "Company Intel Hub"), `key_hash` (sha256 av nyckeln, vi visar råa nyckeln endast vid skapande), `key_prefix` (första 8 tecknen för identifiering i UI), `last_used_at`, `created_at`, `revoked_at`.
+- RLS: bara ägaren får se/radera sina egna nycklar.
 
-Trigger: anropas från `sync-inbox` direkt efter `persistInbound` returnerar id på den nya raden. Körs alltså 1 gång per nytt inkommande mejl. Idempotent — hoppar över om `ai_analyzed_at` redan satt.
+Ny tabell `lead_import_log` (valfritt men nyttigt för felsökning):
+- `id`, `user_id`, `api_key_id`, `source` (text, t.ex. "company-intel-hub"), `payload_count`, `inserted_count`, `skipped_count`, `target_type` ('sequence' | 'campaign' | 'inbox-only'), `target_id`, `created_at`.
 
-Input: `{ message_id: uuid }`. Funktionen:
-1. Hämtar mejlet + senaste 5 utgående mejl i samma `thread_key` (för kontext, så svaret matchar tonen i tidigare kommunikation).
-2. Hämtar leadens namn + företag samt avsändarens `sender_name`/signatur från `email_accounts`.
-3. Hämtar avsändar-företagets info från `profiles` (namn, värdeerbjudande, ton) — så förslaget låter som användaren.
-4. Anropar Lovable AI med **tool-calling** för strukturerad output:
-
-```ts
-tools: [{
-  type: "function",
-  function: {
-    name: "analyze_email",
-    parameters: {
-      type: "object",
-      properties: {
-        sentiment: { type: "string", enum: ["positive","negative","neutral","auto_reply","unsubscribe_request"] },
-        category: { type: "string", enum: ["interested","not_interested","question","meeting_request","objection","out_of_office","wrong_person","other"] },
-        language: { type: "string", description: "ISO 639-1 (sv, en, no, da, fi, de, ...)" },
-        needs_reply: { type: "boolean" },
-        suggested_reply: { type: "string", description: "Only when needs_reply=true. Same language as the email. Match user's tone. No greeting line repetition." }
-      },
-      required: ["sentiment","category","language","needs_reply"]
-    }
+### 2. Edge function `import-leads` (publik, ingen JWT)
+- Endpoint: `POST https://<project>.supabase.co/functions/v1/import-leads`
+- Headers: `Authorization: Bearer <api_key>`, `Content-Type: application/json`
+- Body:
+  ```json
+  {
+    "source": "company-intel-hub",
+    "target": { "type": "sequence" | "campaign" | "none", "id": "<uuid eller null>" },
+    "leads": [
+      {
+        "email": "info@acme.com",
+        "full_name": "Anna Andersson",
+        "first_name": "Anna",
+        "last_name": "Andersson",
+        "company": "Acme AB",
+        "role": "Marketing Director",
+        "phone": "+46...",
+        "website": "https://acme.com",
+        "linkedin_url": "https://linkedin.com/in/...",
+        "notes": "Hittad via Industrikampanj v2"
+      }
+    ]
   }
-}],
-tool_choice: { type: "function", function: { name: "analyze_analyze" } }
-```
+  ```
+- Logik:
+  1. Hasha inkommande nyckel (sha256), slå upp `integration_api_keys` där `key_hash = X` och `revoked_at IS NULL`.
+  2. Validera body med Zod (`leads` max 1000 per request, e-post regex).
+  3. Om `target.type === "sequence"`: insert i `sequence_leads` (de-dup på `(sequence_id, email)`).
+  4. Om `target.type === "campaign"`: insert i `leads` med `campaign_id`.
+  5. Om `target.type === "none"`: insert som "unassigned" leads — vi lägger dem i en standard-sekvens som heter "Inbox – Imported" (skapas automatiskt om saknas) så de syns i Unibox.
+  6. Returnera `{ ok, inserted, skipped, target }`.
+  7. Logga till `lead_import_log` och uppdatera `last_used_at`.
 
-5. Sparar resultatet i `email_messages` + uppdaterar `email_threads.last_sentiment`/`last_category`.
-6. Felhantering: 429/402 returneras med tydlig text, sätter `ai_analysis_error`. `sync-inbox` loggar men avbryter inte — kategorisering kan köras i efterhand.
+### 3. UI i denna app
+- **Settings → Integrations**: lista nycklar, knapp "Skapa API-nyckel" (modal visar nyckeln **en gång** + kopieringsknapp), revoke-knapp.
+- I modalen: visa endpoint-URL + minimalt curl-exempel + en knapp "Kopiera prompt för Company Intel Hub" som kopierar prompten i Del 2 (med URL och nyckel inflickade).
+- **Importer-väljare** (valfri förbättring): instruktion "Tipsa avsändaren att sätta `target.type` + ID från denna sequence/campaign". På sequence- och campaign-detaljsidan: en liten "Import-mottagare"-info-ruta som visar URL + sequence/campaign ID.
 
-System-prompt fokuserar på cold outreach-svar:
-- Avgör sentiment baserat på avsikt (positivt = öppen för dialog/möte, negativt = inte intresserad/avregistrera, neutralt = frågor utan tydlig riktning, auto_reply = OOO/auto-svar).
-- Förslag ska vara kort (under 80 ord), vänligt, och svara på en konkret fråga om sådan finns. Skriver alltid på `language`. Avslutar utan signatur (UI lägger till).
+### 4. Säkerhet
+- Nycklarna lagras endast hashat (SHA-256). Vi kan inte visa dem igen efter skapande.
+- Edge function har `verify_jwt = false` (API-nyckel-auth i kod istället).
+- Rate limit: enkel in-memory-räknare per nyckel (60 requests/min) som varning.
+- RLS säkerställer att en nyckel bara kan skriva data för sin ägare.
 
-## Manuell omkörning
+---
 
-Knapp "Analysera" i konversationsvyn anropar samma function för det aktuella mejlet (för befintliga mejl före den här featuren, eller för att be om nytt förslag).
+## Del 2 – Prompt att klistra in i Company Intel Hub
 
-## UI-ändringar i `Inbox.tsx`
+När Del 1 är klar får du en API-nyckel + URL. Då skriver du följande prompt i Company Intel Hub-projektet:
 
-1. **Trådlista (`ThreadRow`)**: liten färgad prick + label baserad på `last_sentiment` (grön/röd/grå) + kategori-text bredvid datumet. Inga ikoner för `auto_reply`.
-2. **Konversationshuvud**: badge-rad med sentiment + kategori + språk för senaste inbound-mejlet.
-3. **Reply-composer**:
-   - När en tråd öppnas och senaste inbound har `suggested_reply` → fyll `reply`-state automatiskt med förslaget (men bara om användaren inte redan börjat skriva).
-   - Liten label ovanför textarea: "AI-förslag · klicka för att redigera" + knapp "Rensa" + knapp "Generera nytt".
-   - Om sentiment är `negative` eller `unsubscribe_request` → ingen auto-fyllning, istället en varningstext ("Avsändaren verkar inte intresserad" / "Avregistreringsbegäran — lägg till i unsubscribes").
-   - För `unsubscribe_request`: extra knapp "Lägg till i Unsubscribes" som skriver till `unsubscribes`-tabellen.
+> ```
+> Lägg till en "Skicka till Outreach"-integration så jag kan exportera utvalda contacts/companies som leads till min andra Lovable-app.
+>
+> 1. Settings → Integrations: ny sektion "Outreach". Två fält som sparas i en ny tabell `outreach_integration_settings` (en rad per user_id):
+>    - `endpoint_url` (text)
+>    - `api_key` (text, lagras krypterat med pgp_sym_encrypt om möjligt, annars i en Supabase secret OUTREACH_API_KEY)
+>    - `default_target_type` ('sequence' | 'campaign' | 'none')
+>    - `default_target_id` (text)
+>    En "Testa anslutning"-knapp som POSTar `{ "source":"company-intel-hub", "target":{"type":"none"}, "leads":[] }` och visar OK/fel.
+>
+> 2. På Companies-sidan, Contacts-sidan, People-sidan och ImportDetail-sidan: lägg till bulk-action "Skicka till Outreach" på markerade rader. Knappen öppnar en dialog där användaren kan:
+>    - välja target (sequence/campaign/none) — override mot default
+>    - se preview på antalet leads som kommer skickas
+>    - bekräfta
+>
+> 3. Skapa en ny edge function `send-to-outreach` som:
+>    - tar emot `{ ids: string[], source_table: 'companies'|'contacts'|'contact_people', target: {...} }`
+>    - validerar JWT
+>    - läser ut motsvarande rader, mappar till outreach-format:
+>      - från `contacts` (generic_email): `{ email: c.value, company: company.name, website: company.website, notes: 'Generic email from ' + company.name }`
+>      - från `contact_people`: `{ full_name, first_name (split), last_name, role: role_title, company: company.name, website: company.website }` (skippa rader utan email om mottagaren kräver email)
+>      - från `companies`: hämta första generic email per bolag
+>    - POSTar batchat (max 500 per request) till outreach-endpoint med `Authorization: Bearer <api_key>` från settings/secret
+>    - returnerar `{ inserted, skipped, errors[] }` och visar toast i UI
+>    - loggar i ny tabell `outreach_send_log` (user_id, count, target, response, created_at)
+>
+> 4. Outreach API-format (det som ska POSTas):
+>    ```
+>    POST <endpoint_url>
+>    Authorization: Bearer <api_key>
+>    Content-Type: application/json
+>    {
+>      "source": "company-intel-hub",
+>      "target": { "type": "sequence" | "campaign" | "none", "id": "<uuid eller null>" },
+>      "leads": [
+>        { "email": "...", "full_name": "...", "first_name": "...", "last_name": "...",
+>          "company": "...", "role": "...", "phone": "...", "website": "...",
+>          "linkedin_url": "...", "notes": "..." }
+>      ]
+>    }
+>    ```
+>    Skippa rader utan giltig email. Maxa 500 leads per request — chunka om fler.
+>
+> 5. Lägg till en kolumn "Skickad till Outreach" (timestamp) på contacts/contact_people så vi inte skickar dubbletter.
+> ```
 
-4. **Filter-kolumn**: ny dropdown "Sentiment" (Alla / Positiva / Negativa / Neutrala / Auto-svar) som filtrerar trådlistan via `last_sentiment`.
+(När prompten skickas in i andra projektet kommer Lovable-agenten där att be om endpoint-URL och API-nyckel — det är de värden du fick av oss i steg 1.)
 
-## Hooks (`useInbox.ts`)
+---
 
-- `useInboxThreads` får ny filterparameter `sentiment`.
-- Realtime triggar redan invalidate på messages — när `analyze-inbound-email` skriver tillbaka kommer UI uppdateras automatiskt och förslaget poppar in inom någon sekund efter att mejlet hämtats.
+## Tekniska detaljer (denna app)
 
-## Tekniska val
-- **Modell**: `google/gemini-3-flash-preview` — snabb, billig, klarar svenska/engelska och tool calling utmärkt. Bra för envägsanalys per mejl.
-- **Inget extra API-kostnadsskydd**: vi förlitar oss på Lovable AI:s rate limits. Felmeddelande surfas i UI om 402 inträffar.
-- **Inget user-toggle för auto-analys** i v1 — alltid på. Kan läggas till i settings senare om ni vill.
+- `supabase/functions/import-leads/index.ts` – ny.
+- `supabase/migrations/<ts>_integration_api_keys.sql` – två nya tabeller + RLS.
+- `src/pages/Settings.tsx` – ny tab/section "Integrations".
+- `src/components/CreateApiKeyDialog.tsx` – modal med one-time-display.
+- `src/hooks/useIntegrations.ts` – CRUD för API-nycklar.
+- `supabase/config.toml` – `[functions.import-leads] verify_jwt = false`.
 
-## Filer som skapas/ändras
-- Migration: lägg till kolumnerna ovan
-- `supabase/functions/analyze-inbound-email/index.ts` (ny)
-- `supabase/functions/sync-inbox/index.ts` (anropa analyze efter insert)
-- `src/hooks/useInbox.ts` (sentiment-filter, fält i interfaces)
-- `src/pages/Inbox.tsx` (badges, auto-fyll förslag, sentiment-filter, "Generera nytt"-knapp)
-- `src/integrations/supabase/types.ts` regenereras automatiskt
+Inga ändringar behövs i befintliga import/lead-tabeller.
