@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
           {
             role: "system",
             content:
-              "Du analyserar företagswebbplatser och returnerar koncisa, säljinriktade beskrivningar på svenska.",
+              "Du analyserar företagswebbplatser och extraherar strukturerad info som senare ska användas för att skriva personliga kalla mejl på svenska. Var konkret och säljinriktad. Hitta riktiga problem företaget löser och bevis (kunder, siffror, citat). Skriv allt på svenska oavsett källspråk.",
           },
           {
             role: "user",
@@ -112,19 +112,46 @@ Deno.serve(async (req) => {
             type: "function",
             function: {
               name: "describe_company",
-              description: "Return structured company info",
+              description: "Returnera strukturerad företagsinfo för kampanj-draftning",
               parameters: {
                 type: "object",
                 properties: {
                   company_name: { type: "string" },
+                  industry: { type: "string", description: "T.ex. SaaS, e-handel, byrå, konsult, fintech" },
+                  tone: { type: "string", description: "Tonalitet på sajten: professionell, lekfull, teknisk, etc." },
                   target_audience: { type: "string", description: "Vilka säljer de till" },
-                  value_prop: { type: "string", description: "Vad säljer de / vilket värde" },
+                  value_prop: { type: "string", description: "Vad säljer de / vilket värde levererar de" },
                   two_sentence_summary: {
                     type: "string",
                     description: "Beskriv företaget på 2 meningar ur ett säljperspektiv.",
                   },
+                  key_offerings: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "3-5 huvudprodukter/tjänster",
+                  },
+                  pain_points: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "3-5 konkreta problem företaget löser för sina kunder (perfekt för cold mejl-hooks)",
+                  },
+                  proof_points: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Kunder, siffror, citat eller andra bevis från sajten. Tom lista om inget hittas.",
+                  },
                 },
-                required: ["company_name", "target_audience", "value_prop", "two_sentence_summary"],
+                required: [
+                  "company_name",
+                  "industry",
+                  "tone",
+                  "target_audience",
+                  "value_prop",
+                  "two_sentence_summary",
+                  "key_offerings",
+                  "pain_points",
+                  "proof_points",
+                ],
                 additionalProperties: false,
               },
             },
@@ -154,9 +181,15 @@ Deno.serve(async (req) => {
 
     const result = {
       company_name: parsed.company_name ?? title ?? "",
+      company_industry: parsed.industry ?? "",
+      company_tone: parsed.tone ?? "",
       company_target_audience: parsed.target_audience ?? "",
       company_value_prop: parsed.value_prop ?? "",
       company_description: parsed.two_sentence_summary ?? summary ?? "",
+      company_key_offerings: Array.isArray(parsed.key_offerings) ? parsed.key_offerings : [],
+      company_pain_points: Array.isArray(parsed.pain_points) ? parsed.pain_points : [],
+      company_proof_points: Array.isArray(parsed.proof_points) ? parsed.proof_points : [],
+      company_raw_markdown: markdown,
       company_scrape_status: "done",
     };
 
