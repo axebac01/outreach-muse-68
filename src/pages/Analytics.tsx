@@ -327,7 +327,24 @@ const Analytics = () => {
                 </CardContent>
               </Card>
             </div>
-          </>
+            </div>
+            {!hasAnyData && (
+              <div className="absolute inset-0 grid place-items-center z-10 p-4">
+                <div className="bg-card/95 backdrop-blur-sm border shadow-lg rounded-xl p-8 max-w-sm text-center space-y-4">
+                  <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 grid place-items-center">
+                    <Activity className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">{t("analytics.emptyTitle")}</h2>
+                    <p className="text-sm text-muted-foreground mt-1">{t("analytics.emptyDesc")}</p>
+                  </div>
+                  <Button asChild>
+                    <a href="/dashboard">{t("analytics.emptyAction")}</a>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </Layout>
