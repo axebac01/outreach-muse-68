@@ -224,6 +224,25 @@
       "drafts": "AI-utkast"
     }
   },
+  "analytics": {
+    "title": "Analys",
+    "subtitle": "Sammanfattning från alla dina kampanjer",
+    "range": { "24h": "24 timmar", "7d": "7 dagar", "30d": "30 dagar", "all": "Allt" },
+    "sent": "Skickade",
+    "replies": "Svar",
+    "replyRate": "svarsfrekvens",
+    "failed": "Misslyckade",
+    "unsubscribes": "Avregistreringar",
+    "activeSeq": "Aktiva sekvenser",
+    "upcoming": "Kommande sändningar",
+    "totalLeads": "Totalt antal leads",
+    "activityTitle": "Aktivitet över tid",
+    "topCampaigns": "Topp 5 kampanjer",
+    "noCampaignData": "Ingen kampanjdata för perioden",
+    "emptyTitle": "Ingen data ännu",
+    "emptyDesc": "Starta en kampanj för att se siffror här.",
+    "emptyAction": "Till kampanjer"
+  },
   "sequence": {
     "savedAs": "Status: {{status}}",
     "status": {
