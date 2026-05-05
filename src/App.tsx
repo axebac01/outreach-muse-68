@@ -23,6 +23,8 @@ import StepSequence from "./pages/sequence/StepSequence";
 import StepSchedule from "./pages/sequence/StepSchedule";
 import StepSending from "./pages/sequence/StepSending";
 import Analytics from "./pages/Analytics";
+import Onboarding from "./pages/Onboarding";
+import OnboardingGate from "@/components/OnboardingGate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,20 +40,21 @@ const App = () => (
             <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
             <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
             <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/campaign/new" element={<ProtectedRoute><CreateCampaign /></ProtectedRoute>} />
-            <Route path="/campaign/:id" element={<ProtectedRoute><CampaignDetails /></ProtectedRoute>} />
-            <Route path="/outreach/:id" element={<ProtectedRoute><Outreach /></ProtectedRoute>} />
-            <Route path="/sequence/:id" element={<ProtectedRoute><SequenceBuilder /></ProtectedRoute>}>
+            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><OnboardingGate><Dashboard /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/campaign/new" element={<ProtectedRoute><OnboardingGate><CreateCampaign /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/campaign/:id" element={<ProtectedRoute><OnboardingGate><CampaignDetails /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/outreach/:id" element={<ProtectedRoute><OnboardingGate><Outreach /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/sequence/:id" element={<ProtectedRoute><OnboardingGate><SequenceBuilder /></OnboardingGate></ProtectedRoute>}>
               <Route index element={<Navigate to="leads" replace />} />
               <Route path="leads" element={<StepLeads />} />
               <Route path="sequence" element={<StepSequence />} />
               <Route path="schedule" element={<StepSchedule />} />
               <Route path="sending" element={<StepSending />} />
             </Route>
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/email-accounts" element={<ProtectedRoute><EmailAccounts /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><OnboardingGate><Settings /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/email-accounts" element={<ProtectedRoute><OnboardingGate><EmailAccounts /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><OnboardingGate><Analytics /></OnboardingGate></ProtectedRoute>} />
             <Route path="/settings/email-accounts" element={<Navigate to="/email-accounts" replace />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/pricing" element={<Pricing />} />

@@ -34,7 +34,7 @@ const Signup = () => {
       return;
     }
     toast.success(t("auth.signupSuccess"));
-    navigate("/dashboard");
+    navigate("/onboarding");
   };
 
   return (
