@@ -128,6 +128,7 @@ const Onboarding = () => {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [scrapeState, setScrapeState] = useState<"idle" | "loading" | "done" | "failed">("idle");
+  const [scrapeReason, setScrapeReason] = useState<string | null>(null);
   const [fallbackDesc, setFallbackDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
