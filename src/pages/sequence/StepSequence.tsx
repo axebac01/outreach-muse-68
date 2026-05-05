@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, ArrowRight } from "lucide-react";
+import { Plus, ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { useSequenceSteps, useUpsertStep, useDeleteStep, useSequenceLeads } from "@/hooks/useSequence";
 import { SequenceStepCard } from "@/components/sequence/SequenceStepCard";
 import { EmailPreview } from "@/components/sequence/EmailPreview";
+import { GenerateSequenceDialog } from "@/components/sequence/GenerateSequenceDialog";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -18,6 +19,7 @@ const StepSequence = () => {
   const deleteStep = useDeleteStep(id);
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [aiOpen, setAiOpen] = useState(false);
 
   // Add a default first step if none exist
   const ensureFirstStep = async () => {

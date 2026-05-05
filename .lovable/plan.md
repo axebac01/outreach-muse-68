@@ -1,47 +1,84 @@
 ## Mål
-Onboardingen får aldrig fastna i analysläget. Om automatisk företagsanalys inte går att köra — till exempel vid slut på credits, nätverksfel eller timeout — ska användaren direkt eller efter kort väntan få ett manuellt fallback-fält där de själva beskriver företaget.
+Lägg till en "Generera kampanj med AI"-funktion i sequence builder. Användaren beskriver målet med kampanjen (t.ex. "erbjuda partnerskap till IT-konsulter") och får tillbaka en komplett mejlsekvens — alla steg med ämne, brödtext, väntedagar och korrekt användning av variabler.
 
-## Vad jag har verifierat
-- `FinalStep` visar fortfarande loadern så länge `scrapeState` är `"loading"` eller `"idle"`.
-- `startScrape()` i `src/pages/Onboarding.tsx` använder `Promise.race`, men fångar inte ett avvisat `supabase.functions.invoke(...)`-anrop.
-- Om funktionsanropet kastar i stället för att returnera `{ data, error }`, lämnas state kvar i `loading`, vilket förklarar att det kan se ut som att den håller på för alltid.
-- Den manuella fallbacken finns redan i `FinalStep`, men den triggas bara när `scrapeState` faktiskt sätts till `failed`.
+## UX-flöde
 
-## Plan
+1. På `StepSequence`-sidan (`/sequence/:id/sequence`) lägger jag till en knapp **"Generera med AI"** högst upp bredvid "Continue".
+2. Klick öppnar en dialog med:
+   - Textarea: "Vad vill du åstadkomma med kampanjen?" (t.ex. "Erbjuda partnerskap till IT-konsulter").
+   - Litet val för antal steg (3 / 4 / 5, default 4).
+   - Litet val för tonalitet (default = bolagets `company_tone` om finns, annars "professionell men personlig").
+   - Knapp **"Generera"** med inline-loader (samma stil som onboarding-loadern, fast mindre).
+3. När AI:n svarar:
+   - Om det redan finns icke-tomma steg, visa bekräftelse "Detta ersätter befintliga steg" innan vi skriver över.
+   - Annars: spara stegen direkt och stäng dialogen, toast "Kampanj skapad".
 
-### 1. Gör analysanropet feltåligt i `src/pages/Onboarding.tsx`
-Uppdatera `startScrape()` så att alla felvägar alltid leder till fallback i UI:t:
-- Wrappa funktionsanropet i `try/catch` eller lägg på `.catch(...)` så att även avvisade promises sätter `scrapeState` till `"failed"`.
-- Tolka både hårda fel (`error`, exception, timeout) och mjuka fel (`data.ok === false`, `fallback === true`, `reason === "no_credits"`) som fallback.
-- Spara gärna en separat `scrapeFailureReason` i state så att UI:t kan veta varför analysen uteblev.
+## Data till AI:n
 
-### 2. Visa manuell fallback direkt när analysen inte kan köras
-Justera final-steget så att användaren inte lämnas i loadern längre än nödvändigt:
-- Om svaret säger att analysen inte gick att köra, växla direkt till textarea-vyn.
-- Behåll timeout som extra skydd, men låt den bara vara en sista fallback — inte huvudvägen.
-- Säkerställ att `idle` inte kan ligga kvar när användaren väl är på final-steget efter att analysen försökt starta.
+Edge function `generate-sequence` hämtar serverside (med användarens JWT):
+- `profiles`: `company_name`, `company_description`, `company_target_audience`, `company_value_prop`, `company_industry`, `company_tone`, `company_key_offerings`, `company_pain_points`, `company_proof_points`. Det här är "vem säljaren är".
+- `sequence_leads` för aktuell `sequence_id`: ta upp till 20 leads och plocka ut distinkta `company`, `role`, ev. `full_name`-mönster. Skicka även 3 exempel-leads (anonymiserade) som mall för hur variablerna ska användas.
+- Listan av tillåtna variabler från `VARIABLE_DEFS` (`first_name`, `company`, `sender_name`, `unsubscribe`, etc.) — AI:n får instruktion att bara använda dessa och alltid inkludera `{{unsubscribe}}` i sista steget.
 
-### 3. Förbättra copy i fallback-läget
-Gör fallbacken tydligare och tryggare för användaren:
-- Byt till text i stil med: “Vi kunde inte läsa in din hemsida automatiskt just nu. Skriv kort vad företaget gör så fortsätter vi.”
-- Om `reason === "no_credits"`, visa ett lite mer precist men fortfarande enkelt meddelande om att automatisk analys är tillfälligt otillgänglig.
-- Behåll fokus på att onboarding kan slutföras direkt utan att något blockerar.
+Användaren skickar med:
+- `sequence_id`
+- `goal` (fritext)
+- `step_count`
+- `tone`
 
-### 4. Säkerställ att onboarding alltid kan slutföras
-Bekräfta i `finish()`-flödet att:
-- `onboarding_completed = true` sätts även när analysen uteblir.
-- `company_description` sparas från textarea när fallback används.
-- Ingen extra analys krävs för att komma vidare till dashboarden.
+## AI-anrop
 
-### 5. Verifiering efter ändring
-När planen godkänts kommer jag att verifiera att följande scenarier fungerar:
-- Analys lyckas: wow-state + sparad företagsdata.
-- Analys returnerar `{ ok: false, fallback: true }`: textarea visas direkt.
-- Funktionsanrop kastar/rejectar: textarea visas i stället för evig loader.
-- Timeout: textarea visas efter timeout.
-- Slutför onboarding i fallback-läge: användaren skickas vidare och fastnar inte i `/onboarding`.
+- Edge function: `supabase/functions/generate-sequence/index.ts`.
+- Modell: `google/gemini-3-flash-preview` via Lovable AI Gateway.
+- Använder tool calling (`generate_sequence`) för strukturerad output:
+  ```
+  {
+    steps: [
+      { step_order: number, subject: string, body: string, wait_days: number }
+    ]
+  }
+  ```
+- System-prompt ger AI:n personan "expert på kalla mejl och svenska säljkampanjer", instruerar:
+  - Skriv på svenska som default (samma språk som `company_description`).
+  - Personliga, korta mejl (max ~120 ord per steg). Steg 1 = hook + value, mellansteg = follow-up med ny vinkel/proof, sista = mjuk break-up.
+  - Använd variabler `{{first_name}}`, `{{company}}`, `{{sender_name}}` etc. där det är naturligt.
+  - Använd ENBART variabler från en angiven vit lista.
+  - Steg 1 har `wait_days: 0`. Följande steg 2–4 dagar.
+  - Sista stegets body måste innehålla `{{unsubscribe}}`.
+  - Inga "Hi {first}" placeholders eller hashtaggar — bara variabel-syntaxen `{{...}}`.
+- Felhantering: 429 → toast "AI är upptagen, försök igen", 402 → "Slut på AI-credits".
+
+## Spara stegen
+
+- Edge function returnerar bara JSON till klienten — den gör inte DB-skrivningarna själv (då behöver vi inte service role för det här).
+- Frontend tar svaret och:
+  1. Tar bort befintliga `sequence_steps` för sekvensen (om man bekräftat overwrite).
+  2. Insert nya rader via befintlig supabase-klient (RLS skyddar).
+  3. Invalidate `sequence_steps`-query så UI:t ritar om.
+
+## Filer som ändras / skapas
+
+- **Ny**: `supabase/functions/generate-sequence/index.ts` (validerar JWT, läser profile + leads, anropar AI gateway, returnerar steg-array).
+- **Ny**: `src/components/sequence/GenerateSequenceDialog.tsx` (UI: textarea, val, generera-knapp, loader, fel-handling).
+- **Ny**: `src/hooks/useGenerateSequence.ts` (mutation: anropa edge function + skriv över steg).
+- **Edit**: `src/pages/sequence/StepSequence.tsx` — lägg till "Generera med AI"-knappen som öppnar dialogen.
+- **Edit**: `src/i18n/locales/sv.json` + `en.json` — nya strängar.
+
+## Edge cases
+
+- Om `profiles.company_description` saknas helt: edge function returnerar 400 "Slutför onboardingen först" och dialogen visar det.
+- Om sekvensen inte har några leads än: vi kör ändå, men AI:n får en notis "inga konkreta leads — gör mejlen generella mot målgruppen X".
+- Om AI:n bryter mot variabel-vita listan: vi gör en server-side post-process som strippar `{{...}}` som inte finns i listan, så ingen `{{ogiltig}}`-token läcker ut.
 
 ## Tekniska detaljer
-- Mest sannolik rotorsak just nu är att `supabase.functions.invoke("analyze-company")` kan rejecta utan att koden fångar det.
-- Den befintliga fallback-UI:n i `FinalStep` kan återanvändas; det som behöver säkras är state-hanteringen före renderingen.
-- Ingen ny databasmigration behövs för detta arbete — det är främst frontendlogik och eventuellt liten finjustering av funktionsrespons om det behövs.
+
+- Gateway-anrop följer befintligt mönster i `analyze-company` (samma auth/CORS).
+- Tool schema: `additionalProperties: false`, alla fält required, så Gemini följer formatet stabilt.
+- Ingen ny DB-migration behövs — vi återanvänder `sequence_steps`.
+- Loader-komponenten i dialogen återanvänder samma "rotating dots + cycling status text"-stil som onboarding-loadern, fast i mindre format.
+
+## Vad jag verifierar efteråt
+- Generera kampanj på en tom sekvens → 4 steg dyker upp med fyllda subject/body, korrekt `wait_days`, `{{first_name}}` används.
+- Generera på en sekvens med befintliga steg → bekräftelse innan overwrite.
+- Saknad onboarding → tydligt felmeddelande.
+- Variabler renderas korrekt i `EmailPreview` med första leaden.
