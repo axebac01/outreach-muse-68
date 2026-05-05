@@ -92,7 +92,13 @@ Deno.serve(async (req) => {
 
     const finalTone = tone || profile.company_tone || "professionell men personlig";
 
-    const systemPrompt = `Du är en världsklass-expert på kalla mejlsekvenser och B2B-säljkampanjer. Du skriver korta, personliga och konverterande mejl på SVENSKA.
+    // Simple language detection from company description
+    const desc = (profile.company_description ?? "") + " " + (profile.company_value_prop ?? "");
+    const swedishHits = (desc.match(/\b(och|att|för|vi|är|med|som|på|den|det)\b/gi) ?? []).length;
+    const englishHits = (desc.match(/\b(and|the|for|we|are|with|that|our|you|your)\b/gi) ?? []).length;
+    const lang = swedishHits >= englishHits ? "svenska" : "engelska";
+
+    const systemPrompt = `Du är en världsklass-expert på kalla mejlsekvenser och B2B-säljkampanjer. Du skriver korta, personliga och konverterande mejl på ${lang.toUpperCase()}.
 
 REGLER (kritiska):
 - Returnera EXAKT ${stepCount} steg.
@@ -105,7 +111,7 @@ REGLER (kritiska):
 - Sista stegets body MÅSTE innehålla {{unsubscribe}} på egen rad i slutet.
 - Använd ENBART dessa variabler (med {{...}}-syntax): ${ALLOWED_VARS.join(", ")}.
 - Inga andra placeholders, inga [hakparenteser], inga "Hi {first}".
-- Ton: ${finalTone}.`;
+- Skriv på ${lang}. Ton: ${finalTone}.`;
 
     const userPrompt = `KAMPANJMÅL: ${goal}
 
