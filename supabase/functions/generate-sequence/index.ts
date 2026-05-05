@@ -216,13 +216,19 @@ Generera kampanjen nu.`;
       });
     }
 
+    const unsubFooter = lang === "engelska"
+      ? "Not interested? {{unsubscribe}}"
+      : "Vill du inte höra mer? {{unsubscribe}}";
+
     const steps = rawSteps
       .sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0))
       .map((s, i) => {
         let body = sanitizeBody(String(s.body ?? ""));
         const isLast = i === rawSteps.length - 1;
-        if (isLast && !/\{\{\s*unsubscribe\s*\}\}/i.test(body)) {
-          body = `${body.trim()}\n\n{{unsubscribe}}`;
+        // Always strip any unsubscribe mention then re-append on last step (guaranteed)
+        body = body.replace(/\{\{\s*unsubscribe\s*\}\}/gi, "").trimEnd();
+        if (isLast) {
+          body = `${body}\n\n${unsubFooter}`;
         }
         return {
           step_order: i,
