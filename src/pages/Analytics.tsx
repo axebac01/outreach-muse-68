@@ -61,31 +61,65 @@ const Analytics = () => {
   const [range, setRange] = useState<Range>("7d");
   const { data, isLoading } = useAnalytics(range);
 
-  const stats = useMemo(() => {
-    if (!data) return null;
-    const sent = data.sends.filter((s) => s.status === "sent").length;
-    const failed = data.sends.filter((s) => ["failed", "bounced", "error"].includes(s.status)).length;
-    const pendingFuture = data.sends.filter(
-      (s) => s.status === "scheduled" && new Date(s.scheduled_for) > new Date()
-    ).length;
-    const replied = data.leads.filter((l) => l.status === "replied").length;
-    const replyRate = sent > 0 ? (replied / sent) * 100 : 0;
-    const activeSeq = data.sequences.filter((s) => s.status === "active").length;
+  const hasAnyData = (data?.sends.length ?? 0) + (data?.leads.length ?? 0) > 0;
+
+  const mockData = useMemo(() => {
+    const days = range === "24h" ? 1 : range === "7d" ? 7 : range === "30d" ? 30 : 30;
+    const sends: any[] = [];
+    const leads: any[] = [];
+    const seqIds = ["mock-1", "mock-2", "mock-3", "mock-4"];
+    const seqNames = ["Q4 SaaS-VD:ar", "Nordic Fintech", "Tech Founders", "Marketing Leaders"];
+    for (let i = 0; i < days; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const baseSent = 40 + Math.round(Math.sin(i / 2) * 15) + (i % 3) * 6;
+      for (let j = 0; j < baseSent; j++) {
+        sends.push({
+          id: `s-${i}-${j}`,
+          status: j % 18 === 0 ? "failed" : "sent",
+          created_at: d.toISOString(),
+          sequence_id: seqIds[j % seqIds.length],
+          scheduled_for: d.toISOString(),
+        });
+      }
+      const replies = Math.max(2, Math.round(baseSent * 0.14));
+      for (let j = 0; j < replies; j++) {
+        leads.push({ id: `l-${i}-${j}`, status: "replied", created_at: d.toISOString() });
+      }
+      for (let j = 0; j < baseSent * 2; j++) {
+        leads.push({ id: `lp-${i}-${j}`, status: "active", created_at: d.toISOString() });
+      }
+    }
     return {
-      sent,
-      failed,
-      pendingFuture,
-      replied,
-      replyRate,
-      activeSeq,
-      totalSeq: data.sequences.length,
-      totalLeads: data.leads.length,
-      unsub: data.unsubscribes.length,
+      sends,
+      leads,
+      sequences: seqIds.map((id, i) => ({ id, name: seqNames[i], status: i < 2 ? "active" : "paused" })),
+      unsubscribes: Array.from({ length: 23 }, (_, i) => ({ id: `u-${i}`, created_at: new Date().toISOString() })),
     };
-  }, [data]);
+  }, [range]);
+
+  const displayData: any = hasAnyData ? data : mockData;
+
+  const stats = useMemo(() => {
+    if (!displayData) return null;
+    const sent = displayData.sends.filter((s: any) => s.status === "sent").length;
+    const failed = displayData.sends.filter((s: any) => ["failed", "bounced", "error"].includes(s.status)).length;
+    const pendingFuture = displayData.sends.filter(
+      (s: any) => s.status === "scheduled" && new Date(s.scheduled_for) > new Date()
+    ).length;
+    const replied = displayData.leads.filter((l: any) => l.status === "replied").length;
+    const replyRate = sent > 0 ? (replied / sent) * 100 : 0;
+    const activeSeq = displayData.sequences.filter((s: any) => s.status === "active").length;
+    return {
+      sent, failed, pendingFuture, replied, replyRate, activeSeq,
+      totalSeq: displayData.sequences.length,
+      totalLeads: displayData.leads.length,
+      unsub: displayData.unsubscribes.length,
+    };
+  }, [displayData]);
 
   const series = useMemo(() => {
-    if (!data) return [];
+    if (!displayData) return [];
     const days = range === "24h" ? 1 : range === "7d" ? 7 : range === "30d" ? 30 : 30;
     const buckets = new Map<string, { day: string; sent: number; replies: number }>();
     for (let i = days - 1; i >= 0; i--) {
@@ -94,40 +128,36 @@ const Analytics = () => {
       d.setHours(0, 0, 0, 0);
       buckets.set(fmtDay(d), { day: fmtDay(d).slice(5), sent: 0, replies: 0 });
     }
-    data.sends
-      .filter((s) => s.status === "sent")
-      .forEach((s) => {
-        const k = fmtDay(new Date(s.created_at));
-        const b = buckets.get(k);
+    displayData.sends
+      .filter((s: any) => s.status === "sent")
+      .forEach((s: any) => {
+        const b = buckets.get(fmtDay(new Date(s.created_at)));
         if (b) b.sent++;
       });
-    data.leads
-      .filter((l) => l.status === "replied")
-      .forEach((l) => {
-        const k = fmtDay(new Date(l.created_at));
-        const b = buckets.get(k);
+    displayData.leads
+      .filter((l: any) => l.status === "replied")
+      .forEach((l: any) => {
+        const b = buckets.get(fmtDay(new Date(l.created_at)));
         if (b) b.replies++;
       });
     return Array.from(buckets.values());
-  }, [data, range]);
+  }, [displayData, range]);
 
   const topCampaigns = useMemo(() => {
-    if (!data) return [];
+    if (!displayData) return [];
     const counts = new Map<string, number>();
-    data.sends
-      .filter((s) => s.status === "sent")
-      .forEach((s) => counts.set(s.sequence_id, (counts.get(s.sequence_id) ?? 0) + 1));
-    const named = Array.from(counts.entries())
+    displayData.sends
+      .filter((s: any) => s.status === "sent")
+      .forEach((s: any) => counts.set(s.sequence_id, (counts.get(s.sequence_id) ?? 0) + 1));
+    return Array.from(counts.entries())
       .map(([id, n]) => ({
-        name: data.sequences.find((s) => s.id === id)?.name ?? "—",
+        name: displayData.sequences.find((s: any) => s.id === id)?.name ?? "—",
         sent: n,
       }))
       .sort((a, b) => b.sent - a.sent)
       .slice(0, 5);
-    return named;
-  }, [data]);
+  }, [displayData]);
 
-  const hasAnyData = (data?.sends.length ?? 0) + (data?.leads.length ?? 0) > 0;
 
   return (
     <Layout>
@@ -158,15 +188,12 @@ const Analytics = () => {
               <div key={i} className="h-32 rounded-xl border bg-card animate-pulse" />
             ))}
           </div>
-        ) : !hasAnyData ? (
-          <EmptyState
-            title={t("analytics.emptyTitle")}
-            description={t("analytics.emptyDesc")}
-            actionLabel={t("analytics.emptyAction")}
-            actionHref="/dashboard"
-          />
         ) : (
-          <>
+          <div className="relative">
+            <div
+              className={!hasAnyData ? "blur-md opacity-70 pointer-events-none select-none space-y-8" : "space-y-8"}
+              aria-hidden={!hasAnyData}
+            >
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 icon={Send}
@@ -300,7 +327,24 @@ const Analytics = () => {
                 </CardContent>
               </Card>
             </div>
-          </>
+            </div>
+            {!hasAnyData && (
+              <div className="absolute inset-0 grid place-items-center z-10 p-4">
+                <div className="bg-card/95 backdrop-blur-sm border shadow-lg rounded-xl p-8 max-w-sm text-center space-y-4">
+                  <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 grid place-items-center">
+                    <Activity className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">{t("analytics.emptyTitle")}</h2>
+                    <p className="text-sm text-muted-foreground mt-1">{t("analytics.emptyDesc")}</p>
+                  </div>
+                  <Button asChild>
+                    <a href="/dashboard">{t("analytics.emptyAction")}</a>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </Layout>
