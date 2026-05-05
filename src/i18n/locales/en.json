@@ -51,7 +51,9 @@
   "nav": {
     "features": "Features",
     "pricing": "Pricing",
-    "dashboard": "Dashboard",
+    "dashboard": "Campaigns",
+    "campaigns": "Campaigns",
+    "analytics": "Analytics",
     "newCampaign": "New Campaign",
     "emailAccounts": "Email accounts",
     "login": "Log in",
