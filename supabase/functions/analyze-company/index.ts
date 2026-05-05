@@ -168,8 +168,13 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error("analyze-company error", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({
+        ok: false,
+        fallback: true,
+        reason: "unknown",
+        message: e instanceof Error ? e.message : "Unknown",
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
