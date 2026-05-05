@@ -5,9 +5,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Mail, AlertTriangle } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Trash2, Mail, AlertTriangle, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { VARIABLE_DEFS, hasUnsubscribeToken } from "@/lib/renderTemplate";
 import type { SequenceStep } from "@/hooks/useSequence";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   step: Partial<SequenceStep> & { step_order: number };
