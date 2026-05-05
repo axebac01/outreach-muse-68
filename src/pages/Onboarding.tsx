@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowRight, CornerDownLeft, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, CornerDownLeft, Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -92,41 +92,126 @@ type CompanyData = {
   company_scrape_status?: string;
 };
 
+const STORAGE_KEY = "onboarding_progress_v1";
+const URL_REGEX = /^([a-z0-9-]+\.)+[a-z]{2,}(\/.*)?$/i;
+const SCRAPE_TIMEOUT_MS = 20000;
+
+const normalizeUrl = (raw: string): string => {
+  let u = raw.trim();
+  if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+  return u;
+};
+
+const getDomain = (raw: string): string | null => {
+  try {
+    return new URL(normalizeUrl(raw)).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+};
+
+const profileFieldMap: Record<string, string> = {
+  name: "full_name",
+  role: "role",
+  goal: "goal",
+  monthly_volume: "monthly_volume",
+  experience: "experience",
+  sender_count: "sender_count",
+};
+
 const Onboarding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [stepIndex, setStepIndex] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [scrapeState, setScrapeState] = useState<"idle" | "loading" | "done" | "failed">("idle");
   const [fallbackDesc, setFallbackDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const scrapedFor = useRef<string>("");
 
   const step = steps[stepIndex];
-  const progress = (stepIndex / (steps.length - 1)) * 100;
+  const progress = ((stepIndex + 1) / steps.length) * 100;
+
+  // Restore from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.answers) setAnswers(parsed.answers);
+        if (typeof parsed.stepIndex === "number")
+          setStepIndex(Math.min(parsed.stepIndex, steps.length - 1));
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
+
+  // Persist locally on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, stepIndex }));
+    } catch {
+      /* noop */
+    }
+  }, [answers, stepIndex]);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, [stepIndex]);
 
-  const startScrape = async (rawUrl: string) => {
-    if (!rawUrl.trim()) return;
+  // Persist current step's answer to profile (best-effort, fire-and-forget)
+  const persistAnswer = (key: string, value: string) => {
+    if (!user) return;
+    const field = profileFieldMap[key];
+    if (!field) return;
+    supabase.from("profiles").update({ [field]: value } as any).eq("id", user.id);
+  };
+
+  const startScrape = (rawUrl: string) => {
+    const url = rawUrl.trim();
+    if (!url || !URL_REGEX.test(url.replace(/^https?:\/\//i, ""))) return;
+    if (scrapedFor.current === url) return;
+    scrapedFor.current = url;
     setScrapeState("loading");
-    try {
-      const { data, error } = await supabase.functions.invoke("analyze-company", {
-        body: { url: rawUrl.trim() },
-      });
+
+    const timeout = new Promise<{ timeout: true }>((resolve) =>
+      setTimeout(() => resolve({ timeout: true }), SCRAPE_TIMEOUT_MS),
+    );
+    const call = supabase.functions
+      .invoke("analyze-company", { body: { url } })
+      .then((r) => ({ ...r, timeout: false as const }));
+
+    Promise.race([call, timeout]).then((res: any) => {
+      if (res.timeout) {
+        setScrapeState("failed");
+        return;
+      }
+      const { data, error } = res;
       if (error || !data?.ok) {
         setScrapeState("failed");
         return;
       }
       setCompanyData(data);
       setScrapeState("done");
-    } catch {
-      setScrapeState("failed");
+    });
+  };
+
+  const validateStep = (): boolean => {
+    if (step.type === "url") {
+      const v = (answers[step.key] ?? "").trim().replace(/^https?:\/\//i, "");
+      if (!URL_REGEX.test(v)) {
+        setUrlError("Skriv in en giltig adress, t.ex. företag.se");
+        return false;
+      }
+      setUrlError(null);
     }
+    return true;
   };
 
   const canAdvance = useMemo(() => {
@@ -136,35 +221,56 @@ const Onboarding = () => {
     return true;
   }, [step, answers]);
 
-  const next = () => {
+  const goNext = () => {
     if (!canAdvance) return;
-    if (step.type === "url" && scrapeState === "idle") {
+    if (!validateStep()) return;
+    if (step.type === "url") {
       startScrape(answers[step.key] ?? "");
     }
+    if (step.type === "text" || step.type === "url") {
+      persistAnswer(step.key, answers[step.key] ?? "");
+    }
+    setDirection(1);
     setStepIndex((i) => Math.min(i + 1, steps.length - 1));
+  };
+
+  const goBack = () => {
+    if (stepIndex === 0) return;
+    setDirection(-1);
+    setStepIndex((i) => Math.max(0, i - 1));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && step.type !== "final") {
       e.preventDefault();
-      next();
+      goNext();
     }
   };
 
   const selectChoice = (value: string) => {
     setAnswers((a) => ({ ...a, [step.key]: value }));
+    persistAnswer(step.key, value);
     setTimeout(() => {
+      setDirection(1);
       setStepIndex((i) => Math.min(i + 1, steps.length - 1));
-    }, 180);
+    }, 280);
   };
 
-  // keyboard 1-9 selects choice
+  // keyboard shortcuts: 1-9 for choice, Esc/Backspace-on-empty for back
   useEffect(() => {
-    if (step.type !== "choice") return;
     const handler = (e: KeyboardEvent) => {
-      const n = parseInt(e.key, 10);
-      if (!isNaN(n) && n >= 1 && n <= step.options.length) {
-        selectChoice(step.options[n - 1].value);
+      const target = e.target as HTMLElement;
+      const inField = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+      if (e.key === "Escape" && stepIndex > 0 && step.type !== "final") {
+        e.preventDefault();
+        goBack();
+        return;
+      }
+      if (step.type === "choice" && !inField) {
+        const n = parseInt(e.key, 10);
+        if (!isNaN(n) && n >= 1 && n <= step.options.length) {
+          selectChoice(step.options[n - 1].value);
+        }
       }
     };
     window.addEventListener("keydown", handler);
@@ -193,21 +299,44 @@ const Onboarding = () => {
       toast.error("Kunde inte spara. Försök igen.");
       return;
     }
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* noop */
+    }
     queryClient.invalidateQueries({ queryKey: ["profile"] });
     navigate("/dashboard");
   };
 
+  const slideClass =
+    direction === 1
+      ? "animate-in fade-in slide-in-from-bottom-6 duration-500"
+      : "animate-in fade-in slide-in-from-top-6 duration-500";
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <div className="px-6 pt-6">
-        <Progress value={progress} className="h-1" />
+      {/* Top bar */}
+      <div className="px-6 pt-6 flex items-center gap-4">
+        {stepIndex > 0 && step.type !== "final" ? (
+          <button
+            onClick={goBack}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Tillbaka"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Tillbaka
+          </button>
+        ) : (
+          <span className="w-16" />
+        )}
+        <div className="flex-1">
+          <Progress value={progress} className="h-1 transition-all duration-500" />
+        </div>
+        <span className="w-16" />
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div
-          key={stepIndex}
-          className="w-full max-w-2xl text-center animate-in fade-in slide-in-from-bottom-6 duration-500"
-        >
+        <div key={stepIndex} className={`w-full max-w-2xl text-center ${slideClass}`}>
           <div className="text-xs font-medium tracking-widest text-muted-foreground mb-6">
             {step.type === "final" ? "KLART" : `STEG ${stepIndex + 1} AV ${steps.length - 1}`}
           </div>
@@ -226,7 +355,7 @@ const Onboarding = () => {
                 placeholder={step.placeholder}
                 className="h-14 text-xl text-center border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent"
               />
-              <NextHint onNext={next} disabled={!canAdvance} />
+              <NextHint onNext={goNext} disabled={!canAdvance} />
             </>
           )}
 
@@ -242,17 +371,33 @@ const Onboarding = () => {
                 ref={inputRef}
                 autoFocus
                 value={answers[step.key] ?? ""}
-                onChange={(e) => setAnswers({ ...answers, [step.key]: e.target.value })}
+                onChange={(e) => {
+                  setAnswers({ ...answers, [step.key]: e.target.value });
+                  if (urlError) setUrlError(null);
+                }}
                 onBlur={(e) => {
-                  if (scrapeState === "idle" && e.target.value.trim()) {
-                    startScrape(e.target.value);
+                  const v = e.target.value.trim();
+                  if (v && URL_REGEX.test(v.replace(/^https?:\/\//i, ""))) {
+                    startScrape(v);
                   }
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder={step.placeholder}
                 className="h-14 text-xl text-center border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:border-primary bg-transparent"
               />
-              <NextHint onNext={next} disabled={!canAdvance} />
+              {urlError && (
+                <p className="text-sm text-destructive mt-3 animate-in fade-in">{urlError}</p>
+              )}
+              {scrapeState === "loading" && !urlError && (
+                <p className="text-xs text-muted-foreground mt-4 flex items-center justify-center gap-2 animate-in fade-in">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                  </span>
+                  Analyserar i bakgrunden…
+                </p>
+              )}
+              <NextHint onNext={goNext} disabled={!canAdvance} />
             </>
           )}
 
@@ -283,8 +428,8 @@ const Onboarding = () => {
                   );
                 })}
               </div>
-              <p className="text-xs text-muted-foreground mt-8">
-                Tryck <Kbd>1-{step.options.length}</Kbd> för att välja
+              <p className="text-xs text-muted-foreground mt-8 hidden md:block">
+                Tryck <Kbd>1-{step.options.length}</Kbd> för att välja · <Kbd>Esc</Kbd> tillbaka
               </p>
             </>
           )}
@@ -292,6 +437,7 @@ const Onboarding = () => {
           {step.type === "final" && (
             <FinalStep
               name={answers.name}
+              domain={getDomain(answers.company_url ?? "")}
               scrapeState={scrapeState}
               companyData={companyData}
               fallbackDesc={fallbackDesc}
@@ -317,7 +463,7 @@ const NextHint = ({ onNext, disabled }: { onNext: () => void; disabled: boolean 
     <Button onClick={onNext} disabled={disabled} size="lg" className="gap-2">
       OK <CornerDownLeft className="h-4 w-4" />
     </Button>
-    <span className="text-xs text-muted-foreground">
+    <span className="text-xs text-muted-foreground hidden md:inline">
       tryck <Kbd>Enter ↵</Kbd>
     </span>
   </div>
@@ -325,6 +471,7 @@ const NextHint = ({ onNext, disabled }: { onNext: () => void; disabled: boolean 
 
 const FinalStep = ({
   name,
+  domain,
   scrapeState,
   companyData,
   fallbackDesc,
@@ -333,6 +480,7 @@ const FinalStep = ({
   onFinish,
 }: {
   name: string;
+  domain: string | null;
   scrapeState: "idle" | "loading" | "done" | "failed";
   companyData: CompanyData | null;
   fallbackDesc: string;
@@ -343,9 +491,7 @@ const FinalStep = ({
   if (scrapeState === "loading" || scrapeState === "idle") {
     return (
       <div className="flex flex-col items-center gap-6">
-        <div className="relative">
-          <Sparkles className="h-12 w-12 text-primary animate-pulse" />
-        </div>
+        <Sparkles className="h-12 w-12 text-primary animate-pulse" />
         <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
           Vi analyserar ditt företag…
         </h1>
@@ -357,11 +503,11 @@ const FinalStep = ({
 
   if (scrapeState === "failed") {
     return (
-      <div className="space-y-8">
-        <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
+      <div className="space-y-6 text-left">
+        <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-center">
           Perfekt {name}, en sista grej.
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-center">
           Vi kunde inte hämta info från sidan – beskriv kort vad ditt företag gör så fixar vi resten.
         </p>
         <Textarea
@@ -371,10 +517,12 @@ const FinalStep = ({
           placeholder="Vi hjälper SaaS-bolag att…"
           className="min-h-[120px] text-base"
         />
-        <Button size="lg" onClick={onFinish} disabled={submitting} className="gap-2">
-          {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Sätt upp mitt konto
-        </Button>
+        <div className="flex justify-center">
+          <Button size="lg" onClick={onFinish} disabled={submitting} className="gap-2">
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Sätt upp mitt konto
+          </Button>
+        </div>
       </div>
     );
   }
@@ -391,12 +539,32 @@ const FinalStep = ({
 
   return (
     <div className="space-y-10">
+      {domain && (
+        <div
+          className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95"
+          style={{ animationDuration: "500ms", animationFillMode: "both" }}
+        >
+          <div className="h-16 w-16 rounded-2xl bg-card border shadow-sm flex items-center justify-center overflow-hidden">
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
+              alt={cd.company_name || domain}
+              className="h-10 w-10 object-contain"
+              onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground">{domain}</span>
+        </div>
+      )}
       <div className="space-y-4">
         {lines.map((line, i) => (
           <p
             key={i}
             className="text-2xl md:text-4xl font-semibold tracking-tight leading-tight animate-in fade-in slide-in-from-bottom-3"
-            style={{ animationDelay: `${i * 400}ms`, animationFillMode: "both", animationDuration: "600ms" }}
+            style={{
+              animationDelay: `${i * 450 + 200}ms`,
+              animationFillMode: "both",
+              animationDuration: "600ms",
+            }}
           >
             {line}
           </p>
@@ -404,7 +572,11 @@ const FinalStep = ({
       </div>
       <div
         className="animate-in fade-in"
-        style={{ animationDelay: `${lines.length * 400 + 200}ms`, animationFillMode: "both", animationDuration: "500ms" }}
+        style={{
+          animationDelay: `${lines.length * 450 + 400}ms`,
+          animationFillMode: "both",
+          animationDuration: "500ms",
+        }}
       >
         <Button size="lg" onClick={onFinish} disabled={submitting} className="gap-2">
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
