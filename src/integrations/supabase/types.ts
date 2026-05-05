@@ -336,22 +336,58 @@ export type Database = {
       }
       profiles: {
         Row: {
+          company_description: string | null
+          company_name: string | null
+          company_scrape_status: string | null
+          company_target_audience: string | null
+          company_url: string | null
+          company_value_prop: string | null
           created_at: string
+          experience: string | null
           full_name: string | null
+          goal: string | null
           id: string
+          monthly_volume: string | null
+          onboarding_completed: boolean
           plan: string
+          role: string | null
+          sender_count: string | null
         }
         Insert: {
+          company_description?: string | null
+          company_name?: string | null
+          company_scrape_status?: string | null
+          company_target_audience?: string | null
+          company_url?: string | null
+          company_value_prop?: string | null
           created_at?: string
+          experience?: string | null
           full_name?: string | null
+          goal?: string | null
           id: string
+          monthly_volume?: string | null
+          onboarding_completed?: boolean
           plan?: string
+          role?: string | null
+          sender_count?: string | null
         }
         Update: {
+          company_description?: string | null
+          company_name?: string | null
+          company_scrape_status?: string | null
+          company_target_audience?: string | null
+          company_url?: string | null
+          company_value_prop?: string | null
           created_at?: string
+          experience?: string | null
           full_name?: string | null
+          goal?: string | null
           id?: string
+          monthly_volume?: string | null
+          onboarding_completed?: boolean
           plan?: string
+          role?: string | null
+          sender_count?: string | null
         }
         Relationships: []
       }
