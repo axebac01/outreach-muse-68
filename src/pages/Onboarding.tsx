@@ -579,4 +579,99 @@ const FinalStep = ({
   );
 };
 
+const LOADER_STEPS = [
+  "Läser hemsidan…",
+  "Förstår erbjudandet…",
+  "Hittar målgrupp och vinklar…",
+  "Bygger din profil…",
+];
+
+const AnalysisLoader = () => {
+  const [stepIdx, setStepIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => {
+      setStepIdx((i) => (i + 1) % LOADER_STEPS.length);
+    }, 2200);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center gap-10 py-8">
+      {/* Animated orb */}
+      <div className="relative h-40 w-40 flex items-center justify-center">
+        {/* Outer pulsing rings */}
+        <span className="absolute inset-0 rounded-full bg-primary/20 blur-2xl animate-pulse" />
+        <span
+          className="absolute inset-4 rounded-full bg-primary/30 blur-xl animate-pulse"
+          style={{ animationDelay: "300ms" }}
+        />
+        {/* Rotating dot ring */}
+        <span className="absolute inset-0 animate-spin" style={{ animationDuration: "6s" }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <span
+              key={i}
+              className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary"
+              style={{
+                transform: `rotate(${i * 45}deg) translateY(-72px)`,
+                opacity: 0.2 + (i / 8) * 0.8,
+              }}
+            />
+          ))}
+        </span>
+        {/* Counter-rotating inner ring */}
+        <span
+          className="absolute inset-6 animate-spin"
+          style={{ animationDuration: "4s", animationDirection: "reverse" }}
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <span
+              key={i}
+              className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/70"
+              style={{ transform: `rotate(${i * 60}deg) translateY(-46px)` }}
+            />
+          ))}
+        </span>
+        {/* Center sparkle */}
+        <div className="relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl bg-card border shadow-lg">
+          <Sparkles className="h-7 w-7 text-primary" />
+        </div>
+      </div>
+
+      <div className="text-center space-y-3">
+        <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
+          Vi analyserar ditt företag
+        </h1>
+        <div className="h-6 relative">
+          {LOADER_STEPS.map((label, i) => (
+            <p
+              key={label}
+              className={`absolute inset-x-0 text-muted-foreground transition-all duration-500 ${
+                i === stepIdx
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-2 pointer-events-none"
+              }`}
+            >
+              {label}
+            </p>
+          ))}
+        </div>
+      </div>
+
+      {/* Skeleton "writing" lines */}
+      <div className="w-full max-w-md space-y-3">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-3 rounded-full bg-gradient-to-r from-muted via-primary/30 to-muted bg-[length:200%_100%] animate-shimmer"
+            style={{
+              width: `${[92, 78, 60][i]}%`,
+              animationDelay: `${i * 200}ms`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default Onboarding;
