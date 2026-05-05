@@ -32,9 +32,9 @@ const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg shadow-[0_1px_3px_0_hsl(var(--foreground)/0.04)]">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="container flex h-20 items-center justify-between">
         <Link to="/" className="flex items-center" aria-label="MailLead">
-          <img src={logo} alt="MailLead" className="h-9 w-auto" />
+          <img src={logo} alt="MailLead" className="h-14 w-auto" />
         </Link>
 
         {!isApp ? (
