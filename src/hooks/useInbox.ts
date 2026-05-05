@@ -13,6 +13,8 @@ export interface InboxThread {
   last_message_at: string;
   last_snippet: string | null;
   last_direction: string | null;
+  last_sentiment: string | null;
+  last_category: string | null;
   unread_count: number;
   message_count: number;
   lead_id: string | null;
