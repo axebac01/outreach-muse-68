@@ -17,9 +17,14 @@ import { toast } from "sonner";
 const EmailAccounts = () => {
   const { t } = useTranslation();
   const { data: accounts, isLoading } = useEmailAccounts();
+  const { data: limits = [] } = useSendingLimits();
+  const { data: sentToday = {} } = useSentToday();
+  const updateLimit = useUpdateSendingLimit();
   const del = useDeleteEmailAccount();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<EmailAccount | null>(null);
+
+  const limitFor = (id: string) => limits.find((l) => l.email_account_id === id);
 
   const handleDelete = async (id: string) => {
     try {
