@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Trash2, Mail, AlertTriangle, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
+import { Trash2, Mail, AlertTriangle, CheckCircle2, Sparkles, Loader2, Clock, FileText, ShieldAlert } from "lucide-react";
 import { VARIABLE_DEFS, hasUnsubscribeToken } from "@/lib/renderTemplate";
+import { analyzeEmail, spamLevel } from "@/lib/emailQuality";
 import type { SequenceStep } from "@/hooks/useSequence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -215,11 +216,44 @@ export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChan
               queueSave({ body: e.target.value });
             }}
           />
-          {body && !hasUnsubscribeToken(body) && (
-            <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-2 text-xs text-warning-foreground">
-              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-warning" />
+          {body.trim() && (() => {
+            const q = analyzeEmail(subject, body);
+            const lvl = spamLevel(q.spamScore);
+            const lvlClasses = lvl === "good"
+              ? "border-success/30 bg-success/10 text-success"
+              : lvl === "warn"
+              ? "border-warning/30 bg-warning/10 text-warning"
+              : "border-destructive/30 bg-destructive/10 text-destructive";
+            return (
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5">
+                  <FileText className="h-3 w-3" /> {q.wordCount} ord
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5">
+                  <Clock className="h-3 w-3" /> {q.readingTimeSec}s lästid
+                </span>
+                <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 ${lvlClasses}`}>
+                  <ShieldAlert className="h-3 w-3" /> Spam: {lvl === "good" ? "låg" : lvl === "warn" ? "medel" : "hög"}
+                  {q.spamHits.length > 0 && <span className="opacity-70">({q.spamHits.slice(0, 2).join(", ")})</span>}
+                </span>
+                {!q.isPersonalized && (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-warning">
+                    <AlertTriangle className="h-3 w-3" /> ingen personalisering
+                  </span>
+                )}
+                {q.warnings.map((w) => (
+                  <span key={w} className="inline-flex items-center gap-1 rounded-md border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-warning">
+                    <AlertTriangle className="h-3 w-3" /> {w}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
+          {body && !hasUnsubscribeToken(body) && isLast && (
+            <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-2 text-xs text-warning">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               <span>
-                This email is missing <code className="font-mono">{`{{unsubscribe}}`}</code>. An unsubscribe link will be appended automatically, but adding one yourself improves deliverability.
+                Detta sista mejl saknar <code className="font-mono">{`{{unsubscribe}}`}</code>. En unsubscribe-länk läggs till automatiskt vid utskick, men att lägga den själv förbättrar leveransbarheten.
               </span>
             </div>
           )}
