@@ -73,10 +73,29 @@ const Inbox = () => {
 
   const { data: messages = [] } = useThreadMessages(selected);
 
+  const lastInbound = useMemo(
+    () => [...messages].reverse().find((m) => m.direction === "inbound") ?? null,
+    [messages],
+  );
+
   // Auto-select first thread on load
   useEffect(() => {
     if (!selectedId && filteredThreads.length > 0) setSelectedId(filteredThreads[0].id);
   }, [filteredThreads, selectedId]);
+
+  // Reset reply state when switching threads
+  useEffect(() => {
+    setReply("");
+    setReplyTouched(false);
+  }, [selected?.id]);
+
+  // Auto-fill reply with AI suggestion when available and user hasn't typed
+  useEffect(() => {
+    if (!lastInbound || replyTouched) return;
+    if (lastInbound.suggested_reply && !reply) {
+      setReply(lastInbound.suggested_reply);
+    }
+  }, [lastInbound?.id, lastInbound?.suggested_reply, replyTouched]);
 
   // Mark as read on open
   useEffect(() => {
@@ -87,6 +106,39 @@ const Inbox = () => {
       });
     }
   }, [selected?.id]);
+
+  const handleAnalyze = async (force = false) => {
+    if (!lastInbound) return;
+    setAnalyzing(true);
+    try {
+      const { error } = await supabase.functions.invoke("analyze-inbound-email", {
+        body: { message_id: lastInbound.id, force },
+      });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["inbox_messages"] });
+      qc.invalidateQueries({ queryKey: ["inbox_threads", user?.id] });
+      toast.success("AI-analys klar");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Analys misslyckades");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleAddUnsubscribe = async () => {
+    if (!lastInbound || !user) return;
+    try {
+      await supabase.from("unsubscribes").insert({
+        user_id: user.id,
+        email: lastInbound.from_address,
+        sequence_id: selected?.sequence_id ?? null,
+        source: "inbox_request",
+      });
+      toast.success("Avregistrerad");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Kunde inte avregistrera");
+    }
+  };
 
   const handleSync = async () => {
     setSyncing(true);
