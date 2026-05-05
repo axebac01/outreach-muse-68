@@ -75,10 +75,11 @@ Deno.serve(async (req) => {
         .from("profiles")
         .update({ company_scrape_status: "failed" })
         .eq("id", userId);
-      return new Response(JSON.stringify({ error: "scrape_failed" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const reason = fcResp.status === 402 ? "no_credits" : "scrape_failed";
+      return new Response(
+        JSON.stringify({ ok: false, fallback: true, reason }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
     const fcJson = await fcResp.json();
     const doc = fcJson.data ?? fcJson;
