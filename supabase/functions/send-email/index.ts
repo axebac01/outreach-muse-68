@@ -271,8 +271,6 @@ Deno.serve(async (req) => {
       errorMessage = sendErr?.message || "Send failed";
     }
 
-    // Generate our own Message-ID header so we can correlate replies
-    const localMessageId = `<${crypto.randomUUID()}@maillead.local>`;
     const sentAt = status === "sent" ? new Date().toISOString() : null;
     const snippet = (body_text || (body_html ? body_html.replace(/<[^>]+>/g, " ") : "") || "").slice(0, 220);
     const normSubject = (subject ?? "").replace(/^(re|sv|fwd|fw|vs|aw)\s*:\s*/gi, "").trim().toLowerCase();
