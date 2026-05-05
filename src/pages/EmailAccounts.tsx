@@ -1,6 +1,7 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine, Flame } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -8,6 +9,7 @@ import {
   useDeleteEmailAccount,
   type EmailAccount,
 } from "@/hooks/useEmailAccounts";
+import { useSendingLimits, useSentToday, useUpdateSendingLimit, effectiveCap } from "@/hooks/useSendingLimits";
 import ConnectEmailDialog from "@/components/ConnectEmailDialog";
 import EditSignatureDialog from "@/components/EditSignatureDialog";
 import { toast } from "sonner";
