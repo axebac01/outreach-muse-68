@@ -72,7 +72,6 @@ const Inbound = () => {
             ) : filtered.length === 0 ? (
               <Card className="p-12">
                 <EmptyState
-                  icon={Building2}
                   title="Inga besök ännu"
                   description="Så snart någon besöker din sajt dyker företaget upp här."
                 />
