@@ -5,9 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { ArrowLeft, ArrowRight, CalendarIcon, X } from "lucide-react";
+import { format } from "date-fns";
+import { sv as svLocale, enUS } from "date-fns/locale";
 import { useTranslation } from "react-i18next";
 import { useUpdateSequence, type Sequence } from "@/hooks/useSequence";
+import { cn } from "@/lib/utils";
 
 const COMMON_TIMEZONES = [
   "UTC",
@@ -33,7 +38,7 @@ const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 const StepSchedule = () => {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { sequence } = useOutletContext<{ sequence: Sequence }>();
   const update = useUpdateSequence(id);
 
@@ -44,9 +49,34 @@ const StepSchedule = () => {
     update.mutate({ sending_days: next as any });
   };
 
-  const startAtLocal = sequence.start_at
-    ? new Date(sequence.start_at).toISOString().slice(0, 16)
-    : "";
+  const dateLocale = i18n.language?.startsWith("sv") ? svLocale : enUS;
+  const startDate = sequence.start_at ? new Date(sequence.start_at) : null;
+  const startTime = startDate ? format(startDate, "HH:mm") : "09:00";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const commit = (date: Date | null, time: string) => {
+    if (!date) {
+      update.mutate({ start_at: null });
+      return;
+    }
+    const [h, m] = (time || "09:00").split(":").map((n) => parseInt(n, 10) || 0);
+    const next = new Date(date);
+    next.setHours(h, m, 0, 0);
+    update.mutate({ start_at: next.toISOString() });
+  };
+
+  const setQuick = (offsetDays: number) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + offsetDays);
+    commit(d, startTime);
+  };
+  const setNextMonday = () => {
+    const d = new Date(today);
+    const diff = (8 - d.getDay()) % 7 || 7;
+    d.setDate(d.getDate() + diff);
+    commit(d, startTime);
+  };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -86,14 +116,65 @@ const StepSchedule = () => {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">{t("sequence.schedule.startAt")}</Label>
-              <Input
-                type="datetime-local"
-                value={startAtLocal}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  update.mutate({ start_at: v ? new Date(v).toISOString() : null });
-                }}
-              />
+              <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate
+                        ? format(startDate, "PPP", { locale: dateLocale })
+                        : t("sequence.schedule.pickDate")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate ?? undefined}
+                      onSelect={(d) => commit(d ?? null, startTime)}
+                      disabled={(d) => d < today}
+                      initialFocus
+                      weekStartsOn={1}
+                      locale={dateLocale}
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  type="time"
+                  step={300}
+                  value={startTime}
+                  onChange={(e) => commit(startDate ?? today, e.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={() => setQuick(0)}>
+                  {t("sequence.schedule.today")}
+                </Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={() => setQuick(1)}>
+                  {t("sequence.schedule.tomorrow")}
+                </Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={setNextMonday}>
+                  {t("sequence.schedule.nextMonday")}
+                </Button>
+                {startDate && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs ml-auto text-muted-foreground"
+                    onClick={() => commit(null, startTime)}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    {t("sequence.schedule.clear")}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

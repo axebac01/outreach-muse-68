@@ -265,6 +265,11 @@
       "replies": "Svarshantering",
       "pauseOnReply": "Pausa när lead svarar",
       "pauseOnReplyDesc": "Stoppa fortsatta uppföljningar för leads som svarar.",
+      "pickDate": "Välj datum",
+      "today": "Idag",
+      "tomorrow": "Imorgon",
+      "nextMonday": "Nästa måndag",
+      "clear": "Rensa",
       "days": {
         "mon": "Mån", "tue": "Tis", "wed": "Ons", "thu": "Tor", "fri": "Fre", "sat": "Lör", "sun": "Sön"
       }
