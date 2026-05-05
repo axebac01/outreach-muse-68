@@ -224,6 +224,25 @@
       "drafts": "AI Drafts"
     }
   },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Summary across all your campaigns",
+    "range": { "24h": "24h", "7d": "7 days", "30d": "30 days", "all": "All time" },
+    "sent": "Sent",
+    "replies": "Replies",
+    "replyRate": "reply rate",
+    "failed": "Failed",
+    "unsubscribes": "Unsubscribes",
+    "activeSeq": "Active sequences",
+    "upcoming": "Upcoming sends",
+    "totalLeads": "Total leads",
+    "activityTitle": "Activity over time",
+    "topCampaigns": "Top 5 campaigns",
+    "noCampaignData": "No campaign data for this period",
+    "emptyTitle": "No data yet",
+    "emptyDesc": "Launch a campaign to see numbers here.",
+    "emptyAction": "Go to campaigns"
+  },
   "sequence": {
     "savedAs": "Status: {{status}}",
     "status": {
