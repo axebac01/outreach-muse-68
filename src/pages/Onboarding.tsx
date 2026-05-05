@@ -180,27 +180,40 @@ const Onboarding = () => {
     if (scrapedFor.current === url) return;
     scrapedFor.current = url;
     setScrapeState("loading");
+    setScrapeReason(null);
+
+    const failWith = (reason: string) => {
+      setScrapeReason(reason);
+      setScrapeState("failed");
+    };
 
     const timeout = new Promise<{ timeout: true }>((resolve) =>
       setTimeout(() => resolve({ timeout: true }), SCRAPE_TIMEOUT_MS),
     );
     const call = supabase.functions
       .invoke("analyze-company", { body: { url } })
-      .then((r) => ({ ...r, timeout: false as const }));
+      .then((r) => ({ ...r, timeout: false as const }))
+      .catch((err) => ({ error: err, data: null, timeout: false as const }));
 
-    Promise.race([call, timeout]).then((res: any) => {
-      if (res.timeout) {
-        setScrapeState("failed");
-        return;
-      }
-      const { data, error } = res;
-      if (error || !data?.ok) {
-        setScrapeState("failed");
-        return;
-      }
-      setCompanyData(data);
-      setScrapeState("done");
-    });
+    Promise.race([call, timeout])
+      .then((res: any) => {
+        if (res.timeout) {
+          failWith("timeout");
+          return;
+        }
+        const { data, error } = res;
+        if (error) {
+          failWith("invoke_error");
+          return;
+        }
+        if (!data || data.ok === false || data.fallback === true) {
+          failWith(data?.reason ?? "scrape_failed");
+          return;
+        }
+        setCompanyData(data);
+        setScrapeState("done");
+      })
+      .catch(() => failWith("unknown"));
   };
 
   const validateStep = (): boolean => {
