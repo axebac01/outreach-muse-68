@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, Settings, Inbox as InboxIcon } from "lucide-react";
+import { Menu, X, LogOut, Settings, Inbox as InboxIcon, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
 import logo from "@/assets/maillead-logo.png";
@@ -19,6 +19,7 @@ const Navbar = () => {
     location.pathname.startsWith("/outreach") ||
     location.pathname.startsWith("/email-accounts") ||
     location.pathname.startsWith("/inbox") ||
+    location.pathname.startsWith("/inbound") ||
     location.pathname.startsWith("/sequence") ||
     location.pathname.startsWith("/analytics") ||
     location.pathname.startsWith("/settings");
@@ -92,6 +93,9 @@ const Navbar = () => {
                 <InboxIcon className="h-4 w-4" /> Unibox
                 {unread > 0 && <Badge className="h-4 min-w-4 px-1 text-[10px] ml-1">{unread}</Badge>}
               </Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link to="/inbound" className="gap-1.5"><Building2 className="h-4 w-4" /> Inbound</Link>
             </Button>
             <Button variant="ghost" asChild><Link to="/email-accounts">{t("nav.emailAccounts")}</Link></Button>
             <Button variant="ghost" asChild><Link to="/analytics">{t("nav.analytics")}</Link></Button>
