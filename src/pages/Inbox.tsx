@@ -157,7 +157,6 @@ const Inbox = () => {
 
   const handleSendReply = async () => {
     if (!selected || !reply.trim() || messages.length === 0) return;
-    const lastInbound = [...messages].reverse().find((m) => m.direction === "inbound");
     const recipient = lastInbound?.from_address ?? selected.participants.find((p) => {
       const acc = accounts.find((a) => a.id === selected.email_account_id);
       return p !== acc?.email.toLowerCase();
@@ -185,6 +184,7 @@ const Inbox = () => {
       });
       if (error) throw error;
       setReply("");
+      setReplyTouched(false);
       toast.success("Svar skickat");
       qc.invalidateQueries({ queryKey: ["inbox_messages"] });
       qc.invalidateQueries({ queryKey: ["inbox_threads", user?.id] });
