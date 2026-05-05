@@ -116,14 +116,65 @@ const StepSchedule = () => {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">{t("sequence.schedule.startAt")}</Label>
-              <Input
-                type="datetime-local"
-                value={startAtLocal}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  update.mutate({ start_at: v ? new Date(v).toISOString() : null });
-                }}
-              />
+              <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate
+                        ? format(startDate, "PPP", { locale: dateLocale })
+                        : t("sequence.schedule.pickDate")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate ?? undefined}
+                      onSelect={(d) => commit(d ?? null, startTime)}
+                      disabled={(d) => d < today}
+                      initialFocus
+                      weekStartsOn={1}
+                      locale={dateLocale}
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  type="time"
+                  step={300}
+                  value={startTime}
+                  onChange={(e) => commit(startDate ?? today, e.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={() => setQuick(0)}>
+                  {t("sequence.schedule.today")}
+                </Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={() => setQuick(1)}>
+                  {t("sequence.schedule.tomorrow")}
+                </Button>
+                <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={setNextMonday}>
+                  {t("sequence.schedule.nextMonday")}
+                </Button>
+                {startDate && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs ml-auto text-muted-foreground"
+                    onClick={() => commit(null, startTime)}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    {t("sequence.schedule.clear")}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
