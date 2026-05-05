@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, Settings } from "lucide-react";
+import { Menu, X, LogOut, Settings, Inbox as InboxIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useUnreadInboxCount } from "@/hooks/useInbox";
 import logo from "@/assets/maillead-logo.png";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
