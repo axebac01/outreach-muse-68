@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, Settings } from "lucide-react";
+import { Menu, X, LogOut, Settings, Inbox as InboxIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useUnreadInboxCount } from "@/hooks/useInbox";
 import logo from "@/assets/maillead-logo.png";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -16,10 +18,12 @@ const Navbar = () => {
     location.pathname.startsWith("/campaign") ||
     location.pathname.startsWith("/outreach") ||
     location.pathname.startsWith("/email-accounts") ||
+    location.pathname.startsWith("/inbox") ||
     location.pathname.startsWith("/sequence") ||
     location.pathname.startsWith("/analytics") ||
     location.pathname.startsWith("/settings");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: unread = 0 } = useUnreadInboxCount();
 
   const handleSignOut = async () => {
     await signOut();
@@ -83,6 +87,12 @@ const Navbar = () => {
         ) : (
           <div className="flex items-center gap-1">
             <Button variant="ghost" asChild><Link to="/dashboard">{t("nav.campaigns")}</Link></Button>
+            <Button variant="ghost" asChild className="relative">
+              <Link to="/inbox" className="gap-1.5">
+                <InboxIcon className="h-4 w-4" /> Unibox
+                {unread > 0 && <Badge className="h-4 min-w-4 px-1 text-[10px] ml-1">{unread}</Badge>}
+              </Link>
+            </Button>
             <Button variant="ghost" asChild><Link to="/email-accounts">{t("nav.emailAccounts")}</Link></Button>
             <Button variant="ghost" asChild><Link to="/analytics">{t("nav.analytics")}</Link></Button>
             <div className="w-px h-5 bg-border mx-1" />

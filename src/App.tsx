@@ -24,6 +24,7 @@ import StepSchedule from "./pages/sequence/StepSchedule";
 import StepSending from "./pages/sequence/StepSending";
 import Analytics from "./pages/Analytics";
 import Onboarding from "./pages/Onboarding";
+import Inbox from "./pages/Inbox";
 import OnboardingGate from "@/components/OnboardingGate";
 import NotFound from "./pages/NotFound";
 
@@ -54,6 +55,7 @@ const App = () => (
             </Route>
             <Route path="/settings" element={<ProtectedRoute><OnboardingGate><Settings /></OnboardingGate></ProtectedRoute>} />
             <Route path="/email-accounts" element={<ProtectedRoute><OnboardingGate><EmailAccounts /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/inbox" element={<ProtectedRoute><OnboardingGate><Inbox /></OnboardingGate></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><OnboardingGate><Analytics /></OnboardingGate></ProtectedRoute>} />
             <Route path="/settings/email-accounts" element={<Navigate to="/email-accounts" replace />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />

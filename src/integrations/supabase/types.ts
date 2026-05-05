@@ -163,13 +163,19 @@ export type Database = {
           from_address: string
           id: string
           in_reply_to: string | null
+          is_archived: boolean
+          is_read: boolean
           lead_id: string | null
+          message_id_header: string | null
           provider_message_id: string | null
           received_at: string | null
           sent_at: string | null
+          sequence_id: string | null
+          snippet: string | null
           status: string
           subject: string | null
           thread_id: string | null
+          thread_key: string | null
           to_address: string
           user_id: string
         }
@@ -183,13 +189,19 @@ export type Database = {
           from_address: string
           id?: string
           in_reply_to?: string | null
+          is_archived?: boolean
+          is_read?: boolean
           lead_id?: string | null
+          message_id_header?: string | null
           provider_message_id?: string | null
           received_at?: string | null
           sent_at?: string | null
+          sequence_id?: string | null
+          snippet?: string | null
           status?: string
           subject?: string | null
           thread_id?: string | null
+          thread_key?: string | null
           to_address: string
           user_id: string
         }
@@ -203,13 +215,19 @@ export type Database = {
           from_address?: string
           id?: string
           in_reply_to?: string | null
+          is_archived?: boolean
+          is_read?: boolean
           lead_id?: string | null
+          message_id_header?: string | null
           provider_message_id?: string | null
           received_at?: string | null
           sent_at?: string | null
+          sequence_id?: string | null
+          snippet?: string | null
           status?: string
           subject?: string | null
           thread_id?: string | null
+          thread_key?: string | null
           to_address?: string
           user_id?: string
         }
@@ -236,6 +254,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_threads: {
+        Row: {
+          created_at: string
+          email_account_id: string
+          id: string
+          is_archived: boolean
+          last_direction: string | null
+          last_message_at: string
+          last_snippet: string | null
+          lead_id: string | null
+          message_count: number
+          participants: string[]
+          sequence_id: string | null
+          subject: string | null
+          thread_key: string
+          unread_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_account_id: string
+          id?: string
+          is_archived?: boolean
+          last_direction?: string | null
+          last_message_at?: string
+          last_snippet?: string | null
+          lead_id?: string | null
+          message_count?: number
+          participants?: string[]
+          sequence_id?: string | null
+          subject?: string | null
+          thread_key: string
+          unread_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_account_id?: string
+          id?: string
+          is_archived?: boolean
+          last_direction?: string | null
+          last_message_at?: string
+          last_snippet?: string | null
+          lead_id?: string | null
+          message_count?: number
+          participants?: string[]
+          sequence_id?: string | null
+          subject?: string | null
+          thread_key?: string
+          unread_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       generated_outreach: {
         Row: {

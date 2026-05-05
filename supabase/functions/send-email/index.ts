@@ -141,6 +141,8 @@ Deno.serve(async (req) => {
       body_html,
       body_text,
       lead_id,
+      sequence_id,
+      thread_key: clientThreadKey,
       in_reply_to,
     } = await req.json();
 
@@ -192,7 +194,9 @@ Deno.serve(async (req) => {
     // Unsubscribe token + headers
     const unsubToken = await signUnsubscribeToken(userId, toLower);
     const unsubUrl = buildUnsubscribeUrl(unsubToken);
+    const localMessageId = `<${crypto.randomUUID()}@maillead.local>`;
     const extraHeaders = [
+      `Message-ID: ${localMessageId}`,
       `List-Unsubscribe: <${unsubUrl}>`,
       `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
     ];
@@ -267,22 +271,72 @@ Deno.serve(async (req) => {
       errorMessage = sendErr?.message || "Send failed";
     }
 
-    await admin.from("email_messages").insert({
+    const sentAt = status === "sent" ? new Date().toISOString() : null;
+    const snippet = (body_text || (body_html ? body_html.replace(/<[^>]+>/g, " ") : "") || "").slice(0, 220);
+    const normSubject = (subject ?? "").replace(/^(re|sv|fwd|fw|vs|aw)\s*:\s*/gi, "").trim().toLowerCase();
+    const threadKey = clientThreadKey || in_reply_to || `subj:${normSubject}:${String(to).toLowerCase()}`;
+
+    const { data: insertedMsg } = await admin.from("email_messages").insert({
       user_id: userId,
       email_account_id,
       lead_id: lead_id ?? null,
+      sequence_id: sequence_id ?? null,
       direction: "outbound",
       from_address: account.email,
       to_address: to,
       subject,
       body_text: body_text ?? null,
       body_html: body_html ?? null,
-      sent_at: status === "sent" ? new Date().toISOString() : null,
+      snippet,
+      sent_at: sentAt,
       status,
       error_message: errorMessage,
       provider_message_id: providerMessageId,
+      message_id_header: localMessageId,
       in_reply_to: in_reply_to ?? null,
-    });
+      thread_key: threadKey,
+    }).select("id").maybeSingle();
+
+    if (status === "sent") {
+      // Upsert thread for outbound
+      const fromLower = String(account.email).toLowerCase();
+      const toLower2 = String(to).toLowerCase();
+      const { data: existingThread } = await admin
+        .from("email_threads")
+        .select("id, participants, message_count")
+        .eq("email_account_id", email_account_id)
+        .eq("thread_key", threadKey)
+        .maybeSingle();
+      const participants = new Set<string>(existingThread?.participants ?? []);
+      participants.add(fromLower);
+      participants.add(toLower2);
+      if (existingThread) {
+        await admin.from("email_threads").update({
+          last_message_at: sentAt,
+          last_snippet: snippet,
+          last_direction: "outbound",
+          participants: Array.from(participants),
+          message_count: (existingThread.message_count ?? 0) + 1,
+          lead_id: lead_id ?? null,
+          sequence_id: sequence_id ?? null,
+        }).eq("id", existingThread.id);
+      } else {
+        await admin.from("email_threads").insert({
+          user_id: userId,
+          email_account_id,
+          thread_key: threadKey,
+          subject,
+          participants: Array.from(participants),
+          last_message_at: sentAt,
+          last_snippet: snippet,
+          last_direction: "outbound",
+          unread_count: 0,
+          message_count: 1,
+          lead_id: lead_id ?? null,
+          sequence_id: sequence_id ?? null,
+        });
+      }
+    }
 
     if (status !== "sent") {
       return new Response(JSON.stringify({ error: errorMessage }), {
