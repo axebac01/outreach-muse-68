@@ -1,84 +1,77 @@
 ## Mål
-Lägg till en "Generera kampanj med AI"-funktion i sequence builder. Användaren beskriver målet med kampanjen (t.ex. "erbjuda partnerskap till IT-konsulter") och får tillbaka en komplett mejlsekvens — alla steg med ämne, brödtext, väntedagar och korrekt användning av variabler.
 
-## UX-flöde
+En "Unibox" där alla inkommande mejlsvar – från alla anslutna mejlkonton och alla kampanjer – samlas på ett ställe. Du kan:
+- Se alla konversationer (sorterade efter senaste aktivitet, oläst-markerade)
+- Filtrera per konto, kampanj/sekvens och status (oläst, alla, behöver svar)
+- Öppna en tråd, läsa hela historiken (utgående + inkommande)
+- Svara direkt i appen – svaret går från rätt mejlkonto, i rätt tråd
+- Markera som läst/arkiverad
 
-1. På `StepSequence`-sidan (`/sequence/:id/sequence`) lägger jag till en knapp **"Generera med AI"** högst upp bredvid "Continue".
-2. Klick öppnar en dialog med:
-   - Textarea: "Vad vill du åstadkomma med kampanjen?" (t.ex. "Erbjuda partnerskap till IT-konsulter").
-   - Litet val för antal steg (3 / 4 / 5, default 4).
-   - Litet val för tonalitet (default = bolagets `company_tone` om finns, annars "professionell men personlig").
-   - Knapp **"Generera"** med inline-loader (samma stil som onboarding-loadern, fast mindre).
-3. När AI:n svarar:
-   - Om det redan finns icke-tomma steg, visa bekräftelse "Detta ersätter befintliga steg" innan vi skriver över.
-   - Annars: spara stegen direkt och stäng dialogen, toast "Kampanj skapad".
+## Vad byggs
 
-## Data till AI:n
+### 1. Backend — datamodell
 
-Edge function `generate-sequence` hämtar serverside (med användarens JWT):
-- `profiles`: `company_name`, `company_description`, `company_target_audience`, `company_value_prop`, `company_industry`, `company_tone`, `company_key_offerings`, `company_pain_points`, `company_proof_points`. Det här är "vem säljaren är".
-- `sequence_leads` för aktuell `sequence_id`: ta upp till 20 leads och plocka ut distinkta `company`, `role`, ev. `full_name`-mönster. Skicka även 3 exempel-leads (anonymiserade) som mall för hur variablerna ska användas.
-- Listan av tillåtna variabler från `VARIABLE_DEFS` (`first_name`, `company`, `sender_name`, `unsubscribe`, etc.) — AI:n får instruktion att bara använda dessa och alltid inkludera `{{unsubscribe}}` i sista steget.
+Vi bygger på den befintliga `email_messages`-tabellen (där utgående mejl redan loggas). Lägger till:
 
-Användaren skickar med:
-- `sequence_id`
-- `goal` (fritext)
-- `step_count`
-- `tone`
+- Nya kolumner på `email_messages`: `is_read` (bool), `is_archived` (bool), `sequence_id` (uuid, nullable), `snippet` (text – kort förhandsvisning)
+- Ny tabell `email_threads` (cache för UI-prestanda): `id`, `user_id`, `email_account_id`, `thread_id` (provider), `subject`, `participants` (text[]), `last_message_at`, `unread_count`, `lead_id`, `sequence_id`
+- Index på `(user_id, last_message_at desc)` och `(thread_id, email_account_id)`
+- RLS: bara ägaren kan se/uppdatera sina trådar och meddelanden
 
-## AI-anrop
+### 2. Backend — sync av inkommande mejl
 
-- Edge function: `supabase/functions/generate-sequence/index.ts`.
-- Modell: `google/gemini-3-flash-preview` via Lovable AI Gateway.
-- Använder tool calling (`generate_sequence`) för strukturerad output:
-  ```
-  {
-    steps: [
-      { step_order: number, subject: string, body: string, wait_days: number }
-    ]
-  }
-  ```
-- System-prompt ger AI:n personan "expert på kalla mejl och svenska säljkampanjer", instruerar:
-  - Skriv på svenska som default (samma språk som `company_description`).
-  - Personliga, korta mejl (max ~120 ord per steg). Steg 1 = hook + value, mellansteg = follow-up med ny vinkel/proof, sista = mjuk break-up.
-  - Använd variabler `{{first_name}}`, `{{company}}`, `{{sender_name}}` etc. där det är naturligt.
-  - Använd ENBART variabler från en angiven vit lista.
-  - Steg 1 har `wait_days: 0`. Följande steg 2–4 dagar.
-  - Sista stegets body måste innehålla `{{unsubscribe}}`.
-  - Inga "Hi {first}" placeholders eller hashtaggar — bara variabel-syntaxen `{{...}}`.
-- Felhantering: 429 → toast "AI är upptagen, försök igen", 402 → "Slut på AI-credits".
+Ny edge-funktion `sync-inbox` som körs per konto:
+- **Gmail (OAuth)**: använder `users/me/history.list` med sparat `history_id` för delta-sync (eller `messages.list?q=newer_than:7d` om historyId saknas). Hämtar nya inkommande mejl, parsar headers (Message-ID, In-Reply-To, References, From, Subject) och body.
+- **IMAP (SMTP-konton)**: anslut via existerande IMAP-konfig, läs UIDs > `imap_last_uid` i INBOX, hämta nya mejl.
+- För varje nytt mejl: hitta matchande utgående mejl via `In-Reply-To`/`References` → koppla `lead_id`, `sequence_id`, `thread_id`. Spara som `direction: "inbound"`.
+- Uppdatera `email_threads` (upsert) med `last_message_at`, öka `unread_count`.
+- Om `sequences.pause_on_reply = true` → markera `sequence_leads.status = "replied"` så uppföljningar pausas.
 
-## Spara stegen
+Trigger för sync:
+- Manuell "Hämta nytt"-knapp i Unibox (anropar `sync-inbox` för alla aktiva konton)
+- Automatisk: Realtime-prenumeration på `email_messages` så nya rader dyker upp direkt i UI
 
-- Edge function returnerar bara JSON till klienten — den gör inte DB-skrivningarna själv (då behöver vi inte service role för det här).
-- Frontend tar svaret och:
-  1. Tar bort befintliga `sequence_steps` för sekvensen (om man bekräftat overwrite).
-  2. Insert nya rader via befintlig supabase-klient (RLS skyddar).
-  3. Invalidate `sequence_steps`-query så UI:t ritar om.
+(Cron-baserad bakgrundssync kan läggas till senare – för nu räcker manuell + on-open trigger när du öppnar Unibox.)
 
-## Filer som ändras / skapas
+### 3. Frontend — Unibox-sida
 
-- **Ny**: `supabase/functions/generate-sequence/index.ts` (validerar JWT, läser profile + leads, anropar AI gateway, returnerar steg-array).
-- **Ny**: `src/components/sequence/GenerateSequenceDialog.tsx` (UI: textarea, val, generera-knapp, loader, fel-handling).
-- **Ny**: `src/hooks/useGenerateSequence.ts` (mutation: anropa edge function + skriv över steg).
-- **Edit**: `src/pages/sequence/StepSequence.tsx` — lägg till "Generera med AI"-knappen som öppnar dialogen.
-- **Edit**: `src/i18n/locales/sv.json` + `en.json` — nya strängar.
+Ny route `/inbox` med 3-kolumnslayout:
 
-## Edge cases
+```text
++------------+----------------------+--------------------------+
+| Filter     | Trådlista            | Konversation + svarsruta |
+| - Konto    | [Avsändare/ämne]     | [Hela tråden, äldst→ny]  |
+| - Sekvens  | [Snippet · 2 tim]    |                          |
+| - Status   | [Oläst-badge]        | [Skriv svar...]          |
++------------+----------------------+--------------------------+
+```
 
-- Om `profiles.company_description` saknas helt: edge function returnerar 400 "Slutför onboardingen först" och dialogen visar det.
-- Om sekvensen inte har några leads än: vi kör ändå, men AI:n får en notis "inga konkreta leads — gör mejlen generella mot målgruppen X".
-- Om AI:n bryter mot variabel-vita listan: vi gör en server-side post-process som strippar `{{...}}` som inte finns i listan, så ingen `{{ogiltig}}`-token läcker ut.
+Komponenter:
+- `Inbox.tsx` – sida med layout och routing (`/inbox` och `/inbox/:threadId`)
+- `ThreadList.tsx` – virtualiserad lista med oläst-fetstil, snippet, tidsstämpel, sekvensnamn-badge
+- `ThreadView.tsx` – hela trådens mejl som "chattbubblor" (utgående höger, inkommande vänster), citerad text kollapsad
+- `ReplyComposer.tsx` – textfält + skicka-knapp; använder `send-email`-funktionen med `in_reply_to` satt och `from` = ursprungligt konto
+- Markera som läst när tråden öppnas
+- Realtime via Supabase channel på `email_messages` → invalidate trådlistan
+
+Lägg till "Inbox"-länk i Navbar med oläst-räknare (badge).
+
+### 4. Översättningar
+
+Lägga till sv/en strängar för Unibox under `inbox.*` namespace.
 
 ## Tekniska detaljer
 
-- Gateway-anrop följer befintligt mönster i `analyze-company` (samma auth/CORS).
-- Tool schema: `additionalProperties: false`, alla fält required, så Gemini följer formatet stabilt.
-- Ingen ny DB-migration behövs — vi återanvänder `sequence_steps`.
-- Loader-komponenten i dialogen återanvänder samma "rotating dots + cycling status text"-stil som onboarding-loadern, fast i mindre format.
+- Migration lägger till nya kolumner + tabell + RLS-policies + realtime-publication för `email_messages` och `email_threads`.
+- `send-email` används återanvänt för svar (sätter `in_reply_to`, kopierar `to_address` från inkommande, hittar rätt `email_account_id` från tråden).
+- `sync-inbox` schemaläggs INTE som cron i denna iteration (kan läggas till senare med pg_cron); manuell + Realtime räcker för MVP.
+- Feltolerant: om ett konto inte kan synca (token utgången etc.) sätts `email_accounts.status_message`, övriga konton fortsätter.
 
-## Vad jag verifierar efteråt
-- Generera kampanj på en tom sekvens → 4 steg dyker upp med fyllda subject/body, korrekt `wait_days`, `{{first_name}}` används.
-- Generera på en sekvens med befintliga steg → bekräftelse innan overwrite.
-- Saknad onboarding → tydligt felmeddelande.
-- Variabler renderas korrekt i `EmailPreview` med första leaden.
+## Avgränsning (gör vi INTE nu)
+
+- Bilagor (visning eller utgående)
+- Etiketter/mappar
+- Bakgrundscron (manuell sync + Realtime räcker som MVP)
+- Tråd-arkivering med smart filter (vi har bara läst/oläst för nu)
+
+Säg till om något ska ändras eller läggas till innan jag bygger.
