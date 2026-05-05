@@ -75,10 +75,11 @@ Deno.serve(async (req) => {
         .from("profiles")
         .update({ company_scrape_status: "failed" })
         .eq("id", userId);
-      return new Response(JSON.stringify({ error: "scrape_failed" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const reason = fcResp.status === 402 ? "no_credits" : "scrape_failed";
+      return new Response(
+        JSON.stringify({ ok: false, fallback: true, reason }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
     const fcJson = await fcResp.json();
     const doc = fcJson.data ?? fcJson;
@@ -137,10 +138,10 @@ Deno.serve(async (req) => {
       const txt = await aiResp.text();
       console.error("AI failed", aiResp.status, txt);
       await admin.from("profiles").update({ company_scrape_status: "failed" }).eq("id", userId);
-      return new Response(JSON.stringify({ error: "ai_failed" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ ok: false, fallback: true, reason: "ai_failed" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
     const aiJson = await aiResp.json();
     const args = aiJson.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
@@ -167,8 +168,13 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error("analyze-company error", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({
+        ok: false,
+        fallback: true,
+        reason: "unknown",
+        message: e instanceof Error ? e.message : "Unknown",
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
