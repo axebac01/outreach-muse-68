@@ -87,6 +87,12 @@ const Navbar = () => {
         ) : (
           <div className="flex items-center gap-1">
             <Button variant="ghost" asChild><Link to="/dashboard">{t("nav.campaigns")}</Link></Button>
+            <Button variant="ghost" asChild className="relative">
+              <Link to="/inbox" className="gap-1.5">
+                <InboxIcon className="h-4 w-4" /> Unibox
+                {unread > 0 && <Badge className="h-4 min-w-4 px-1 text-[10px] ml-1">{unread}</Badge>}
+              </Link>
+            </Button>
             <Button variant="ghost" asChild><Link to="/email-accounts">{t("nav.emailAccounts")}</Link></Button>
             <Button variant="ghost" asChild><Link to="/analytics">{t("nav.analytics")}</Link></Button>
             <div className="w-px h-5 bg-border mx-1" />
