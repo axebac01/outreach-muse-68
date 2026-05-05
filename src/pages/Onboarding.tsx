@@ -489,16 +489,7 @@ const FinalStep = ({
   onFinish: () => void;
 }) => {
   if (scrapeState === "loading" || scrapeState === "idle") {
-    return (
-      <div className="flex flex-col items-center gap-6">
-        <Sparkles className="h-12 w-12 text-primary animate-pulse" />
-        <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
-          Vi analyserar ditt företag…
-        </h1>
-        <p className="text-muted-foreground">Tar bara några sekunder.</p>
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <AnalysisLoader />;
   }
 
   if (scrapeState === "failed") {
