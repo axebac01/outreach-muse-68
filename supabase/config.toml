@@ -2,3 +2,6 @@ project_id = "xnhxokvtcuwfyxaulaxc"
 
 [functions.unsubscribe]
 verify_jwt = false
+
+[functions.import-leads]
+verify_jwt = false
