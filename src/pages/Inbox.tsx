@@ -289,9 +289,41 @@ const Inbox = () => {
               </div>
             ) : (
               <>
-                <div className="px-4 py-3 border-b">
-                  <div className="font-medium truncate">{selected.subject || "(utan ämne)"}</div>
-                  <div className="text-xs text-muted-foreground truncate">{selected.participants.join(", ")}</div>
+                <div className="px-4 py-3 border-b space-y-2">
+                  <div>
+                    <div className="font-medium truncate">{selected.subject || "(utan ämne)"}</div>
+                    <div className="text-xs text-muted-foreground truncate">{selected.participants.join(", ")}</div>
+                  </div>
+                  {lastInbound && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <SentimentBadge sentiment={lastInbound.sentiment} />
+                      {lastInbound.category && (
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+                          {categoryLabel(lastInbound.category)}
+                        </Badge>
+                      )}
+                      {lastInbound.language && (
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          {lastInbound.language}
+                        </Badge>
+                      )}
+                      {!lastInbound.ai_analyzed_at && !lastInbound.ai_analysis_error && (
+                        <Badge variant="secondary" className="text-[10px] gap-1">
+                          <Loader2 className="h-2.5 w-2.5 animate-spin" /> Analyserar…
+                        </Badge>
+                      )}
+                      {lastInbound.ai_analysis_error && (
+                        <Badge variant="destructive" className="text-[10px] gap-1">
+                          <AlertCircle className="h-2.5 w-2.5" /> AI-fel
+                        </Badge>
+                      )}
+                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto"
+                        onClick={() => handleAnalyze(true)} disabled={analyzing}>
+                        {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        Analysera om
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-3">
@@ -301,15 +333,37 @@ const Inbox = () => {
                   </div>
                 </ScrollArea>
                 <div className="border-t p-3 space-y-2 bg-muted/20">
+                  {lastInbound?.sentiment === "unsubscribe_request" && (
+                    <div className="rounded-md bg-destructive/10 text-destructive text-xs p-2 flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5"><Ban className="h-3.5 w-3.5" /> Avregistreringsbegäran</span>
+                      <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={handleAddUnsubscribe}>
+                        Lägg till i avregistrerade
+                      </Button>
+                    </div>
+                  )}
+                  {lastInbound?.sentiment === "negative" && (
+                    <div className="rounded-md bg-muted text-muted-foreground text-xs p-2 flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5" /> Avsändaren verkar inte intresserad — överväg att inte svara.
+                    </div>
+                  )}
+                  {lastInbound?.suggested_reply && reply === lastInbound.suggested_reply && !replyTouched && (
+                    <div className="flex items-center justify-between text-xs text-primary">
+                      <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> AI-förslag · redigera fritt</span>
+                      <button
+                        onClick={() => { setReply(""); setReplyTouched(true); }}
+                        className="hover:underline"
+                      >Rensa</button>
+                    </div>
+                  )}
                   <Textarea
                     value={reply}
-                    onChange={(e) => setReply(e.target.value)}
+                    onChange={(e) => { setReply(e.target.value); setReplyTouched(true); }}
                     placeholder="Skriv ditt svar…"
                     className="min-h-[100px] bg-background"
                   />
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">
-                      Svar skickas från {accounts.find((a) => a.id === selected.email_account_id)?.email}
+                    <span className="text-xs text-muted-foreground truncate">
+                      Från {accounts.find((a) => a.id === selected.email_account_id)?.email}
                     </span>
                     <Button onClick={handleSendReply} disabled={!reply.trim() || sending} size="sm" className="gap-2">
                       {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
