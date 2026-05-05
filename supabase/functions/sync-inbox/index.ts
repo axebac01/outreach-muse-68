@@ -299,7 +299,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     });
   }
 
-  // Pause sequence on reply if configured
+  // Pause sequence on reply if configured + cancel scheduled
   if (sequenceId) {
     const { data: seq } = await admin.from("sequences")
       .select("pause_on_reply").eq("id", sequenceId).maybeSingle();
@@ -308,6 +308,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
         .update({ status: "replied" })
         .eq("sequence_id", sequenceId)
         .ilike("email", fromEmail);
+      await cancelScheduledForLead(admin, sequenceId, leadId, account.user_id, fromEmail);
     }
   }
 }
