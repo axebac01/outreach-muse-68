@@ -25,6 +25,8 @@ import StepSending from "./pages/sequence/StepSending";
 import Analytics from "./pages/Analytics";
 import Onboarding from "./pages/Onboarding";
 import Inbox from "./pages/Inbox";
+import Inbound from "./pages/Inbound";
+import TrackingSettings from "./pages/TrackingSettings";
 import OnboardingGate from "@/components/OnboardingGate";
 import NotFound from "./pages/NotFound";
 
