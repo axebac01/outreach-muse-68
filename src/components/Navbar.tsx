@@ -94,6 +94,9 @@ const Navbar = () => {
                 {unread > 0 && <Badge className="h-4 min-w-4 px-1 text-[10px] ml-1">{unread}</Badge>}
               </Link>
             </Button>
+            <Button variant="ghost" asChild>
+              <Link to="/inbound" className="gap-1.5"><Building2 className="h-4 w-4" /> Inbound</Link>
+            </Button>
             <Button variant="ghost" asChild><Link to="/email-accounts">{t("nav.emailAccounts")}</Link></Button>
             <Button variant="ghost" asChild><Link to="/analytics">{t("nav.analytics")}</Link></Button>
             <div className="w-px h-5 bg-border mx-1" />
