@@ -106,7 +106,21 @@
     "ctaTitle": "Your competitors are already personalizing. Are you?",
     "ctaSub": "Join hundreds of teams already using MailLead.ai to book more meetings.",
     "mobileCta": "Try free — no credit card needed",
-    "globeCaption": "Live: emails being delivered around the world",
+    "pipeline": {
+      "leads": "Leads",
+      "sequence": "Sequence",
+      "replies": "Replies",
+      "day1": "Day 1 – First email",
+      "day3": "Day 3 – Follow-up",
+      "day7": "Day 7 – Last chance",
+      "sent": "Sent",
+      "scheduled": "Scheduled",
+      "replied": "Replied",
+      "now": "now",
+      "sentLabel": "Sent",
+      "openRate": "Open rate",
+      "replyRate": "Reply rate"
+    },
     "emailsPerMin": "emails/min",
     "footer": "© 2026 MailLead.ai. All rights reserved."
   },

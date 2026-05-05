@@ -106,7 +106,21 @@
     "ctaTitle": "Dina konkurrenter personifierar redan. Gör du?",
     "ctaSub": "Gå med i hundratals team som redan använder MailLead.ai för att boka fler möten.",
     "mobileCta": "Prova gratis – inget kreditkort krävs",
-    "globeCaption": "Live: mejl skickas just nu världen runt",
+    "pipeline": {
+      "leads": "Leads",
+      "sequence": "Sekvens",
+      "replies": "Svar",
+      "day1": "Dag 1 – Första mejlet",
+      "day3": "Dag 3 – Uppföljning",
+      "day7": "Dag 7 – Sista chansen",
+      "sent": "Skickat",
+      "scheduled": "Schemalagd",
+      "replied": "Svarade",
+      "now": "nu",
+      "sentLabel": "Skickade",
+      "openRate": "Öppningsgrad",
+      "replyRate": "Svarsfrekvens"
+    },
     "emailsPerMin": "mejl/min",
     "footer": "© 2026 MailLead.ai. Alla rättigheter förbehållna."
   },
