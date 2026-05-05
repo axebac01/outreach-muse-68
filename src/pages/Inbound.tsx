@@ -44,14 +44,10 @@ const Inbound = () => {
         {sites.length === 0 ? (
           <Card className="p-12">
             <EmptyState
-              icon={Globe}
               title="Du har inte installerat snippeten än"
               description="Lägg till din webbplats och klistra in tracking-snippeten i headern för att börja se vilka företag som besöker dig."
-              action={
-                <Button asChild>
-                  <Link to="/settings/tracking">Kom igång</Link>
-                </Button>
-              }
+              actionLabel="Kom igång"
+              actionHref="/settings/tracking"
             />
           </Card>
         ) : (
