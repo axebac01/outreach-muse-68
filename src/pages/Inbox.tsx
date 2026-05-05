@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Inbox as InboxIcon, RefreshCw, Send, Loader2, Mail, MailOpen, ArrowDown, ArrowUp, Search } from "lucide-react";
+import { Inbox as InboxIcon, RefreshCw, Send, Loader2, Mail, MailOpen, ArrowDown, ArrowUp, Search, Sparkles, Ban, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -28,11 +28,14 @@ const Inbox = () => {
 
   const [accountId, setAccountId] = useState<string>("all");
   const [onlyUnread, setOnlyUnread] = useState(false);
+  const [sentimentFilter, setSentimentFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
+  const [replyTouched, setReplyTouched] = useState(false);
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["email_accounts_simple", user?.id],
@@ -50,6 +53,7 @@ const Inbox = () => {
   const { data: threads = [], isLoading } = useInboxThreads({
     accountId: accountId === "all" ? undefined : accountId,
     onlyUnread,
+    sentiment: sentimentFilter === "all" ? undefined : sentimentFilter,
   });
 
   const filteredThreads = useMemo(() => {
@@ -69,10 +73,29 @@ const Inbox = () => {
 
   const { data: messages = [] } = useThreadMessages(selected);
 
+  const lastInbound = useMemo(
+    () => [...messages].reverse().find((m) => m.direction === "inbound") ?? null,
+    [messages],
+  );
+
   // Auto-select first thread on load
   useEffect(() => {
     if (!selectedId && filteredThreads.length > 0) setSelectedId(filteredThreads[0].id);
   }, [filteredThreads, selectedId]);
+
+  // Reset reply state when switching threads
+  useEffect(() => {
+    setReply("");
+    setReplyTouched(false);
+  }, [selected?.id]);
+
+  // Auto-fill reply with AI suggestion when available and user hasn't typed
+  useEffect(() => {
+    if (!lastInbound || replyTouched) return;
+    if (lastInbound.suggested_reply && !reply) {
+      setReply(lastInbound.suggested_reply);
+    }
+  }, [lastInbound?.id, lastInbound?.suggested_reply, replyTouched]);
 
   // Mark as read on open
   useEffect(() => {
@@ -83,6 +106,39 @@ const Inbox = () => {
       });
     }
   }, [selected?.id]);
+
+  const handleAnalyze = async (force = false) => {
+    if (!lastInbound) return;
+    setAnalyzing(true);
+    try {
+      const { error } = await supabase.functions.invoke("analyze-inbound-email", {
+        body: { message_id: lastInbound.id, force },
+      });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["inbox_messages"] });
+      qc.invalidateQueries({ queryKey: ["inbox_threads", user?.id] });
+      toast.success("AI-analys klar");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Analys misslyckades");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleAddUnsubscribe = async () => {
+    if (!lastInbound || !user) return;
+    try {
+      await supabase.from("unsubscribes").insert({
+        user_id: user.id,
+        email: lastInbound.from_address,
+        sequence_id: selected?.sequence_id ?? null,
+        source: "inbox_request",
+      });
+      toast.success("Avregistrerad");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Kunde inte avregistrera");
+    }
+  };
 
   const handleSync = async () => {
     setSyncing(true);
@@ -101,7 +157,6 @@ const Inbox = () => {
 
   const handleSendReply = async () => {
     if (!selected || !reply.trim() || messages.length === 0) return;
-    const lastInbound = [...messages].reverse().find((m) => m.direction === "inbound");
     const recipient = lastInbound?.from_address ?? selected.participants.find((p) => {
       const acc = accounts.find((a) => a.id === selected.email_account_id);
       return p !== acc?.email.toLowerCase();
@@ -129,6 +184,7 @@ const Inbox = () => {
       });
       if (error) throw error;
       setReply("");
+      setReplyTouched(false);
       toast.success("Svar skickat");
       qc.invalidateQueries({ queryKey: ["inbox_messages"] });
       qc.invalidateQueries({ queryKey: ["inbox_threads", user?.id] });
@@ -180,6 +236,20 @@ const Inbox = () => {
               </div>
             </div>
             <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">Sentiment</label>
+              <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alla</SelectItem>
+                  <SelectItem value="positive">Positiva</SelectItem>
+                  <SelectItem value="neutral">Neutrala</SelectItem>
+                  <SelectItem value="negative">Negativa</SelectItem>
+                  <SelectItem value="auto_reply">Auto-svar</SelectItem>
+                  <SelectItem value="unsubscribe_request">Avregistreringar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <label className="text-xs uppercase tracking-wider text-muted-foreground">Sök</label>
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -219,9 +289,41 @@ const Inbox = () => {
               </div>
             ) : (
               <>
-                <div className="px-4 py-3 border-b">
-                  <div className="font-medium truncate">{selected.subject || "(utan ämne)"}</div>
-                  <div className="text-xs text-muted-foreground truncate">{selected.participants.join(", ")}</div>
+                <div className="px-4 py-3 border-b space-y-2">
+                  <div>
+                    <div className="font-medium truncate">{selected.subject || "(utan ämne)"}</div>
+                    <div className="text-xs text-muted-foreground truncate">{selected.participants.join(", ")}</div>
+                  </div>
+                  {lastInbound && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <SentimentBadge sentiment={lastInbound.sentiment} />
+                      {lastInbound.category && (
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+                          {categoryLabel(lastInbound.category)}
+                        </Badge>
+                      )}
+                      {lastInbound.language && (
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          {lastInbound.language}
+                        </Badge>
+                      )}
+                      {!lastInbound.ai_analyzed_at && !lastInbound.ai_analysis_error && (
+                        <Badge variant="secondary" className="text-[10px] gap-1">
+                          <Loader2 className="h-2.5 w-2.5 animate-spin" /> Analyserar…
+                        </Badge>
+                      )}
+                      {lastInbound.ai_analysis_error && (
+                        <Badge variant="destructive" className="text-[10px] gap-1">
+                          <AlertCircle className="h-2.5 w-2.5" /> AI-fel
+                        </Badge>
+                      )}
+                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto"
+                        onClick={() => handleAnalyze(true)} disabled={analyzing}>
+                        {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        Analysera om
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-3">
@@ -231,15 +333,37 @@ const Inbox = () => {
                   </div>
                 </ScrollArea>
                 <div className="border-t p-3 space-y-2 bg-muted/20">
+                  {lastInbound?.sentiment === "unsubscribe_request" && (
+                    <div className="rounded-md bg-destructive/10 text-destructive text-xs p-2 flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5"><Ban className="h-3.5 w-3.5" /> Avregistreringsbegäran</span>
+                      <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={handleAddUnsubscribe}>
+                        Lägg till i avregistrerade
+                      </Button>
+                    </div>
+                  )}
+                  {lastInbound?.sentiment === "negative" && (
+                    <div className="rounded-md bg-muted text-muted-foreground text-xs p-2 flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5" /> Avsändaren verkar inte intresserad — överväg att inte svara.
+                    </div>
+                  )}
+                  {lastInbound?.suggested_reply && reply === lastInbound.suggested_reply && !replyTouched && (
+                    <div className="flex items-center justify-between text-xs text-primary">
+                      <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> AI-förslag · redigera fritt</span>
+                      <button
+                        onClick={() => { setReply(""); setReplyTouched(true); }}
+                        className="hover:underline"
+                      >Rensa</button>
+                    </div>
+                  )}
                   <Textarea
                     value={reply}
-                    onChange={(e) => setReply(e.target.value)}
+                    onChange={(e) => { setReply(e.target.value); setReplyTouched(true); }}
                     placeholder="Skriv ditt svar…"
                     className="min-h-[100px] bg-background"
                   />
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">
-                      Svar skickas från {accounts.find((a) => a.id === selected.email_account_id)?.email}
+                    <span className="text-xs text-muted-foreground truncate">
+                      Från {accounts.find((a) => a.id === selected.email_account_id)?.email}
                     </span>
                     <Button onClick={handleSendReply} disabled={!reply.trim() || sending} size="sm" className="gap-2">
                       {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -253,6 +377,49 @@ const Inbox = () => {
         </div>
       </div>
     </Layout>
+  );
+};
+
+const sentimentDotClass = (s: string | null | undefined) => {
+  switch (s) {
+    case "positive": return "bg-green-500";
+    case "negative": return "bg-destructive";
+    case "neutral": return "bg-yellow-500";
+    case "auto_reply": return "bg-blue-400";
+    case "unsubscribe_request": return "bg-orange-500";
+    default: return "bg-muted-foreground/30";
+  }
+};
+
+const SENTIMENT_LABEL: Record<string, string> = {
+  positive: "Positivt",
+  negative: "Negativt",
+  neutral: "Neutralt",
+  auto_reply: "Auto-svar",
+  unsubscribe_request: "Avregistrering",
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  interested: "Intresserad",
+  not_interested: "Ej intresserad",
+  question: "Fråga",
+  meeting_request: "Mötesförfrågan",
+  objection: "Invändning",
+  out_of_office: "Frånvaro",
+  wrong_person: "Fel person",
+  other: "Övrigt",
+};
+
+const categoryLabel = (c: string | null | undefined) => (c ? CATEGORY_LABEL[c] ?? c : "");
+
+const SentimentBadge = ({ sentiment }: { sentiment: string | null | undefined }) => {
+  if (!sentiment) return null;
+  const label = SENTIMENT_LABEL[sentiment] ?? sentiment;
+  return (
+    <Badge variant="outline" className="text-[10px] gap-1.5">
+      <span className={`h-1.5 w-1.5 rounded-full ${sentimentDotClass(sentiment)}`} />
+      {label}
+    </Badge>
   );
 };
 
@@ -273,7 +440,13 @@ const ThreadRow = ({ thread, accounts, active, onClick }: {
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <div className={`text-sm truncate ${unread ? "font-semibold" : ""}`}>{otherParticipant}</div>
+            <div className="flex items-center gap-1.5">
+              {thread.last_sentiment && (
+                <span className={`h-2 w-2 rounded-full shrink-0 ${sentimentDotClass(thread.last_sentiment)}`}
+                  title={SENTIMENT_LABEL[thread.last_sentiment] ?? thread.last_sentiment} />
+              )}
+              <div className={`text-sm truncate ${unread ? "font-semibold" : ""}`}>{otherParticipant}</div>
+            </div>
             <div className={`text-sm truncate ${unread ? "font-medium" : "text-muted-foreground"}`}>
               {thread.subject || "(utan ämne)"}
             </div>
@@ -286,6 +459,9 @@ const ThreadRow = ({ thread, accounts, active, onClick }: {
               {formatDistanceToNow(new Date(thread.last_message_at), { addSuffix: false, locale: sv })}
             </span>
             {unread && <Badge className="h-4 min-w-4 px-1 text-[10px]">{thread.unread_count}</Badge>}
+            {thread.last_category && (
+              <span className="text-[9px] text-muted-foreground truncate max-w-[80px]">{categoryLabel(thread.last_category)}</span>
+            )}
           </div>
         </div>
       </button>

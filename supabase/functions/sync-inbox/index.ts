@@ -199,6 +199,19 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     return;
   }
 
+  // Trigger AI analysis (fire-and-forget; don't block sync)
+  if (inserted?.id) {
+    const analyzeUrl = `${SUPABASE_URL}/functions/v1/analyze-inbound-email`;
+    fetch(analyzeUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({ message_id: inserted.id }),
+    }).catch((e) => console.error("analyze trigger failed", e));
+  }
+
   // Upsert thread
   const { data: existingThread } = await admin
     .from("email_threads")
