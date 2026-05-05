@@ -236,6 +236,20 @@ const Inbox = () => {
               </div>
             </div>
             <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">Sentiment</label>
+              <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alla</SelectItem>
+                  <SelectItem value="positive">Positiva</SelectItem>
+                  <SelectItem value="neutral">Neutrala</SelectItem>
+                  <SelectItem value="negative">Negativa</SelectItem>
+                  <SelectItem value="auto_reply">Auto-svar</SelectItem>
+                  <SelectItem value="unsubscribe_request">Avregistreringar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <label className="text-xs uppercase tracking-wider text-muted-foreground">Sök</label>
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
