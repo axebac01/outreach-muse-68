@@ -631,10 +631,8 @@ const AnalysisLoader = () => {
             />
           ))}
         </span>
-        {/* Center sparkle */}
-        <div className="relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl bg-card border shadow-lg">
-          <Sparkles className="h-7 w-7 text-primary" />
-        </div>
+        {/* Center glow */}
+        <div className="relative z-10 h-10 w-10 rounded-full bg-primary/40 blur-md animate-pulse" />
       </div>
 
       <div className="text-center space-y-3">
