@@ -188,15 +188,12 @@ const Analytics = () => {
               <div key={i} className="h-32 rounded-xl border bg-card animate-pulse" />
             ))}
           </div>
-        ) : !hasAnyData ? (
-          <EmptyState
-            title={t("analytics.emptyTitle")}
-            description={t("analytics.emptyDesc")}
-            actionLabel={t("analytics.emptyAction")}
-            actionHref="/dashboard"
-          />
         ) : (
-          <>
+          <div className="relative">
+            <div
+              className={!hasAnyData ? "blur-md opacity-70 pointer-events-none select-none space-y-8" : "space-y-8"}
+              aria-hidden={!hasAnyData}
+            >
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 icon={Send}
