@@ -154,8 +154,11 @@ export type Database = {
       }
       email_messages: {
         Row: {
+          ai_analysis_error: string | null
+          ai_analyzed_at: string | null
           body_html: string | null
           body_text: string | null
+          category: string | null
           created_at: string
           direction: string
           email_account_id: string
@@ -165,23 +168,29 @@ export type Database = {
           in_reply_to: string | null
           is_archived: boolean
           is_read: boolean
+          language: string | null
           lead_id: string | null
           message_id_header: string | null
           provider_message_id: string | null
           received_at: string | null
           sent_at: string | null
+          sentiment: string | null
           sequence_id: string | null
           snippet: string | null
           status: string
           subject: string | null
+          suggested_reply: string | null
           thread_id: string | null
           thread_key: string | null
           to_address: string
           user_id: string
         }
         Insert: {
+          ai_analysis_error?: string | null
+          ai_analyzed_at?: string | null
           body_html?: string | null
           body_text?: string | null
+          category?: string | null
           created_at?: string
           direction: string
           email_account_id: string
@@ -191,23 +200,29 @@ export type Database = {
           in_reply_to?: string | null
           is_archived?: boolean
           is_read?: boolean
+          language?: string | null
           lead_id?: string | null
           message_id_header?: string | null
           provider_message_id?: string | null
           received_at?: string | null
           sent_at?: string | null
+          sentiment?: string | null
           sequence_id?: string | null
           snippet?: string | null
           status?: string
           subject?: string | null
+          suggested_reply?: string | null
           thread_id?: string | null
           thread_key?: string | null
           to_address: string
           user_id: string
         }
         Update: {
+          ai_analysis_error?: string | null
+          ai_analyzed_at?: string | null
           body_html?: string | null
           body_text?: string | null
+          category?: string | null
           created_at?: string
           direction?: string
           email_account_id?: string
@@ -217,15 +232,18 @@ export type Database = {
           in_reply_to?: string | null
           is_archived?: boolean
           is_read?: boolean
+          language?: string | null
           lead_id?: string | null
           message_id_header?: string | null
           provider_message_id?: string | null
           received_at?: string | null
           sent_at?: string | null
+          sentiment?: string | null
           sequence_id?: string | null
           snippet?: string | null
           status?: string
           subject?: string | null
+          suggested_reply?: string | null
           thread_id?: string | null
           thread_key?: string | null
           to_address?: string
@@ -261,8 +279,10 @@ export type Database = {
           email_account_id: string
           id: string
           is_archived: boolean
+          last_category: string | null
           last_direction: string | null
           last_message_at: string
+          last_sentiment: string | null
           last_snippet: string | null
           lead_id: string | null
           message_count: number
@@ -279,8 +299,10 @@ export type Database = {
           email_account_id: string
           id?: string
           is_archived?: boolean
+          last_category?: string | null
           last_direction?: string | null
           last_message_at?: string
+          last_sentiment?: string | null
           last_snippet?: string | null
           lead_id?: string | null
           message_count?: number
@@ -297,8 +319,10 @@ export type Database = {
           email_account_id?: string
           id?: string
           is_archived?: boolean
+          last_category?: string | null
           last_direction?: string | null
           last_message_at?: string
+          last_sentiment?: string | null
           last_snippet?: string | null
           lead_id?: string | null
           message_count?: number
