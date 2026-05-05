@@ -1,77 +1,49 @@
-## Mål
+# Fixar i Unibox-implementationen
 
-En "Unibox" där alla inkommande mejlsvar – från alla anslutna mejlkonton och alla kampanjer – samlas på ett ställe. Du kan:
-- Se alla konversationer (sorterade efter senaste aktivitet, oläst-markerade)
-- Filtrera per konto, kampanj/sekvens och status (oläst, alla, behöver svar)
-- Öppna en tråd, läsa hela historiken (utgående + inkommande)
-- Svara direkt i appen – svaret går från rätt mejlkonto, i rätt tråd
-- Markera som läst/arkiverad
+Vid genomgång hittades fyra konkreta fel. Inboxen renderar och RLS/realtime är korrekt, men sync och trådlogik fungerar inte i praktiken förrän dessa är åtgärdade.
 
-## Vad byggs
+## Bugg 1 — Sync hoppar över alla konton (KRITISK)
+I `supabase/functions/sync-inbox/index.ts` rad 277:
+```ts
+if (acc.auth_type === "oauth" && acc.provider === "google") { ... }
+```
+Men i databasen lagras providern som `"gmail"` (verifierat via `select distinct provider from email_accounts`). Resten av kodbasen (`send-email`) använder också `"gmail"`. Resultat: "Hämta nytt" gör en lyckad körning men hämtar 0 mejl eftersom loopen alltid faller in i `else { continue }`.
 
-### 1. Backend — datamodell
+**Fix:** ändra till `acc.provider === "gmail"`.
 
-Vi bygger på den befintliga `email_messages`-tabellen (där utgående mejl redan loggas). Lägger till:
+## Bugg 2 — Inkommande svar hamnar i fel tråd
+- Utgående mejl får `thread_key = "subj:<ämne>:<mottagare>"` (ingen Gmail-thread_id finns vid sändtillfället).
+- Inkommande svar i `sync-inbox` sätter `thread_key = msg.threadId` (Gmails trådId).
+- Dessa två nycklar matchar aldrig → svaret skapar en **ny** tråd istället för att hamna i samma konversation som det utgående mejlet.
 
-- Nya kolumner på `email_messages`: `is_read` (bool), `is_archived` (bool), `sequence_id` (uuid, nullable), `snippet` (text – kort förhandsvisning)
-- Ny tabell `email_threads` (cache för UI-prestanda): `id`, `user_id`, `email_account_id`, `thread_id` (provider), `subject`, `participants` (text[]), `last_message_at`, `unread_count`, `lead_id`, `sequence_id`
-- Index på `(user_id, last_message_at desc)` och `(thread_id, email_account_id)`
-- RLS: bara ägaren kan se/uppdatera sina trådar och meddelanden
+**Fix i `persistInbound`:** när vi hittar `prior` via `In-Reply-To` ska vi återanvända `prior.thread_key` för det inkommande meddelandet och tråduppslaget. Fall tillbaka till nuvarande logik bara om ingen prior hittas.
 
-### 2. Backend — sync av inkommande mejl
+## Bugg 3 — `pause_on_reply` triggas aldrig korrekt
+I `sync-inbox` rad 245–247:
+```ts
+await admin.from("sequence_leads")
+  .update({ status: "replied" })
+  .eq("sequence_id", sequenceId).eq("id", leadId);
+```
+`leadId` här kommer från tabellen `leads`, men filtret matchar mot `sequence_leads.id` (helt annan tabell utan FK). Uppdateringen träffar 0 rader.
 
-Ny edge-funktion `sync-inbox` som körs per konto:
-- **Gmail (OAuth)**: använder `users/me/history.list` med sparat `history_id` för delta-sync (eller `messages.list?q=newer_than:7d` om historyId saknas). Hämtar nya inkommande mejl, parsar headers (Message-ID, In-Reply-To, References, From, Subject) och body.
-- **IMAP (SMTP-konton)**: anslut via existerande IMAP-konfig, läs UIDs > `imap_last_uid` i INBOX, hämta nya mejl.
-- För varje nytt mejl: hitta matchande utgående mejl via `In-Reply-To`/`References` → koppla `lead_id`, `sequence_id`, `thread_id`. Spara som `direction: "inbound"`.
-- Uppdatera `email_threads` (upsert) med `last_message_at`, öka `unread_count`.
-- Om `sequences.pause_on_reply = true` → markera `sequence_leads.status = "replied"` så uppföljningar pausas.
-
-Trigger för sync:
-- Manuell "Hämta nytt"-knapp i Unibox (anropar `sync-inbox` för alla aktiva konton)
-- Automatisk: Realtime-prenumeration på `email_messages` så nya rader dyker upp direkt i UI
-
-(Cron-baserad bakgrundssync kan läggas till senare – för nu räcker manuell + on-open trigger när du öppnar Unibox.)
-
-### 3. Frontend — Unibox-sida
-
-Ny route `/inbox` med 3-kolumnslayout:
-
-```text
-+------------+----------------------+--------------------------+
-| Filter     | Trådlista            | Konversation + svarsruta |
-| - Konto    | [Avsändare/ämne]     | [Hela tråden, äldst→ny]  |
-| - Sekvens  | [Snippet · 2 tim]    |                          |
-| - Status   | [Oläst-badge]        | [Skriv svar...]          |
-+------------+----------------------+--------------------------+
+**Fix:** matcha på e-postadress istället:
+```ts
+.eq("sequence_id", sequenceId)
+.ilike("email", fromEmail)
 ```
 
-Komponenter:
-- `Inbox.tsx` – sida med layout och routing (`/inbox` och `/inbox/:threadId`)
-- `ThreadList.tsx` – virtualiserad lista med oläst-fetstil, snippet, tidsstämpel, sekvensnamn-badge
-- `ThreadView.tsx` – hela trådens mejl som "chattbubblor" (utgående höger, inkommande vänster), citerad text kollapsad
-- `ReplyComposer.tsx` – textfält + skicka-knapp; använder `send-email`-funktionen med `in_reply_to` satt och `from` = ursprungligt konto
-- Markera som läst när tråden öppnas
-- Realtime via Supabase channel på `email_messages` → invalidate trådlistan
+## Bugg 4 — Konversationsrutan är dold på "lg"-bredd
+I `src/pages/Inbox.tsx` rad 215 har konversationskolumnen klasserna `lg:hidden xl:flex`. Mellan 1024 och 1279 px visas alltså trådlistan men inte själva konversationen — man kan välja en tråd men inte läsa eller svara.
 
-Lägg till "Inbox"-länk i Navbar med oläst-räknare (badge).
+**Fix:** ändra till `hidden xl:flex` (mobil/tablet döljer som idag, xl och uppåt visar). På lg-bredd visar vi då bara 2 kolumner (filter + lista). Alternativt göra konversationen synlig även på lg genom att ta bort `lg:hidden`. Jag väljer det sistnämnda så användare på 1024–1279 px får läsa och svara — vi gömmer filterkolumnen istället på lg om utrymmet inte räcker. Slutgiltigt: `grid-cols-1 xl:grid-cols-[280px_360px_1fr] lg:grid-cols-[320px_1fr]` och konversationskolumnen blir `hidden lg:flex`.
 
-### 4. Översättningar
+## Småsaker som åtgärdas samtidigt
+- `Re:`-prefix-koll i Inbox.tsx görs case-insensitive (`/^re:/i`) så vi inte får "Re: Re: ...".
+- I `sync-inbox` lägga till `.eq("user_id", account.user_id)` i lead-uppslaget (redan finns) — dubbelkollat OK.
 
-Lägga till sv/en strängar för Unibox under `inbox.*` namespace.
+## Filer som ändras
+- `supabase/functions/sync-inbox/index.ts` (bugg 1, 2, 3)
+- `src/pages/Inbox.tsx` (bugg 4 + Re:-fix)
 
-## Tekniska detaljer
-
-- Migration lägger till nya kolumner + tabell + RLS-policies + realtime-publication för `email_messages` och `email_threads`.
-- `send-email` används återanvänt för svar (sätter `in_reply_to`, kopierar `to_address` från inkommande, hittar rätt `email_account_id` från tråden).
-- `sync-inbox` schemaläggs INTE som cron i denna iteration (kan läggas till senare med pg_cron); manuell + Realtime räcker för MVP.
-- Feltolerant: om ett konto inte kan synca (token utgången etc.) sätts `email_accounts.status_message`, övriga konton fortsätter.
-
-## Avgränsning (gör vi INTE nu)
-
-- Bilagor (visning eller utgående)
-- Etiketter/mappar
-- Bakgrundscron (manuell sync + Realtime räcker som MVP)
-- Tråd-arkivering med smart filter (vi har bara läst/oläst för nu)
-
-Säg till om något ska ändras eller läggas till innan jag bygger.
+Inga DB-migreringar behövs. Edge function `sync-inbox` redeployas automatiskt.
