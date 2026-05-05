@@ -44,6 +44,12 @@ export interface InboxMessage {
   created_at: string;
   is_read: boolean;
   status: string;
+  sentiment: string | null;
+  category: string | null;
+  language: string | null;
+  suggested_reply: string | null;
+  ai_analyzed_at: string | null;
+  ai_analysis_error: string | null;
 }
 
 export const useInboxThreads = (filters: { accountId?: string; sequenceId?: string; onlyUnread?: boolean } = {}) => {
