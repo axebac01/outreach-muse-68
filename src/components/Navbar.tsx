@@ -19,6 +19,7 @@ const Navbar = () => {
     location.pathname.startsWith("/outreach") ||
     location.pathname.startsWith("/email-accounts") ||
     location.pathname.startsWith("/inbox") ||
+    location.pathname.startsWith("/inbound") ||
     location.pathname.startsWith("/sequence") ||
     location.pathname.startsWith("/analytics") ||
     location.pathname.startsWith("/settings");
