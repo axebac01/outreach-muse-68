@@ -145,12 +145,9 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { data: msg, error: msgErr } = await admin
-      .from("email_messages")
-      .select("*")
-      .eq("id", message_id)
-      .eq("user_id", userData.user.id)
-      .maybeSingle();
+    let msgQuery = admin.from("email_messages").select("*").eq("id", message_id);
+    if (!isServiceRole && userId) msgQuery = msgQuery.eq("user_id", userId);
+    const { data: msg, error: msgErr } = await msgQuery.maybeSingle();
 
     if (msgErr || !msg) {
       return new Response(JSON.stringify({ error: "Message not found" }), {
