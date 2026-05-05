@@ -337,9 +337,15 @@ export type Database = {
       profiles: {
         Row: {
           company_description: string | null
+          company_industry: string | null
+          company_key_offerings: string[] | null
           company_name: string | null
+          company_pain_points: string[] | null
+          company_proof_points: string[] | null
+          company_raw_markdown: string | null
           company_scrape_status: string | null
           company_target_audience: string | null
+          company_tone: string | null
           company_url: string | null
           company_value_prop: string | null
           created_at: string
@@ -355,9 +361,15 @@ export type Database = {
         }
         Insert: {
           company_description?: string | null
+          company_industry?: string | null
+          company_key_offerings?: string[] | null
           company_name?: string | null
+          company_pain_points?: string[] | null
+          company_proof_points?: string[] | null
+          company_raw_markdown?: string | null
           company_scrape_status?: string | null
           company_target_audience?: string | null
+          company_tone?: string | null
           company_url?: string | null
           company_value_prop?: string | null
           created_at?: string
@@ -373,9 +385,15 @@ export type Database = {
         }
         Update: {
           company_description?: string | null
+          company_industry?: string | null
+          company_key_offerings?: string[] | null
           company_name?: string | null
+          company_pain_points?: string[] | null
+          company_proof_points?: string[] | null
+          company_raw_markdown?: string | null
           company_scrape_status?: string | null
           company_target_audience?: string | null
+          company_tone?: string | null
           company_url?: string | null
           company_value_prop?: string | null
           created_at?: string
