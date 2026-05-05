@@ -102,6 +102,13 @@ const StepSequence = () => {
           />
         </div>
       </div>
+
+      <GenerateSequenceDialog
+        sequenceId={id}
+        hasExistingContent={steps.some((s) => (s.subject?.trim() || s.body?.trim()))}
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+      />
     </div>
   );
 };
