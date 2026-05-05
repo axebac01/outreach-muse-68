@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock, Star, Upload, Sparkles, Send } from "lucide-react";
 import logo from "@/assets/maillead-logo.png";
 import { useTranslation } from "react-i18next";
-import { GlobeEmails } from "@/components/ui/globe-emails";
+import { PipelineMockup } from "@/components/ui/pipeline-mockup";
 
 const Landing = () => {
   const { t } = useTranslation();
@@ -61,8 +61,8 @@ const Landing = () => {
             <p className="text-xs text-muted-foreground animate-fade-in">{t("landing.noCard")}</p>
           </div>
 
-          <div className="mx-auto mt-12 w-full max-w-lg md:max-w-xl animate-fade-in">
-            <GlobeEmails />
+          <div className="mx-auto mt-12 w-full max-w-[880px]">
+            <PipelineMockup />
           </div>
         </div>
       </section>
