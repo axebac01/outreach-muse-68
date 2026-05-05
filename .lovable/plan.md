@@ -1,128 +1,73 @@
-# Integration: Importera leads från Company Intel Hub
+# Deliverability-paketet (A)
 
-Vi bygger en enkel **API-key-baserad** integration. Den här appen (outreach) exponerar en publik edge function som tar emot leads. Den andra appen (Company Intel Hub) skickar leads dit via en knapp "Skicka till Outreach".
+Två problem upptäckta vid kodgenomgång — båda är kritiska och bör fixas i samma omgång:
 
-Två separata jobb: först bygger vi mottagarsidan här. Sen får du en färdig prompt att klistra in i det andra projektet.
+1. **Reply auto-stop fungerar bara halvvägs.** `sync-inbox` sätter `sequence_leads.status = 'replied'` när någon svarar, MEN redan schemalagda rader i `scheduled_sends` annulleras inte. De skickas ändå när schemaläggaren kör. Dessutom: jag hittar **ingen cron/processor** som faktiskt plockar upp `scheduled_sends` och kallar `send-email`. Det betyder att follow-ups idag aldrig går iväg automatiskt — endast steg 1 schemaläggs av `launch-sequence`. Detta måste byggas innan resten är meningsfullt.
 
----
+2. **Inga sending limits per dag/inbox utöver `daily_limit_per_account` (default 25)** — ingen warm-up ramp, ingen throttle mellan sändningar, ingen bounce-detektion.
 
-## Del 1 – Vad vi bygger i DENNA app
+## Vad vi bygger
 
-### 1. Databas
-Ny tabell `integration_api_keys`:
-- `id`, `user_id` (FK auth.users), `name` (t.ex. "Company Intel Hub"), `key_hash` (sha256 av nyckeln, vi visar råa nyckeln endast vid skapande), `key_prefix` (första 8 tecknen för identifiering i UI), `last_used_at`, `created_at`, `revoked_at`.
-- RLS: bara ägaren får se/radera sina egna nycklar.
+### 1. Schemalagd processor (`process-scheduled-sends` edge function + cron)
+- Körs var 5:e minut via `pg_cron` + `net.http_post`.
+- Plockar `scheduled_sends` där `status = 'scheduled'` och `scheduled_for <= now()`.
+- För varje rad:
+  - Skippa om `sequence_leads.status` är `replied` / `unsubscribed` / `bounced` → markera `status = 'cancelled'`.
+  - Skippa om utanför sending-window/sending-days för sequencen → flytta `scheduled_for` till nästa giltiga slot.
+  - Skippa om dagens skick på inboxen ≥ daglig gräns (warm-up-justerad) → flytta till imorgon.
+  - Annars: anropa `send-email`, sätt `status = 'sent'` + `sent_message_id`. Vid fel: `status = 'failed'` + retry max 3.
+- Efter lyckad send: schemalägg nästa steg för leaden (`current_step + 1`) baserat på `wait_days`.
 
-Ny tabell `lead_import_log` (valfritt men nyttigt för felsökning):
-- `id`, `user_id`, `api_key_id`, `source` (text, t.ex. "company-intel-hub"), `payload_count`, `inserted_count`, `skipped_count`, `target_type` ('sequence' | 'campaign' | 'inbox-only'), `target_id`, `created_at`.
+### 2. Auto-cancel vid reply
+I `sync-inbox` direkt efter att `sequence_leads.status = 'replied'` sätts:
+```ts
+await admin.from("scheduled_sends")
+  .update({ status: "cancelled" })
+  .eq("sequence_id", sequenceId)
+  .eq("lead_id", leadId)
+  .eq("status", "scheduled");
+```
+Samma sak vid unsubscribe (i `unsubscribe`-funktionen) och vid hård bounce (se #4).
 
-### 2. Edge function `import-leads` (publik, ingen JWT)
-- Endpoint: `POST https://<project>.supabase.co/functions/v1/import-leads`
-- Headers: `Authorization: Bearer <api_key>`, `Content-Type: application/json`
-- Body:
-  ```json
-  {
-    "source": "company-intel-hub",
-    "target": { "type": "sequence" | "campaign" | "none", "id": "<uuid eller null>" },
-    "leads": [
-      {
-        "email": "info@acme.com",
-        "full_name": "Anna Andersson",
-        "first_name": "Anna",
-        "last_name": "Andersson",
-        "company": "Acme AB",
-        "role": "Marketing Director",
-        "phone": "+46...",
-        "website": "https://acme.com",
-        "linkedin_url": "https://linkedin.com/in/...",
-        "notes": "Hittad via Industrikampanj v2"
-      }
-    ]
-  }
-  ```
-- Logik:
-  1. Hasha inkommande nyckel (sha256), slå upp `integration_api_keys` där `key_hash = X` och `revoked_at IS NULL`.
-  2. Validera body med Zod (`leads` max 1000 per request, e-post regex).
-  3. Om `target.type === "sequence"`: insert i `sequence_leads` (de-dup på `(sequence_id, email)`).
-  4. Om `target.type === "campaign"`: insert i `leads` med `campaign_id`.
-  5. Om `target.type === "none"`: insert som "unassigned" leads — vi lägger dem i en standard-sekvens som heter "Inbox – Imported" (skapas automatiskt om saknas) så de syns i Unibox.
-  6. Returnera `{ ok, inserted, skipped, target }`.
-  7. Logga till `lead_import_log` och uppdatera `last_used_at`.
+### 3. Warm-up ramp + sending limits per inbox
+Ny tabell `email_account_sending_limits`:
+- `email_account_id`, `warmup_enabled` (bool, default true), `warmup_started_at`, `daily_cap_override` (nullable int).
+- Effektiv daglig gräns:
+  - Om `warmup_enabled` och konto är < 14 dagar gammalt: `min(20 + dag*5, 50)`.
+  - Annars: `daily_cap_override ?? sequence.daily_limit_per_account`.
+- Räknas mot dagens redan skickade i `email_messages` där `direction='outbound'` och `sent_at` idag.
+- Throttling: efter varje send i processorn — slumpmässig fördröjning 30–120s mellan sändningar från samma inbox (implementeras genom att nästa rad får `scheduled_for = max(now, lastSendForInbox + jitter)`).
 
-### 3. UI i denna app
-- **Settings → Integrations**: lista nycklar, knapp "Skapa API-nyckel" (modal visar nyckeln **en gång** + kopieringsknapp), revoke-knapp.
-- I modalen: visa endpoint-URL + minimalt curl-exempel + en knapp "Kopiera prompt för Company Intel Hub" som kopierar prompten i Del 2 (med URL och nyckel inflickade).
-- **Importer-väljare** (valfri förbättring): instruktion "Tipsa avsändaren att sätta `target.type` + ID från denna sequence/campaign". På sequence- och campaign-detaljsidan: en liten "Import-mottagare"-info-ruta som visar URL + sequence/campaign ID.
+UI: I **Email Accounts** — visa "Dagens skick: 12/30 (warm-up dag 4)" + toggle för warm-up + override-fält.
 
-### 4. Säkerhet
-- Nycklarna lagras endast hashat (SHA-256). Vi kan inte visa dem igen efter skapande.
-- Edge function har `verify_jwt = false` (API-nyckel-auth i kod istället).
-- Rate limit: enkel in-memory-räknare per nyckel (60 requests/min) som varning.
-- RLS säkerställer att en nyckel bara kan skriva data för sin ägare.
+### 4. Bounce-hantering
+- I `sync-inbox` när vi parsar inkommande: detektera DSN/bounce (from `mailer-daemon@`, eller `Content-Type: multipart/report`, eller subject matchar `/^(undeliverable|delivery (status notification|failure)|mail delivery failed)/i`).
+- Extrahera den bouncade adressen från body (regex `/<([^>]+@[^>]+)>/` i diagnostic part).
+- Hård bounce → ny tabell `bounces (user_id, email, reason, bounced_at, hard)`. Sätt `sequence_leads.status = 'bounced'` för matchande leads. Annullera deras `scheduled_sends` (samma logik som reply).
+- Soft bounce → loggas men inga åtgärder.
 
----
+### 5. UI-feedback
+- **Inbox**: badge "Svarat — sekvens pausad" på trådar där leaden är `replied`.
+- **Sequence detail**: stats-rad "X scheduled • Y sent • Z replied • W bounced • V cancelled".
+- **Email Accounts**: status-pill "Warm-up dag 4 (cap 40/dag)".
 
-## Del 2 – Prompt att klistra in i Company Intel Hub
+## Tekniska detaljer
 
-När Del 1 är klar får du en API-nyckel + URL. Då skriver du följande prompt i Company Intel Hub-projektet:
+**Filer:**
+- `supabase/functions/process-scheduled-sends/index.ts` (ny)
+- `supabase/functions/sync-inbox/index.ts` (cancel scheduled, bounce-detect)
+- `supabase/functions/unsubscribe/index.ts` (cancel scheduled)
+- `supabase/migrations/<ts>_deliverability.sql`:
+  - `email_account_sending_limits`
+  - `bounces`
+  - utöka `scheduled_sends.status` med `'cancelled'`
+  - lägg till `sequence_leads.status` värde `'bounced'`
+  - pg_cron job som kallar processorn var 5:e min via service role
+- `src/pages/EmailAccounts.tsx` (warm-up UI)
+- `src/pages/SequenceBuilder.tsx` / detalj (statsrad)
 
-> ```
-> Lägg till en "Skicka till Outreach"-integration så jag kan exportera utvalda contacts/companies som leads till min andra Lovable-app.
->
-> 1. Settings → Integrations: ny sektion "Outreach". Två fält som sparas i en ny tabell `outreach_integration_settings` (en rad per user_id):
->    - `endpoint_url` (text)
->    - `api_key` (text, lagras krypterat med pgp_sym_encrypt om möjligt, annars i en Supabase secret OUTREACH_API_KEY)
->    - `default_target_type` ('sequence' | 'campaign' | 'none')
->    - `default_target_id` (text)
->    En "Testa anslutning"-knapp som POSTar `{ "source":"company-intel-hub", "target":{"type":"none"}, "leads":[] }` och visar OK/fel.
->
-> 2. På Companies-sidan, Contacts-sidan, People-sidan och ImportDetail-sidan: lägg till bulk-action "Skicka till Outreach" på markerade rader. Knappen öppnar en dialog där användaren kan:
->    - välja target (sequence/campaign/none) — override mot default
->    - se preview på antalet leads som kommer skickas
->    - bekräfta
->
-> 3. Skapa en ny edge function `send-to-outreach` som:
->    - tar emot `{ ids: string[], source_table: 'companies'|'contacts'|'contact_people', target: {...} }`
->    - validerar JWT
->    - läser ut motsvarande rader, mappar till outreach-format:
->      - från `contacts` (generic_email): `{ email: c.value, company: company.name, website: company.website, notes: 'Generic email from ' + company.name }`
->      - från `contact_people`: `{ full_name, first_name (split), last_name, role: role_title, company: company.name, website: company.website }` (skippa rader utan email om mottagaren kräver email)
->      - från `companies`: hämta första generic email per bolag
->    - POSTar batchat (max 500 per request) till outreach-endpoint med `Authorization: Bearer <api_key>` från settings/secret
->    - returnerar `{ inserted, skipped, errors[] }` och visar toast i UI
->    - loggar i ny tabell `outreach_send_log` (user_id, count, target, response, created_at)
->
-> 4. Outreach API-format (det som ska POSTas):
->    ```
->    POST <endpoint_url>
->    Authorization: Bearer <api_key>
->    Content-Type: application/json
->    {
->      "source": "company-intel-hub",
->      "target": { "type": "sequence" | "campaign" | "none", "id": "<uuid eller null>" },
->      "leads": [
->        { "email": "...", "full_name": "...", "first_name": "...", "last_name": "...",
->          "company": "...", "role": "...", "phone": "...", "website": "...",
->          "linkedin_url": "...", "notes": "..." }
->      ]
->    }
->    ```
->    Skippa rader utan giltig email. Maxa 500 leads per request — chunka om fler.
->
-> 5. Lägg till en kolumn "Skickad till Outreach" (timestamp) på contacts/contact_people så vi inte skickar dubbletter.
-> ```
+**Frågor innan jag börjar bygga:**
+1. Warm-up-default — ska den vara **på automatiskt** för alla nya inboxes (rekommenderas) eller opt-in?
+2. Cron-intervall: **5 min** ok, eller vill du ha snabbare (1 min) trots högre last?
 
-(När prompten skickas in i andra projektet kommer Lovable-agenten där att be om endpoint-URL och API-nyckel — det är de värden du fick av oss i steg 1.)
-
----
-
-## Tekniska detaljer (denna app)
-
-- `supabase/functions/import-leads/index.ts` – ny.
-- `supabase/migrations/<ts>_integration_api_keys.sql` – två nya tabeller + RLS.
-- `src/pages/Settings.tsx` – ny tab/section "Integrations".
-- `src/components/CreateApiKeyDialog.tsx` – modal med one-time-display.
-- `src/hooks/useIntegrations.ts` – CRUD för API-nycklar.
-- `supabase/config.toml` – `[functions.import-leads] verify_jwt = false`.
-
-Inga ändringar behövs i befintliga import/lead-tabeller.
+Säg "kör" så bygger jag direkt med default = warm-up på + 5 min cron, om du inte säger annat.
