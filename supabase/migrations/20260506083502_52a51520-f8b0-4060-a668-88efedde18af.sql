@@ -1,0 +1,1 @@
+ALTER TABLE public.tracking_sites ADD COLUMN IF NOT EXISTS auto_tag_email_links boolean NOT NULL DEFAULT true;

@@ -1,58 +1,72 @@
-# GDPR-härdning av tracking-skriptet
+## Mål
+Auto-tagga alla länkar i utgående mejl som pekar mot användarens spårade domäner, så att klick re-identifierar mottagaren mot lead-tabellen vid återbesök.
 
-Mål: göra MailLeads tracking cookieless och samtyckesfri by default, så sajtägare kan installera snippeten utan cookie-banner och utan att bryta mot ePrivacy/GDPR.
+## 1. Hashad e-post-token (säkerhet)
+För att inte exponera plaintext-mejl i URL:er bygger vi en kort, signerad token:
+- `ml_e = base64url(lead_id_short).base64url(hmac_sha256(secret, lead_id))` — ~32 tecken, inte enumererbar.
+- Ny secret: `TRACKING_LINK_SECRET` (auto-genereras i migration eller via `add_secret`).
+- Servern verifierar HMAC innan koppling görs → ingen kan gissa andras token.
 
-## 1. Cookieless visitor-ID (snippet)
-- Ta bort `ml_vid`-cookien.
-- Generera `visitor_id` som en daglig hash: `sha256(site_key + anonIp_hint + UA + YYYY-MM-DD)` beräknad i edge-funktionen istället för i klienten (klienten skickar bara en slumpad `client_seed` i `sessionStorage` som rensas vid tabbstängning).
-- `session_id` ligger kvar i `sessionStorage` (rensas vid tabbstängning, ePrivacy tillåter detta som "strictly necessary").
-- Effekt: ingen persistent identifierare → ingen cookie-banner krävs.
+## 2. Ny helper: `tagLinksForTracking()`
+Plats: `supabase/functions/_shared/trackingLinks.ts` (ny fil).
 
-## 2. Default = privacy-safe
-- Vänd default på `tracking_sites.require_consent` till `true` för nya sajter (kolumn-default ändras).
-- Snippet beter sig så här:
-  - Om `data-consent="granted"` finns på script-taggen ELLER `MailLead.consent()` anropats → tracka.
-  - Annars → vänta tyst. Ingen request skickas.
-- Sajtägare som vill köra utan consent måste explicit sätta `data-consent="granted"` (på eget juridiskt ansvar, t.ex. om de har LIA).
+```ts
+export async function tagLinksForTracking(
+  html: string | undefined,
+  text: string | undefined,
+  opts: { leadId: string; userId: string; trackedDomains: string[]; secret: string }
+): Promise<{ html?: string; text?: string }>
+```
 
-## 3. Respektera DNT och GPC
-- I snippet: om `navigator.doNotTrack === '1'` eller `navigator.globalPrivacyControl === true` → returnera direkt, skicka ingenting.
+Beteende:
+- Genererar token från `leadId + secret`.
+- I HTML: regex över `<a href="...">`, parsar URL:en, om hostname matchar någon av `trackedDomains` (med eller utan `www.`) → lägg till `?ml_e=<token>` (eller `&ml_e=` om query finns). Hoppar över om `ml_e=` redan finns.
+- I text: motsvarande regex för `https?://...`-länkar.
+- Idempotent — säkert att köra flera gånger.
 
-## 4. Retention (auto-radering)
-- Ny edge-funktion `purge-old-visits` (cron, dagligen 03:00 UTC):
-  - Radera rader i `visits` äldre än 90 dagar.
-  - Radera rader i `visitors` med `last_seen_at` äldre än 180 dagar.
-  - Radera `inbound_companies` utan besök senaste 365 dagar.
-- Schemaläggs via `pg_cron` + `pg_net` (separat insert-SQL, inte migration, eftersom URL/anon-key är projektspecifika).
+## 3. Hooka in i `send-email`
+I `supabase/functions/send-email/index.ts`, precis före `ensureUnsub`-anropet (rad ~228):
+- Hämta `tracking_sites.domain` för `userId` (cachable, en query).
+- Om `lead_id` finns och listan inte är tom → kör `tagLinksForTracking()` på `body_html` + `body_text`.
+- Annars: hoppa över (inga taggade länkar för användare utan tracking).
 
-## 5. "Glöm mig"-endpoint
-- Ny edge-funktion `forget-visitor` (publik POST):
-  - Body: `{ site_key, visitor_id }`.
-  - Raderar alla `visits` och `visitors` för den kombinationen.
-- Lägg till en `MailLead.forget()`-metod i snippet som anropar endpointen och tömmer `sessionStorage`.
+`process-scheduled-sends` behöver ingen ändring — den anropar `send-email` som redan kör helpern.
 
-## 6. UI på `/tracking-settings`
-- Ny sektion "GDPR & integritet" med:
-  - Toggle: "Kräv samtycke innan tracking" (default på).
-  - Färdig privacy-policy-text på svenska/engelska att kopiera till sajtens policy (lista underbiträden: Lovable Cloud / Supabase EU, IPinfo).
-  - Kort förklaring av cookieless-läget och `MailLead.consent()` / `MailLead.forget()`.
-- Ny sektion "Datalagring": "Besöksdata raderas automatiskt efter 90 dagar."
+## 4. Tracker-skriptet läser `ml_e`
+I `tracker-script/index.ts`, i `sendInitial()` (rad ~102):
+- Läs `params.get('ml_e')`, skicka som `ml_e` i payloaden.
+- Direkt efter: `history.replaceState({}, '', url_utan_ml_e)` så token inte läcker via referrer eller bokmärken.
 
-## 7. IPinfo-anrop endast vid behov
-- I `track-visit`: hoppa över IPinfo-uppslag om `require_consent=true` och consent inte är bekräftat (snippet skickar `consent: true/false`).
-- Räcker eftersom snippet redan inte ens skickar request utan consent — men dubbelförsäkring serverside.
+## 5. `track-visit` verifierar token och kopplar lead
+I `track-visit/index.ts`, i pageview-grenen:
+- Om `ml_e` finns → splitta i `lead_id_short.signature`, slå upp lead, verifiera HMAC mot `TRACKING_LINK_SECRET`. Vid match → sätt `leadId` (gå förbi e-post-flödet).
+- Persisteras redan i `visitors`-raden via befintlig kod.
+- **Sticky lead**: om `visitors`-raden för `visitor_id` redan har `lead_id` och nytt anrop saknar `ml_e` → behåll befintlig `lead_id` (idag skrivs den över med `null`-fallthrough — fixas så `lead_id` bara *sätts*, aldrig nollas).
 
-## Filer som ändras
-- `supabase/functions/tracker-script/index.ts` — cookieless, DNT/GPC, consent-default, `forget()`.
-- `supabase/functions/track-visit/index.ts` — hash-baserad visitor_id, IPinfo-gating, consent-flagga.
-- `supabase/functions/purge-old-visits/index.ts` (ny) — retention-job.
-- `supabase/functions/forget-visitor/index.ts` (ny) — radering på begäran.
-- Migration: `tracking_sites.require_consent` default `true`, indexar för retention-radering.
-- `src/pages/TrackingSettings.tsx` — GDPR-sektion + policy-text.
-- `src/i18n/locales/{sv,en}.json` — översättningar.
-- Cron-job (separat insert-SQL, inte migration).
+## 6. UI: klick-/besöksstatistik per kampanj
+Två tillägg på `/inbound`:
+- **Identifierade besökare** (sektion överst): listar `visitors WHERE lead_id IS NOT NULL` med namn, företag, senaste besök, antal besök, senast besökt sida. Klick → öppnar lead-detaljer.
+- **Notis på `inbound_notifications`**: när en lead-matchning sker i `track-visit` (via `ml_e`) och senaste notis för paret är > 24h gammal → skapa "Anna från Acme klickade din mejl-länk och besökte /pricing".
+
+Ny hook `useIdentifiedVisitors()` i `src/hooks/useInbound.ts`, ny komponent-sektion i `src/pages/Inbound.tsx`.
+
+## 7. UI: visa att tracking finns på `/tracking-settings`
+Ny förklaringsruta: "Vi taggar automatiskt länkar i utgående mejl som pekar på din spårade domän. När en mottagare klickar identifieras de mot din lead-lista — även vid framtida återbesök." Plus toggle `auto_tag_email_links` (default på) på `tracking_sites`.
+
+## Filer
+- **Ny migration**: lägg till kolumn `tracking_sites.auto_tag_email_links boolean not null default true`.
+- **Ny secret**: `TRACKING_LINK_SECRET` (begärs via `add_secret`).
+- **Ny fil**: `supabase/functions/_shared/trackingLinks.ts`.
+- **Edit**: `supabase/functions/send-email/index.ts` — anropa helpern.
+- **Edit**: `supabase/functions/tracker-script/index.ts` — läs `ml_e`, rensa URL.
+- **Edit**: `supabase/functions/track-visit/index.ts` — verifiera token, sticky `lead_id`, notis.
+- **Edit**: `src/hooks/useInbound.ts` — `useIdentifiedVisitors()`.
+- **Edit**: `src/pages/Inbound.tsx` — ny sektion.
+- **Edit**: `src/pages/TrackingSettings.tsx` — förklaring + toggle.
+- **Edit**: `src/i18n/locales/{sv,en}.json` — översättningar.
 
 ## Att vara medveten om
-- Befintliga sajter behåller sitt nuvarande `require_consent`-värde — bara nya får default `true`. Vi visar en banner i `/tracking-settings` som rekommenderar att slå på det.
-- Hash-baserade visitor_id:n "rullar" varje midnatt UTC → samma fysiska besökare räknas som ny nästa dag. Det är priset för cookieless. Detta motsvarar Plausibles modell.
-- Detta gör skriptet GDPR/ePrivacy-tryggt för 95% av användningsfallen. Ett fullständigt DPA-paket (avtalsmall) ligger utanför kod och bör tas fram juridiskt separat.
+- Endast länkar till **egna spårade domäner** taggas — externa länkar (LinkedIn, kalendrar, dokument) lämnas orörda. Det betyder att om en lead bara klickar en kalenderlänk får vi ingen identifiering, vilket är korrekt (annars läcker e-post till tredje part).
+- Token är låst till `lead_id`. Om mottagaren forwardar mejlet → kollegans klick taggas som ursprunglig lead. Sällsynt men värt att veta.
+- `ml_e` rensas från URL:en direkt vid pageload, så bokmärken och Google Analytics fångar inte upp den.
+- Cookieless visitor-id "rullar" varje midnatt UTC, men `lead_id`-kopplingen i `visitors`-raden består tills hash:en byts → bästa praxis är att tagga ALLA länkar i utskick så återbesök blir re-identifierade vid behov.
