@@ -25,6 +25,14 @@ const TrackingSettings = () => {
   const [name, setName] = useState("");
   const [requireConsent, setRequireConsent] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [verifyingSite, setVerifyingSite] = useState<{ id: string; domain: string; verified: boolean } | null>(null);
+
+  const statusFor = (s: any) => {
+    if (!s.verified_at) return { label: "Inte installerad", color: "bg-muted-foreground/40", variant: "secondary" as const };
+    const ageMs = Date.now() - new Date(s.last_ping_at || s.verified_at).getTime();
+    if (ageMs < 24 * 60 * 60 * 1000) return { label: "Aktiv", color: "bg-emerald-500", variant: "default" as const };
+    return { label: "Inaktiv", color: "bg-amber-500", variant: "outline" as const };
+  };
 
   const handleCreate = async () => {
     if (!domain.trim()) return;
