@@ -145,6 +145,17 @@ Deno.serve(async (req) => {
     const ip = getClientIp(req);
     const anonIp = anonymizeIp(ip);
 
+    // Update verification ping fields (fire-and-forget)
+    admin
+      .from("tracking_sites")
+      .update({
+        last_ping_at: new Date().toISOString(),
+        verified_at: (site as any).verified_at || new Date().toISOString(),
+        last_ping_url: url,
+      })
+      .eq("id", site.id)
+      .then(() => {});
+
     // IP -> company lookup (use real IP for lookup, store only anonymized)
     const lookup = await ipLookup(ip);
 
