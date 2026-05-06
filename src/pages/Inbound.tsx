@@ -236,10 +236,12 @@ const Inbound = () => {
                   {visits.map((v) => (
                     <div key={v.id} className="text-xs border rounded p-2">
                       <div className="font-medium truncate">{v.path || v.url}</div>
-                      <div className="text-muted-foreground mt-0.5">
-                        {formatDistanceToNow(new Date(v.created_at), { addSuffix: true })}
-                        {v.referrer && <span> · från {new URL(v.referrer).hostname}</span>}
-                        {v.utm_source && <span> · utm: {v.utm_source}</span>}
+                      <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                        <span>{formatDistanceToNow(new Date(v.created_at), { addSuffix: true })}</span>
+                        {formatDuration((v as any).duration_ms) && <span>· {formatDuration((v as any).duration_ms)}</span>}
+                        {typeof (v as any).scroll_depth === "number" && (v as any).scroll_depth > 0 && <span>· {(v as any).scroll_depth}% scroll</span>}
+                        {v.referrer && (() => { try { return <span>· från {new URL(v.referrer).hostname}</span>; } catch { return null; } })()}
+                        {v.utm_source && <span>· utm: {v.utm_source}</span>}
                       </div>
                     </div>
                   ))}
