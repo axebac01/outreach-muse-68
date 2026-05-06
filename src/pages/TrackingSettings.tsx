@@ -111,31 +111,61 @@ const TrackingSettings = () => {
           <div className="space-y-4">
             {sites.map((s) => {
               const snippet = snippetFor(s.site_key, s.require_consent);
+              const status = statusFor(s);
+              const lastSeen = s.last_ping_at
+                ? formatDistanceToNow(new Date(s.last_ping_at), { addSuffix: true })
+                : null;
               return (
                 <Card key={s.id} className="p-5 space-y-4">
                   <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold">{s.name || s.domain}</h3>
-                        {s.is_active ? (
-                          <Badge variant="default" className="text-[10px]">Aktiv</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-[10px]">Pausad</Badge>
-                        )}
+                        <Badge variant={status.variant} className="text-[10px] gap-1.5">
+                          <span className={`h-1.5 w-1.5 rounded-full ${status.color} ${status.label === "Aktiv" ? "animate-pulse" : ""}`} />
+                          {status.label}
+                        </Badge>
                         {s.require_consent && <Badge variant="outline" className="text-[10px]">Consent krävs</Badge>}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">{s.domain}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {s.domain}
+                        {lastSeen && (
+                          <> · senast sedd {lastSeen}{s.last_ping_url && ` på ${(() => { try { return new URL(s.last_ping_url).pathname; } catch { return s.last_ping_url; } })()}`}</>
+                        )}
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        if (confirm("Ta bort denna webbplats? All historik försvinner inte.")) deleteSite.mutate(s.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setVerifyingSite({ id: s.id, domain: s.domain, verified: !!s.verified_at })}
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        {s.verified_at ? "Verifierad" : "Verifiera"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm("Ta bort denna webbplats? Historik försvinner inte.")) deleteSite.mutate(s.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
+
+                  {!s.verified_at && (
+                    <div className="text-xs bg-primary/5 border border-primary/20 rounded p-3 space-y-1">
+                      <div className="font-medium text-foreground">Kom igång på 30 sekunder:</div>
+                      <ol className="list-decimal pl-5 text-muted-foreground space-y-0.5">
+                        <li>Kopiera snippeten nedan</li>
+                        <li>Klistra in i <code>&lt;head&gt;</code> på din sajt och deploya</li>
+                        <li>Klicka "Verifiera" — vi upptäcker det automatiskt</li>
+                      </ol>
+                    </div>
+                  )}
 
                   <div>
                     <Label className="text-xs">Klistra in i din <code>&lt;head&gt;</code></Label>
