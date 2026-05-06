@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut, Settings, Inbox as InboxIcon, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
-import logo from "@/assets/maillead-logo.png";
+import logo from "@/assets/logo.svg";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "react-i18next";

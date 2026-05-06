@@ -2,7 +2,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock, Star, Upload, Sparkles, Send } from "lucide-react";
-import logo from "@/assets/maillead-logo.png";
+import logo from "@/assets/logo.svg";
 import { useTranslation } from "react-i18next";
 import { PipelineMockup } from "@/components/ui/pipeline-mockup";
 
