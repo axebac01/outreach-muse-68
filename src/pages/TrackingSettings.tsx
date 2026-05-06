@@ -23,7 +23,7 @@ const TrackingSettings = () => {
   const [open, setOpen] = useState(false);
   const [domain, setDomain] = useState("");
   const [name, setName] = useState("");
-  const [requireConsent, setRequireConsent] = useState(false);
+  const [requireConsent, setRequireConsent] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [verifyingSite, setVerifyingSite] = useState<{ id: string; domain: string; verified: boolean } | null>(null);
 
@@ -47,7 +47,7 @@ const TrackingSettings = () => {
   };
 
   const snippetFor = (siteKey: string, requireConsent: boolean) =>
-    `<script async src="${SUPABASE_URL}/functions/v1/tracker-script?site=${siteKey}"${requireConsent ? ' data-require-consent="true"' : ""}></script>`;
+    `<script async src="${SUPABASE_URL}/functions/v1/tracker-script?site=${siteKey}"${requireConsent ? "" : ' data-consent="granted"'}></script>`;
 
   const copy = async (text: string, id: string) => {
     await navigator.clipboard.writeText(text);
@@ -195,13 +195,26 @@ const TrackingSettings = () => {
           </div>
         )}
 
-        <Card className="p-5 bg-muted/30 border-dashed">
-          <h3 className="font-semibold text-sm">Om GDPR & integritet</h3>
-          <ul className="text-xs text-muted-foreground space-y-1 mt-2 list-disc pl-5">
-            <li>IP-adresser anonymiseras innan lagring (sista oktetten nollas).</li>
-            <li>En förstapartscookie (<code>ml_vid</code>) sätts för att räkna unika besökare.</li>
-            <li>Du ansvarar för att informera dina besökare via cookie-banner. Aktivera "Kräv consent" om du vill vänta på godkännande.</li>
-          </ul>
+        <Card className="p-5 bg-muted/30 border-dashed space-y-4">
+          <div>
+            <h3 className="font-semibold text-sm">GDPR & integritet</h3>
+            <ul className="text-xs text-muted-foreground space-y-1 mt-2 list-disc pl-5">
+              <li><strong>Cookieless:</strong> ingen persistent cookie sätts. Besökar-ID härleds från en daglig hash av anonymiserad IP + webbläsare. ePrivacy-direktivet kräver därmed inte samtycke för själva mätningen.</li>
+              <li><strong>IP anonymiseras</strong> innan lagring (sista oktetten nollas). Råa IP används endast momentant för företagsuppslag via IPinfo.</li>
+              <li><strong>Do Not Track</strong> och <strong>Global Privacy Control</strong> respekteras automatiskt — skriptet skickar inget från sådana besökare.</li>
+              <li><strong>Samtycke krävs</strong> som standard innan tracking startar. Sätt <code>data-consent="granted"</code> eller anropa <code>MailLead.consent()</code> efter att besökaren godkänt.</li>
+              <li><strong>Datalagring:</strong> besök raderas automatiskt efter 90 dagar, besökare efter 180 dagar.</li>
+              <li><strong>Glöm mig:</strong> anropa <code>MailLead.forget()</code> för att radera all data för en besökare.</li>
+            </ul>
+          </div>
+          <details className="text-xs">
+            <summary className="cursor-pointer font-medium hover:text-foreground">Färdig text till din integritetspolicy</summary>
+            <div className="mt-2 p-3 bg-background rounded border text-muted-foreground space-y-2">
+              <p>Vi använder ett integritetsvänligt analysverktyg från MailLead för att förstå hur besökare använder vår sajt. Verktyget sätter inga cookies och samlar inte in personuppgifter som direkt kan identifiera dig.</p>
+              <p>Vi behandlar: anonymiserad IP-adress, webbläsartyp, besökt sida, tid på sidan, scroll-djup, hänvisande sajt och UTM-parametrar. Datan lagras inom EU (Lovable Cloud) och raderas automatiskt efter 90 dagar.</p>
+              <p>Underbiträden: Lovable Cloud (Supabase, EU) och IPinfo (USA) för att slå upp företagsdomän via IP.</p>
+            </div>
+          </details>
         </Card>
       </div>
 
