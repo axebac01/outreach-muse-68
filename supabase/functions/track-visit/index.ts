@@ -101,7 +101,8 @@ Deno.serve(async (req) => {
     const {
       type,
       site_key,
-      visitor_id,
+      visitor_id: visitorIdInput,
+      client_seed,
       session_id,
       visit_id,
       duration_ms,
@@ -112,7 +113,9 @@ Deno.serve(async (req) => {
       utm_medium,
       utm_campaign,
       email,
+      consent,
     } = body || {};
+    let visitor_id: string = visitorIdInput || "";
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
