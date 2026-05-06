@@ -204,6 +204,16 @@ const TrackingSettings = () => {
           </ul>
         </Card>
       </div>
+
+      {verifyingSite && (
+        <VerifyInstallDialog
+          open={!!verifyingSite}
+          onOpenChange={(o) => !o && setVerifyingSite(null)}
+          siteId={verifyingSite.id}
+          domain={verifyingSite.domain}
+          alreadyVerified={verifyingSite.verified}
+        />
+      )}
     </Layout>
   );
 };
