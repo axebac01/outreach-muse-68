@@ -5,6 +5,21 @@ import { useAuth } from "@/context/AuthContext";
 
 export const useTrackingSites = () => {
   const { user } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("tracking_sites_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tracking_sites", filter: `user_id=eq.${user.id}` },
+        () => qc.invalidateQueries({ queryKey: ["tracking_sites"] })
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, qc]);
+
   return useQuery({
     queryKey: ["tracking_sites", user?.id],
     queryFn: async () => {
