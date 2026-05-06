@@ -1019,33 +1019,42 @@ export type Database = {
           domain: string
           id: string
           is_active: boolean
+          last_ping_at: string | null
+          last_ping_url: string | null
           name: string | null
           require_consent: boolean
           site_key: string
           updated_at: string
           user_id: string
+          verified_at: string | null
         }
         Insert: {
           created_at?: string
           domain: string
           id?: string
           is_active?: boolean
+          last_ping_at?: string | null
+          last_ping_url?: string | null
           name?: string | null
           require_consent?: boolean
           site_key: string
           updated_at?: string
           user_id: string
+          verified_at?: string | null
         }
         Update: {
           created_at?: string
           domain?: string
           id?: string
           is_active?: boolean
+          last_ping_at?: string | null
+          last_ping_url?: string | null
           name?: string | null
           require_consent?: boolean
           site_key?: string
           updated_at?: string
           user_id?: string
+          verified_at?: string | null
         }
         Relationships: []
       }

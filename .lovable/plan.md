@@ -1,73 +1,62 @@
-# Deliverability-paketet (A)
+## Mål
 
-Två problem upptäckta vid kodgenomgång — båda är kritiska och bör fixas i samma omgång:
-
-1. **Reply auto-stop fungerar bara halvvägs.** `sync-inbox` sätter `sequence_leads.status = 'replied'` när någon svarar, MEN redan schemalagda rader i `scheduled_sends` annulleras inte. De skickas ändå när schemaläggaren kör. Dessutom: jag hittar **ingen cron/processor** som faktiskt plockar upp `scheduled_sends` och kallar `send-email`. Det betyder att follow-ups idag aldrig går iväg automatiskt — endast steg 1 schemaläggs av `launch-sequence`. Detta måste byggas innan resten är meningsfullt.
-
-2. **Inga sending limits per dag/inbox utöver `daily_limit_per_account` (default 25)** — ingen warm-up ramp, ingen throttle mellan sändningar, ingen bounce-detektion.
+Gör det tydligt om snippeten faktiskt är installerad och fungerar, så användaren slipper gissa.
 
 ## Vad vi bygger
 
-### 1. Schemalagd processor (`process-scheduled-sends` edge function + cron)
-- Körs var 5:e minut via `pg_cron` + `net.http_post`.
-- Plockar `scheduled_sends` där `status = 'scheduled'` och `scheduled_for <= now()`.
-- För varje rad:
-  - Skippa om `sequence_leads.status` är `replied` / `unsubscribed` / `bounced` → markera `status = 'cancelled'`.
-  - Skippa om utanför sending-window/sending-days för sequencen → flytta `scheduled_for` till nästa giltiga slot.
-  - Skippa om dagens skick på inboxen ≥ daglig gräns (warm-up-justerad) → flytta till imorgon.
-  - Annars: anropa `send-email`, sätt `status = 'sent'` + `sent_message_id`. Vid fel: `status = 'failed'` + retry max 3.
-- Efter lyckad send: schemalägg nästa steg för leaden (`current_step + 1`) baserat på `wait_days`.
+### 1. Verifierings-status per sajt
+Lägg till tre fält på `tracking_sites`:
+- `last_ping_at` (timestamptz) — senaste gången snippeten hörde av sig
+- `verified_at` (timestamptz) — första gången vi tog emot ett besök
+- `last_ping_url` (text) — URL från senaste pingen (för att visa "vi såg dig på X")
 
-### 2. Auto-cancel vid reply
-I `sync-inbox` direkt efter att `sequence_leads.status = 'replied'` sätts:
-```ts
-await admin.from("scheduled_sends")
-  .update({ status: "cancelled" })
-  .eq("sequence_id", sequenceId)
-  .eq("lead_id", leadId)
-  .eq("status", "scheduled");
-```
-Samma sak vid unsubscribe (i `unsubscribe`-funktionen) och vid hård bounce (se #4).
+`track-visit` uppdaterar dessa vid varje request.
 
-### 3. Warm-up ramp + sending limits per inbox
-Ny tabell `email_account_sending_limits`:
-- `email_account_id`, `warmup_enabled` (bool, default true), `warmup_started_at`, `daily_cap_override` (nullable int).
-- Effektiv daglig gräns:
-  - Om `warmup_enabled` och konto är < 14 dagar gammalt: `min(20 + dag*5, 50)`.
-  - Annars: `daily_cap_override ?? sequence.daily_limit_per_account`.
-- Räknas mot dagens redan skickade i `email_messages` där `direction='outbound'` och `sent_at` idag.
-- Throttling: efter varje send i processorn — slumpmässig fördröjning 30–120s mellan sändningar från samma inbox (implementeras genom att nästa rad får `scheduled_for = max(now, lastSendForInbox + jitter)`).
+### 2. Status-badge i UI
+På `/settings/tracking` visas en tydlig statuspill per sajt:
+- **"Inte installerad än"** (grå) — `verified_at` är null
+- **"Aktiv"** (grön, pulserande prick) — ping inom senaste 24h
+- **"Inaktiv"** (gul varning) — verifierad men ingen ping på >24h (snippet kanske borttagen)
 
-UI: I **Email Accounts** — visa "Dagens skick: 12/30 (warm-up dag 4)" + toggle för warm-up + override-fält.
+Plus liten text: "Senast sedd: 2 min sedan på /pricing".
 
-### 4. Bounce-hantering
-- I `sync-inbox` när vi parsar inkommande: detektera DSN/bounce (from `mailer-daemon@`, eller `Content-Type: multipart/report`, eller subject matchar `/^(undeliverable|delivery (status notification|failure)|mail delivery failed)/i`).
-- Extrahera den bouncade adressen från body (regex `/<([^>]+@[^>]+)>/` i diagnostic part).
-- Hård bounce → ny tabell `bounces (user_id, email, reason, bounced_at, hard)`. Sätt `sequence_leads.status = 'bounced'` för matchande leads. Annullera deras `scheduled_sends` (samma logik som reply).
-- Soft bounce → loggas men inga åtgärder.
+### 3. "Verifiera installation"-knapp
+Knapp som öppnar en dialog som:
+- Pollar databasen var 2:a sekund i upp till 60s
+- Ber användaren öppna sin sajt i en ny flik
+- När en ping kommer in: confetti + "Klart! Snippeten är installerad."
+- Timeout efter 60s: visar felsökningstips (cache, fel domän, CSP, ad-blocker)
 
-### 5. UI-feedback
-- **Inbox**: badge "Svarat — sekvens pausad" på trådar där leaden är `replied`.
-- **Sequence detail**: stats-rad "X scheduled • Y sent • Z replied • W bounced • V cancelled".
-- **Email Accounts**: status-pill "Warm-up dag 4 (cap 40/dag)".
+### 4. Onboarding-checklista i tom-state
+När `verified_at` är null visas en kort 3-stegs guide direkt under snippeten:
+1. Kopiera snippeten
+2. Klistra in i `<head>` på din sajt
+3. Besök sajten — vi upptäcker det automatiskt
+
+### 5. Inbound-sidan: varning om ingen sajt verifierad
+Om användaren har sajter men ingen är verifierad, visa en banner överst på `/inbound`: "Vi har inte tagit emot några besök än — verifiera installationen".
 
 ## Tekniska detaljer
 
-**Filer:**
-- `supabase/functions/process-scheduled-sends/index.ts` (ny)
-- `supabase/functions/sync-inbox/index.ts` (cancel scheduled, bounce-detect)
-- `supabase/functions/unsubscribe/index.ts` (cancel scheduled)
-- `supabase/migrations/<ts>_deliverability.sql`:
-  - `email_account_sending_limits`
-  - `bounces`
-  - utöka `scheduled_sends.status` med `'cancelled'`
-  - lägg till `sequence_leads.status` värde `'bounced'`
-  - pg_cron job som kallar processorn var 5:e min via service role
-- `src/pages/EmailAccounts.tsx` (warm-up UI)
-- `src/pages/SequenceBuilder.tsx` / detalj (statsrad)
+**Migration:** lägg till `last_ping_at`, `verified_at`, `last_ping_url` på `tracking_sites`.
 
-**Frågor innan jag börjar bygga:**
-1. Warm-up-default — ska den vara **på automatiskt** för alla nya inboxes (rekommenderas) eller opt-in?
-2. Cron-intervall: **5 min** ok, eller vill du ha snabbare (1 min) trots högre last?
+**Edge function `track-visit`:** efter att site-lookup lyckas, uppdatera `last_ping_at = now()`, sätt `verified_at = now()` om null, sätt `last_ping_url = url`. En extra UPDATE per request — försumbart.
 
-Säg "kör" så bygger jag direkt med default = warm-up på + 5 min cron, om du inte säger annat.
+**Realtime:** `tracking_sites` läggs till i `supabase_realtime`-publication så UI uppdateras direkt utan polling när ping kommer in.
+
+**Verifierings-dialog:** subscribar på `postgres_changes` för rad-id, visar "väntar..." spinner, byter till success-state när `verified_at` blir satt.
+
+**Statuspil-logik:**
+```
+verified_at IS NULL                          → "Inte installerad"
+last_ping_at > now() - 24h                   → "Aktiv"
+last_ping_at <= now() - 24h                  → "Inaktiv (kontrollera)"
+```
+
+## Filer
+
+- Ny migration: `tracking_sites` + 3 kolumner + realtime
+- `supabase/functions/track-visit/index.ts` — uppdatera ping-fält
+- `src/hooks/useInbound.ts` — realtime-subscription för tracking_sites
+- `src/pages/TrackingSettings.tsx` — status-badge, verifiera-knapp + dialog, onboarding-steg
+- `src/pages/Inbound.tsx` — banner när ingen sajt är verifierad
