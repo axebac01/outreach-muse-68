@@ -8,9 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useTrackingSites, useCreateTrackingSite, useDeleteTrackingSite } from "@/hooks/useInbound";
-import { Plus, Trash2, Copy, Check, Globe, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Copy, Check, Globe, ArrowLeft, ShieldCheck, Circle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import VerifyInstallDialog from "@/components/VerifyInstallDialog";
+import { formatDistanceToNow } from "date-fns";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
