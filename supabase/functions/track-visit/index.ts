@@ -148,10 +148,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // (admin client created above)
 
     // Look up tracking site
     const { data: site } = await admin
