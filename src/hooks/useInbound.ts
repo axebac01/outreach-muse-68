@@ -126,3 +126,62 @@ export const useInboundNotifications = () => {
     enabled: !!user,
   });
 };
+
+export const useRecentVisits = (limit = 50) => {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("recent_visits_changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "visits", filter: `user_id=eq.${user.id}` },
+        () => qc.invalidateQueries({ queryKey: ["recent_visits"] })
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, qc]);
+
+  return useQuery({
+    queryKey: ["recent_visits", user?.id, limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("visits")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+    refetchInterval: 15000,
+  });
+};
+
+export const useInboundStats = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["inbound_stats", user?.id],
+    queryFn: async () => {
+      const since = new Date();
+      since.setHours(0, 0, 0, 0);
+      const sinceIso = since.toISOString();
+
+      const [visitsRes, visitorsRes, companiesRes] = await Promise.all([
+        supabase.from("visits").select("id", { count: "exact", head: true }).gte("created_at", sinceIso),
+        supabase.from("visitors").select("id", { count: "exact", head: true }).gte("last_seen_at", sinceIso),
+        supabase.from("inbound_companies").select("id", { count: "exact", head: true }).gte("last_seen_at", sinceIso),
+      ]);
+
+      return {
+        visits: visitsRes.count || 0,
+        visitors: visitorsRes.count || 0,
+        companies: companiesRes.count || 0,
+      };
+    },
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+};
