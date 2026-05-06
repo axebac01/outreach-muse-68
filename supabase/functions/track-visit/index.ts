@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
     // Look up tracking site
     const { data: site } = await admin
       .from("tracking_sites")
-      .select("id, user_id, is_active")
+      .select("id, user_id, is_active, verified_at")
       .eq("site_key", site_key)
       .maybeSingle();
 
@@ -144,6 +144,17 @@ Deno.serve(async (req) => {
     const userId = site.user_id;
     const ip = getClientIp(req);
     const anonIp = anonymizeIp(ip);
+
+    // Update verification ping fields (fire-and-forget)
+    admin
+      .from("tracking_sites")
+      .update({
+        last_ping_at: new Date().toISOString(),
+        verified_at: (site as any).verified_at || new Date().toISOString(),
+        last_ping_url: url,
+      })
+      .eq("id", site.id)
+      .then(() => {});
 
     // IP -> company lookup (use real IP for lookup, store only anonymized)
     const lookup = await ipLookup(ip);
