@@ -120,6 +120,8 @@ const Inbound = () => {
                 </div>
               </Card>
             )}
+
+            <div className="flex items-center gap-3 flex-wrap">
               <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "known" | "live")}>
                 <TabsList>
                   <TabsTrigger value="all">Alla företag</TabsTrigger>
