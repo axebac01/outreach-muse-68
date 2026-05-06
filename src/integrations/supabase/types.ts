@@ -1015,6 +1015,7 @@ export type Database = {
       }
       tracking_sites: {
         Row: {
+          auto_tag_email_links: boolean
           created_at: string
           domain: string
           id: string
@@ -1029,6 +1030,7 @@ export type Database = {
           verified_at: string | null
         }
         Insert: {
+          auto_tag_email_links?: boolean
           created_at?: string
           domain: string
           id?: string
@@ -1043,6 +1045,7 @@ export type Database = {
           verified_at?: string | null
         }
         Update: {
+          auto_tag_email_links?: boolean
           created_at?: string
           domain?: string
           id?: string
