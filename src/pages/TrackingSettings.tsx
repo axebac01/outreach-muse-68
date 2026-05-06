@@ -23,7 +23,7 @@ const TrackingSettings = () => {
   const [open, setOpen] = useState(false);
   const [domain, setDomain] = useState("");
   const [name, setName] = useState("");
-  const [requireConsent, setRequireConsent] = useState(false);
+  const [requireConsent, setRequireConsent] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [verifyingSite, setVerifyingSite] = useState<{ id: string; domain: string; verified: boolean } | null>(null);
 
