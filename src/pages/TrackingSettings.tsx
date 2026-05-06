@@ -216,6 +216,16 @@ const TrackingSettings = () => {
             </div>
           </details>
         </Card>
+
+        <Card className="p-5 space-y-2">
+          <h3 className="font-semibold text-sm">Auto-tagga mejl-länkar</h3>
+          <p className="text-xs text-muted-foreground">
+            Vi taggar automatiskt länkar i utgående mejl som pekar på dina spårade domäner med en signerad token. När en mottagare klickar identifieras de mot din lead-lista — och vi kommer ihåg dem vid framtida återbesök på sajten under samma session/dygn. Endast länkar till dina egna domäner taggas; externa länkar (LinkedIn, kalendrar, etc.) lämnas orörda.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Tokenen rensas automatiskt från URL:en vid sidladdning så den inte läcker via referrers eller bokmärken.
+          </p>
+        </Card>
       </div>
 
       {verifyingSite && (

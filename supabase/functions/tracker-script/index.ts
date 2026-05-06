@@ -100,6 +100,15 @@ const SCRIPT = `(function(){
       sentInitial = true;
       startedAt = Date.now();
       var params = new URLSearchParams(window.location.search);
+      var mlE = params.get('ml_e');
+      if (mlE) {
+        try {
+          params.delete('ml_e');
+          var qs = params.toString();
+          var newUrl = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+          window.history.replaceState({}, '', newUrl);
+        } catch(e) {}
+      }
       var payload = {
         type: 'pageview',
         site_key: siteKey,
@@ -113,6 +122,7 @@ const SCRIPT = `(function(){
         screen_w: window.innerWidth,
         screen_h: window.innerHeight,
         consent: true,
+        ml_e: mlE,
         email: (extra && extra.email) || null
       };
       var p = post(payload, false);

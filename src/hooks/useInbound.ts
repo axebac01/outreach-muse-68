@@ -160,6 +160,34 @@ export const useRecentVisits = (limit = 50) => {
   });
 };
 
+export const useIdentifiedVisitors = (limit = 50) => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["identified_visitors", user?.id, limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("visitors")
+        .select("id, visitor_id, lead_id, email, company_id, visit_count, last_seen_at, first_seen_at")
+        .not("lead_id", "is", null)
+        .order("last_seen_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      const leadIds = Array.from(new Set((data || []).map((v: any) => v.lead_id).filter(Boolean)));
+      let leadsMap: Record<string, any> = {};
+      if (leadIds.length > 0) {
+        const { data: leads } = await supabase
+          .from("leads")
+          .select("id, full_name, email, company, role")
+          .in("id", leadIds);
+        leadsMap = Object.fromEntries((leads || []).map((l: any) => [l.id, l]));
+      }
+      return (data || []).map((v: any) => ({ ...v, lead: leadsMap[v.lead_id] || null }));
+    },
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+};
+
 export const useInboundStats = () => {
   const { user } = useAuth();
   return useQuery({

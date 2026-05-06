@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useInboundCompanies, useCompanyVisits, useTrackingSites, useRecentVisits, useInboundStats } from "@/hooks/useInbound";
-import { Building2, ExternalLink, Settings as SettingsIcon, MapPin, Eye, User, Activity } from "lucide-react";
+import { useInboundCompanies, useCompanyVisits, useTrackingSites, useRecentVisits, useInboundStats, useIdentifiedVisitors } from "@/hooks/useInbound";
+import { Building2, ExternalLink, Settings as SettingsIcon, MapPin, Eye, User, Activity, MailCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import EmptyState from "@/components/EmptyState";
 import { formatDistanceToNow } from "date-fns";
@@ -30,6 +30,7 @@ const Inbound = () => {
   const { data: visits = [] } = useCompanyVisits(selectedId || undefined);
   const { data: liveVisits = [] } = useRecentVisits(50);
   const { data: stats } = useInboundStats();
+  const { data: identified = [] } = useIdentifiedVisitors(20);
 
   const filtered = companies.filter((c) => {
     if (!search) return true;
@@ -88,6 +89,37 @@ const Inbound = () => {
                 <div className="text-2xl font-semibold mt-1">{stats?.companies ?? "—"}</div>
               </Card>
             </div>
+
+            {identified.length > 0 && (
+              <Card className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <MailCheck className="h-4 w-4 text-primary" />
+                  <h2 className="font-semibold text-sm">Identifierade leads</h2>
+                  <Badge variant="secondary" className="text-[10px]">{identified.length}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground -mt-1">
+                  Mottagare som klickat en länk i dina mejl och besökt sajten. Vi kommer ihåg dem vid återbesök.
+                </p>
+                <div className="divide-y">
+                  {identified.map((v: any) => (
+                    <div key={v.id} className="flex items-center gap-3 py-2 text-sm">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">
+                          {v.lead?.full_name || v.lead?.email || v.email || "Okänd"}
+                          {v.lead?.company && <span className="text-muted-foreground font-normal"> · {v.lead.company}</span>}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {v.visit_count} besök · senast {formatDistanceToNow(new Date(v.last_seen_at), { addSuffix: true })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             <div className="flex items-center gap-3 flex-wrap">
               <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "known" | "live")}>

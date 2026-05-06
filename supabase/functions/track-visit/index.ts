@@ -1,6 +1,7 @@
 // Public endpoint — receives visit beacons from the JS snippet.
 // No JWT required. Auth via site_key lookup.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { verifyLeadToken } from "../_shared/trackingLinks.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -113,6 +114,7 @@ Deno.serve(async (req) => {
       utm_medium,
       utm_campaign,
       email,
+      ml_e,
       consent,
     } = body || {};
     let visitor_id: string = visitorIdInput || "";
@@ -259,9 +261,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Identify visitor by email if provided
+    // Identify visitor: prefer signed ml_e token, fallback to email
     let leadId: string | null = null;
-    if (email) {
+    let identifiedViaToken = false;
+    if (ml_e) {
+      const secret = Deno.env.get("TRACKING_LINK_SECRET");
+      if (secret) {
+        const tokenLeadId = await verifyLeadToken(ml_e, secret);
+        if (tokenLeadId) {
+          const { data: lead } = await admin
+            .from("leads")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("id", tokenLeadId)
+            .maybeSingle();
+          if (lead) {
+            leadId = lead.id;
+            identifiedViaToken = true;
+          }
+        }
+      }
+    }
+    if (!leadId && email) {
       const { data: lead } = await admin
         .from("leads")
         .select("id")
@@ -270,6 +291,29 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
       leadId = lead?.id || null;
+    }
+
+    // Notify on first identification (or after 24h gap) via mail-link click
+    if (identifiedViaToken && leadId) {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: recent } = await admin
+        .from("inbound_notifications")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("lead_id", leadId)
+        .gte("created_at", since)
+        .limit(1)
+        .maybeSingle();
+      if (!recent) {
+        let path: string | null = null;
+        try { path = new URL(url).pathname; } catch (_e) { /* ignore */ }
+        await admin.from("inbound_notifications").insert({
+          user_id: userId,
+          company_id: companyId,
+          lead_id: leadId,
+          message: `Lead klickade din mejl-länk och besökte ${path || "din sajt"}`,
+        });
+      }
     }
 
     // Upsert visitor

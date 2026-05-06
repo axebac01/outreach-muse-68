@@ -9,6 +9,7 @@ import {
   signUnsubscribeToken,
   buildUnsubscribeUrl,
 } from "../_shared/unsubscribe.ts";
+import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
 
 function buildRfc2822(opts: {
   from: string;
@@ -225,7 +226,29 @@ Deno.serve(async (req) => {
         text: text ? (hasInText ? text : text + footerText) : (html ? undefined : footerText.trim()),
       };
     };
-    const finalBody = ensureUnsub(body_html, body_text);
+    // Auto-tag links to user's tracked domains for visitor identification
+    let taggedHtml = body_html;
+    let taggedText = body_text;
+    if (lead_id) {
+      const { data: sites } = await admin
+        .from("tracking_sites")
+        .select("domain, auto_tag_email_links, is_active")
+        .eq("user_id", userId);
+      const trackedDomains = (sites || [])
+        .filter((s: any) => s.is_active && s.auto_tag_email_links !== false)
+        .map((s: any) => s.domain as string);
+      const secret = Deno.env.get("TRACKING_LINK_SECRET");
+      if (trackedDomains.length > 0 && secret) {
+        const tagged = await tagLinksForTracking(body_html, body_text, {
+          leadId: lead_id,
+          trackedDomains,
+          secret,
+        });
+        taggedHtml = tagged.html;
+        taggedText = tagged.text;
+      }
+    }
+    const finalBody = ensureUnsub(taggedHtml, taggedText);
 
     let status = "sent";
     let errorMessage: string | null = null;
