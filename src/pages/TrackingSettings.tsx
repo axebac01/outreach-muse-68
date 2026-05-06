@@ -47,7 +47,7 @@ const TrackingSettings = () => {
   };
 
   const snippetFor = (siteKey: string, requireConsent: boolean) =>
-    `<script async src="${SUPABASE_URL}/functions/v1/tracker-script?site=${siteKey}"${requireConsent ? ' data-require-consent="true"' : ""}></script>`;
+    `<script async src="${SUPABASE_URL}/functions/v1/tracker-script?site=${siteKey}"${requireConsent ? "" : ' data-consent="granted"'}></script>`;
 
   const copy = async (text: string, id: string) => {
     await navigator.clipboard.writeText(text);
