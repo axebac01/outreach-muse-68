@@ -96,7 +96,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
+    const raw = await req.text();
+    const body = raw ? JSON.parse(raw) : {};
     const {
       site_key,
       visitor_id,

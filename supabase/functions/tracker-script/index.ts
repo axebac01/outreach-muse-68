@@ -48,13 +48,25 @@ const SCRIPT = `(function(){
         utm_campaign: params.get('utm_campaign'),
         email: (extra && extra.email) || null
       };
+      var ok = false;
       try {
         if (navigator.sendBeacon) {
-          navigator.sendBeacon(endpoint, new Blob([JSON.stringify(payload)], {type:'application/json'}));
-        } else {
-          fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload), keepalive:true });
+          // Use text/plain (CORS-safelisted) — sendBeacon rejects application/json silently
+          var blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
+          ok = navigator.sendBeacon(endpoint, blob);
         }
       } catch(e) {}
+      if (!ok) {
+        try {
+          fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload),
+            keepalive: true,
+            mode: 'cors'
+          });
+        } catch(e) {}
+      }
     }
 
     window.MailLead = {
@@ -73,7 +85,7 @@ Deno.serve((req) => {
     headers: {
       ...corsHeaders,
       "Content-Type": "application/javascript; charset=utf-8",
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": "public, max-age=60",
     },
   });
 });

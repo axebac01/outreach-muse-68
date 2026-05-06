@@ -1,62 +1,56 @@
-## Mål
+## Problem
 
-Gör det tydligt om snippeten faktiskt är installerad och fungerar, så användaren slipper gissa.
+Snippeten på `crmdata.se` laddas och triggar OPTIONS-preflight till `track-visit`, men **ingen POST** kommer fram. Orsak: `navigator.sendBeacon` accepterar inte `application/json` som Blob-type — webbläsaren avvisar tyst och vi kollar aldrig returvärdet, så fallback till `fetch` triggas inte.
 
-## Vad vi bygger
+`tracking_sites.last_ping_at` förblir `null` → verifieringen timeout:ar trots korrekt installation.
 
-### 1. Verifierings-status per sajt
-Lägg till tre fält på `tracking_sites`:
-- `last_ping_at` (timestamptz) — senaste gången snippeten hörde av sig
-- `verified_at` (timestamptz) — första gången vi tog emot ett besök
-- `last_ping_url` (text) — URL från senaste pingen (för att visa "vi såg dig på X")
+## Fix
 
-`track-visit` uppdaterar dessa vid varje request.
+### 1. `supabase/functions/tracker-script/index.ts`
+Ändra sendBeacon till att använda `text/plain` (CORS-safelisted, accepteras av sendBeacon) och kolla returvärdet med fetch-fallback:
 
-### 2. Status-badge i UI
-På `/settings/tracking` visas en tydlig statuspill per sajt:
-- **"Inte installerad än"** (grå) — `verified_at` är null
-- **"Aktiv"** (grön, pulserande prick) — ping inom senaste 24h
-- **"Inaktiv"** (gul varning) — verifierad men ingen ping på >24h (snippet kanske borttagen)
-
-Plus liten text: "Senast sedd: 2 min sedan på /pricing".
-
-### 3. "Verifiera installation"-knapp
-Knapp som öppnar en dialog som:
-- Pollar databasen var 2:a sekund i upp till 60s
-- Ber användaren öppna sin sajt i en ny flik
-- När en ping kommer in: confetti + "Klart! Snippeten är installerad."
-- Timeout efter 60s: visar felsökningstips (cache, fel domän, CSP, ad-blocker)
-
-### 4. Onboarding-checklista i tom-state
-När `verified_at` är null visas en kort 3-stegs guide direkt under snippeten:
-1. Kopiera snippeten
-2. Klistra in i `<head>` på din sajt
-3. Besök sajten — vi upptäcker det automatiskt
-
-### 5. Inbound-sidan: varning om ingen sajt verifierad
-Om användaren har sajter men ingen är verifierad, visa en banner överst på `/inbound`: "Vi har inte tagit emot några besök än — verifiera installationen".
-
-## Tekniska detaljer
-
-**Migration:** lägg till `last_ping_at`, `verified_at`, `last_ping_url` på `tracking_sites`.
-
-**Edge function `track-visit`:** efter att site-lookup lyckas, uppdatera `last_ping_at = now()`, sätt `verified_at = now()` om null, sätt `last_ping_url = url`. En extra UPDATE per request — försumbart.
-
-**Realtime:** `tracking_sites` läggs till i `supabase_realtime`-publication så UI uppdateras direkt utan polling när ping kommer in.
-
-**Verifierings-dialog:** subscribar på `postgres_changes` för rad-id, visar "väntar..." spinner, byter till success-state när `verified_at` blir satt.
-
-**Statuspil-logik:**
-```
-verified_at IS NULL                          → "Inte installerad"
-last_ping_at > now() - 24h                   → "Aktiv"
-last_ping_at <= now() - 24h                  → "Inaktiv (kontrollera)"
+```js
+var ok = false;
+try {
+  if (navigator.sendBeacon) {
+    var blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
+    ok = navigator.sendBeacon(endpoint, blob);
+  }
+} catch(e) {}
+if (!ok) {
+  try {
+    fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+      mode: 'cors'
+    });
+  } catch(e) {}
+}
 ```
 
-## Filer
+Bonus: `text/plain` är en "simple request" → ingen CORS-preflight alls → snabbare och mer robust mot strikt CSP.
 
-- Ny migration: `tracking_sites` + 3 kolumner + realtime
-- `supabase/functions/track-visit/index.ts` — uppdatera ping-fält
-- `src/hooks/useInbound.ts` — realtime-subscription för tracking_sites
-- `src/pages/TrackingSettings.tsx` — status-badge, verifiera-knapp + dialog, onboarding-steg
-- `src/pages/Inbound.tsx` — banner när ingen sajt är verifierad
+### 2. `supabase/functions/track-visit/index.ts`
+`req.json()` fungerar redan oavsett content-type (läser bytes), så ingen serveränding krävs. Men för säkerhets skull byter vi till manuell parsing som tål både JSON-body och text:
+
+```ts
+const raw = await req.text();
+const body = raw ? JSON.parse(raw) : {};
+```
+
+### 3. Bumpa cache-tiden ner tillfälligt
+Sätt `Cache-Control: public, max-age=60` (från 300) i `tracker-script` så användare som redan har gamla snippeten cachad får den nya inom en minut.
+
+### 4. Verifieringsdialogen
+Ingen ändring behövs — så fort POST når servern uppdateras `verified_at` och Realtime triggar success-state.
+
+## Test efter deploy
+1. Hårdrefresha `crmdata.se` (Cmd+Shift+R) för att tömma snippet-cache
+2. Öppna Network-fliken → filtrera på `track-visit` → bekräfta att en POST 200 går iväg
+3. Kolla `/settings/tracking` — badge ska bli grön "Aktiv" inom sekunder
+
+## Filer som ändras
+- `supabase/functions/tracker-script/index.ts` — sendBeacon content-type + fallback
+- `supabase/functions/track-visit/index.ts` — robust body-parsing
