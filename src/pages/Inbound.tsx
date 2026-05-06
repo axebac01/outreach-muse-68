@@ -65,28 +65,84 @@ const Inbound = () => {
                 </Button>
               </Card>
             )}
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="p-4">
+                <div className="text-xs text-muted-foreground">Besök idag</div>
+                <div className="text-2xl font-semibold mt-1">{stats?.visits ?? "—"}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-xs text-muted-foreground">Unika besökare idag</div>
+                <div className="text-2xl font-semibold mt-1">{stats?.visitors ?? "—"}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-xs text-muted-foreground">Identifierade företag idag</div>
+                <div className="text-2xl font-semibold mt-1">{stats?.companies ?? "—"}</div>
+              </Card>
+            </div>
+
             <div className="flex items-center gap-3 flex-wrap">
-              <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "known")}>
+              <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "known" | "live")}>
                 <TabsList>
                   <TabsTrigger value="all">Alla företag</TabsTrigger>
                   <TabsTrigger value="known">Kända leads</TabsTrigger>
+                  <TabsTrigger value="live" className="gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    Live-besök
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
-              <Input
-                placeholder="Sök företag eller domän…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="max-w-xs"
-              />
+              {filter !== "live" && (
+                <Input
+                  placeholder="Sök företag eller domän…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="max-w-xs"
+                />
+              )}
             </div>
 
-            {isLoading ? (
+            {filter === "live" ? (
+              liveVisits.length === 0 ? (
+                <Card className="p-12">
+                  <EmptyState
+                    title="Inga besök loggade än"
+                    description="Så fort någon laddar din sajt dyker besöket upp här i realtid."
+                  />
+                </Card>
+              ) : (
+                <Card className="divide-y">
+                  {liveVisits.map((v: any) => (
+                    <div key={v.id} className="flex items-center gap-4 p-3 text-sm">
+                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                        {v.company_id ? <Building2 className="h-4 w-4 text-primary" /> : <User className="h-4 w-4 text-muted-foreground" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{v.path || v.url}</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
+                          {(v.city || v.country) && (
+                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{[v.city, v.country].filter(Boolean).join(", ")}</span>
+                          )}
+                          {v.referrer && (() => { try { return <span>· från {new URL(v.referrer).hostname}</span>; } catch { return null; } })()}
+                          {v.utm_source && <span>· utm: {v.utm_source}</span>}
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground shrink-0">
+                        {formatDistanceToNow(new Date(v.created_at), { addSuffix: true })}
+                      </div>
+                    </div>
+                  ))}
+                </Card>
+              )
+            ) : isLoading ? (
               <Card className="p-12 text-center text-muted-foreground">Laddar…</Card>
             ) : filtered.length === 0 ? (
               <Card className="p-12">
                 <EmptyState
-                  title="Inga besök ännu"
-                  description="Så snart någon besöker din sajt dyker företaget upp här."
+                  title="Inga identifierade företag ännu"
+                  description="Vi visar företag här när IPinfo kan koppla en besökar-IP till ett företag. Anonyma besök syns under fliken Live-besök."
                 />
               </Card>
             ) : (
