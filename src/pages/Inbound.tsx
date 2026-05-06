@@ -52,6 +52,17 @@ const Inbound = () => {
           </Card>
         ) : (
           <>
+            {sites.every((s: any) => !s.verified_at) && (
+              <Card className="p-4 bg-amber-500/10 border-amber-500/30 flex items-start gap-3">
+                <div className="text-sm flex-1">
+                  <div className="font-medium">Vi har inte tagit emot några besök än</div>
+                  <div className="text-muted-foreground text-xs mt-0.5">Snippeten verkar inte vara installerad. Verifiera installationen för att börja samla inbound-leads.</div>
+                </div>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/settings/tracking">Verifiera</Link>
+                </Button>
+              </Card>
+            )}
             <div className="flex items-center gap-3 flex-wrap">
               <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "known")}>
                 <TabsList>
