@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
     // Look up tracking site
     const { data: site } = await admin
       .from("tracking_sites")
-      .select("id, user_id, is_active")
+      .select("id, user_id, is_active, verified_at")
       .eq("site_key", site_key)
       .maybeSingle();
 
