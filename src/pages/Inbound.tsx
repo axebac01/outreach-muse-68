@@ -129,11 +129,13 @@ const Inbound = () => {
                         {v.company_id ? <Building2 className="h-4 w-4 text-primary" /> : <User className="h-4 w-4 text-muted-foreground" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{v.path || v.url}</div>
+                      <div className="font-medium truncate">{v.path || v.url}</div>
                         <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
                           {(v.city || v.country) && (
                             <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{[v.city, v.country].filter(Boolean).join(", ")}</span>
                           )}
+                          {formatDuration(v.duration_ms) && <span>· {formatDuration(v.duration_ms)} på sidan</span>}
+                          {typeof v.scroll_depth === "number" && v.scroll_depth > 0 && <span>· {v.scroll_depth}% scroll</span>}
                           {v.referrer && (() => { try { return <span>· från {new URL(v.referrer).hostname}</span>; } catch { return null; } })()}
                           {v.utm_source && <span>· utm: {v.utm_source}</span>}
                         </div>
