@@ -13,12 +13,14 @@ import EmptyState from "@/components/EmptyState";
 import { formatDistanceToNow } from "date-fns";
 
 const Inbound = () => {
-  const [filter, setFilter] = useState<"all" | "known">("all");
+  const [filter, setFilter] = useState<"all" | "known" | "live">("all");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data: companies = [], isLoading } = useInboundCompanies({ knownOnly: filter === "known" });
   const { data: sites = [] } = useTrackingSites();
   const { data: visits = [] } = useCompanyVisits(selectedId || undefined);
+  const { data: liveVisits = [] } = useRecentVisits(50);
+  const { data: stats } = useInboundStats();
 
   const filtered = companies.filter((c) => {
     if (!search) return true;
