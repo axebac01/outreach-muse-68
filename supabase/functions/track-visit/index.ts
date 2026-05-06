@@ -99,8 +99,13 @@ Deno.serve(async (req) => {
     const raw = await req.text();
     const body = raw ? JSON.parse(raw) : {};
     const {
+      type,
       site_key,
       visitor_id,
+      session_id,
+      visit_id,
+      duration_ms,
+      scroll_depth,
       url,
       referrer,
       utm_source,
@@ -109,6 +114,26 @@ Deno.serve(async (req) => {
       email,
     } = body || {};
 
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // === UPDATE MODE: heartbeat / final beacon for an existing visit ===
+    if (type === "update" && visit_id) {
+      const patch: Record<string, unknown> = {};
+      if (typeof duration_ms === "number") patch.duration_ms = Math.max(0, Math.floor(duration_ms));
+      if (typeof scroll_depth === "number") patch.scroll_depth = Math.max(0, Math.min(100, Math.floor(scroll_depth)));
+      if (body.ended) patch.ended_at = new Date().toISOString();
+      if (Object.keys(patch).length > 0) {
+        await admin.from("visits").update(patch).eq("id", visit_id);
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // === PAGEVIEW MODE ===
     if (!site_key || !visitor_id || !url) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
