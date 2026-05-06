@@ -1,53 +1,58 @@
-## Vad vi redan har
-- ✅ **Vilka sidor:** varje sidladdning loggas i `visits` med `url`, `path`
-- ✅ **Hur de kom hit:** `referrer`, `utm_source`, `utm_medium`, `utm_campaign` finns redan
-- ❌ **Tid på sida / session:** loggas inte
+# GDPR-härdning av tracking-skriptet
 
-## Vad som behöver byggas
+Mål: göra MailLeads tracking cookieless och samtyckesfri by default, så sajtägare kan installera snippeten utan cookie-banner och utan att bryta mot ePrivacy/GDPR.
 
-### 1. Tid på sida (per pageview)
-**Snippet (`tracker-script`):**
-- Mät tid mellan pageload och `pagehide`/`visibilitychange=hidden`
-- Skicka en uppföljnings-beacon med `{ visit_id, duration_ms, scroll_depth }`
-- Heartbeat var 15s för att hantera långa sessioner som stängs hårt (browser crash)
+## 1. Cookieless visitor-ID (snippet)
+- Ta bort `ml_vid`-cookien.
+- Generera `visitor_id` som en daglig hash: `sha256(site_key + anonIp_hint + UA + YYYY-MM-DD)` beräknad i edge-funktionen istället för i klienten (klienten skickar bara en slumpad `client_seed` i `sessionStorage` som rensas vid tabbstängning).
+- `session_id` ligger kvar i `sessionStorage` (rensas vid tabbstängning, ePrivacy tillåter detta som "strictly necessary").
+- Effekt: ingen persistent identifierare → ingen cookie-banner krävs.
 
-**Server (`track-visit`):**
-- Returnera `visit_id` (UUID) i POST-svaret så snippeten kan referera till den
-- Ny endpoint-läge: om `visit_id` + `duration_ms` skickas → uppdatera befintlig visit istället för att skapa ny
+## 2. Default = privacy-safe
+- Vänd default på `tracking_sites.require_consent` till `true` för nya sajter (kolumn-default ändras).
+- Snippet beter sig så här:
+  - Om `data-consent="granted"` finns på script-taggen ELLER `MailLead.consent()` anropats → tracka.
+  - Annars → vänta tyst. Ingen request skickas.
+- Sajtägare som vill köra utan consent måste explicit sätta `data-consent="granted"` (på eget juridiskt ansvar, t.ex. om de har LIA).
 
-**DB-migration:**
-- `visits.duration_ms` (int, nullable)
-- `visits.scroll_depth` (int, nullable, 0-100)
-- `visits.ended_at` (timestamptz, nullable)
+## 3. Respektera DNT och GPC
+- I snippet: om `navigator.doNotTrack === '1'` eller `navigator.globalPrivacyControl === true` → returnera direkt, skicka ingenting.
 
-### 2. Session-aggregering
-En "session" = besök från samma `visitor_id` med <30 min mellan pageviews.
-Lägg till på `visits`:
-- `session_id` (text) — beräknas i `track-visit` genom att titta på senaste visit för visitor_id
-- Sessionens första referrer = sessionens "source"
+## 4. Retention (auto-radering)
+- Ny edge-funktion `purge-old-visits` (cron, dagligen 03:00 UTC):
+  - Radera rader i `visits` äldre än 90 dagar.
+  - Radera rader i `visitors` med `last_seen_at` äldre än 180 dagar.
+  - Radera `inbound_companies` utan besök senaste 365 dagar.
+- Schemaläggs via `pg_cron` + `pg_net` (separat insert-SQL, inte migration, eftersom URL/anon-key är projektspecifika).
 
-### 3. UI-uppdateringar
+## 5. "Glöm mig"-endpoint
+- Ny edge-funktion `forget-visitor` (publik POST):
+  - Body: `{ site_key, visitor_id }`.
+  - Raderar alla `visits` och `visitors` för den kombinationen.
+- Lägg till en `MailLead.forget()`-metod i snippet som anropar endpointen och tömmer `sessionStorage`.
 
-**`/inbound` Live-flik:**
-- Visa tid på sida bredvid varje rad: "23s", "2m 14s"
-- Gruppera sessions visuellt (samma visitor + nära i tid → samma "kort")
+## 6. UI på `/tracking-settings`
+- Ny sektion "GDPR & integritet" med:
+  - Toggle: "Kräv samtycke innan tracking" (default på).
+  - Färdig privacy-policy-text på svenska/engelska att kopiera till sajtens policy (lista underbiträden: Lovable Cloud / Supabase EU, IPinfo).
+  - Kort förklaring av cookieless-läget och `MailLead.consent()` / `MailLead.forget()`.
+- Ny sektion "Datalagring": "Besöksdata raderas automatiskt efter 90 dagar."
 
-**Drawer (företagsvyn):**
-- "Sessioner" istället för platt visit-lista
-- Per session: total tid, antal sidor, entry page, source/referrer
-- Expanderbar för att se enskilda sidor och tid per sida
+## 7. IPinfo-anrop endast vid behov
+- I `track-visit`: hoppa över IPinfo-uppslag om `require_consent=true` och consent inte är bekräftat (snippet skickar `consent: true/false`).
+- Räcker eftersom snippet redan inte ens skickar request utan consent — men dubbelförsäkring serverside.
 
-**KPI-strip:**
-- Lägg till "Snitt-tid på sajt idag"
+## Filer som ändras
+- `supabase/functions/tracker-script/index.ts` — cookieless, DNT/GPC, consent-default, `forget()`.
+- `supabase/functions/track-visit/index.ts` — hash-baserad visitor_id, IPinfo-gating, consent-flagga.
+- `supabase/functions/purge-old-visits/index.ts` (ny) — retention-job.
+- `supabase/functions/forget-visitor/index.ts` (ny) — radering på begäran.
+- Migration: `tracking_sites.require_consent` default `true`, indexar för retention-radering.
+- `src/pages/TrackingSettings.tsx` — GDPR-sektion + policy-text.
+- `src/i18n/locales/{sv,en}.json` — översättningar.
+- Cron-job (separat insert-SQL, inte migration).
 
-## Filer
-- `supabase/migrations/<ts>_visit_duration.sql` (nya kolumner)
-- `supabase/functions/track-visit/index.ts` (returnera visit_id, hantera duration-uppdateringar, session_id-logik)
-- `supabase/functions/tracker-script/index.ts` (duration tracking + heartbeat + scroll depth)
-- `src/hooks/useInbound.ts` (uppdatera typer, ny session-aggregering)
-- `src/pages/Inbound.tsx` (visa duration + sessions)
-
-## Att tänka på
-- **Privacy:** scroll-depth och tid är inte personuppgifter, ingen extra consent behövs
-- **Bandbredd:** beacon vid pagehide är gratis, heartbeat var 15s är försumbart
-- **Pålitlighet:** `pagehide` triggas inte alltid → kombinera med `visibilitychange` + sista heartbeat som fallback
+## Att vara medveten om
+- Befintliga sajter behåller sitt nuvarande `require_consent`-värde — bara nya får default `true`. Vi visar en banner i `/tracking-settings` som rekommenderar att slå på det.
+- Hash-baserade visitor_id:n "rullar" varje midnatt UTC → samma fysiska besökare räknas som ny nästa dag. Det är priset för cookieless. Detta motsvarar Plausibles modell.
+- Detta gör skriptet GDPR/ePrivacy-tryggt för 95% av användningsfallen. Ett fullständigt DPA-paket (avtalsmall) ligger utanför kod och bör tas fram juridiskt separat.
