@@ -1,34 +1,53 @@
-## Mål
-Visa **alla besök** (inte bara matchade företag) på `/inbound` så du ser realtidsaktivitet — Stockholm-besökare, sidor som visas, referrer — även när IPinfo inte returnerar företagsnamn.
+## Vad vi redan har
+- ✅ **Vilka sidor:** varje sidladdning loggas i `visits` med `url`, `path`
+- ✅ **Hur de kom hit:** `referrer`, `utm_source`, `utm_medium`, `utm_campaign` finns redan
+- ❌ **Tid på sida / session:** loggas inte
 
-## Ändringar
+## Vad som behöver byggas
 
-### 1. Realtime på `visits`-tabellen
-Migration: `ALTER PUBLICATION supabase_realtime ADD TABLE public.visits;` + `ALTER TABLE public.visits REPLICA IDENTITY FULL;`
+### 1. Tid på sida (per pageview)
+**Snippet (`tracker-script`):**
+- Mät tid mellan pageload och `pagehide`/`visibilitychange=hidden`
+- Skicka en uppföljnings-beacon med `{ visit_id, duration_ms, scroll_depth }`
+- Heartbeat var 15s för att hantera långa sessioner som stängs hårt (browser crash)
 
-### 2. `src/hooks/useInbound.ts`
-Ny hook `useRecentVisits(limit = 50)`:
-- Hämtar de 50 senaste besöken (alla, oavsett company_id)
-- Lyssnar på Realtime INSERTs + refetch var 15:e sekund som fallback
+**Server (`track-visit`):**
+- Returnera `visit_id` (UUID) i POST-svaret så snippeten kan referera till den
+- Ny endpoint-läge: om `visit_id` + `duration_ms` skickas → uppdatera befintlig visit istället för att skapa ny
 
-### 3. `src/pages/Inbound.tsx`
-Lägg till en tredje tab **"Live-besök"** vid sidan av "Alla företag" / "Kända leads":
-- Lista med tidsstämpel (relativ), URL-path, stad/land, referrer, UTM
-- Liten ikon: 🏢 om `company_id` finns, 👤 om anonym
-- Auto-uppdaterar via Realtime
-- Pulserande "Live"-indikator i headern
+**DB-migration:**
+- `visits.duration_ms` (int, nullable)
+- `visits.scroll_depth` (int, nullable, 0-100)
+- `visits.ended_at` (timestamptz, nullable)
 
-Behåll befintlig vy som default — Live-tab är ett komplement, inte en ersättning.
+### 2. Session-aggregering
+En "session" = besök från samma `visitor_id` med <30 min mellan pageviews.
+Lägg till på `visits`:
+- `session_id` (text) — beräknas i `track-visit` genom att titta på senaste visit för visitor_id
+- Sessionens första referrer = sessionens "source"
 
-### 4. KPI-strip ovanför tabbarna
-Tre små stat-kort:
-- Besök idag
-- Unika besökare idag  
-- Identifierade företag idag
+### 3. UI-uppdateringar
 
-Detta gör det självklart att tracking funkar även om "företag"-listan är tom.
+**`/inbound` Live-flik:**
+- Visa tid på sida bredvid varje rad: "23s", "2m 14s"
+- Gruppera sessions visuellt (samma visitor + nära i tid → samma "kort")
+
+**Drawer (företagsvyn):**
+- "Sessioner" istället för platt visit-lista
+- Per session: total tid, antal sidor, entry page, source/referrer
+- Expanderbar för att se enskilda sidor och tid per sida
+
+**KPI-strip:**
+- Lägg till "Snitt-tid på sajt idag"
 
 ## Filer
-- `supabase/migrations/<ts>_visits_realtime.sql` (ny)
-- `src/hooks/useInbound.ts` (ny hook)
-- `src/pages/Inbound.tsx` (Live-tab + KPI-strip)
+- `supabase/migrations/<ts>_visit_duration.sql` (nya kolumner)
+- `supabase/functions/track-visit/index.ts` (returnera visit_id, hantera duration-uppdateringar, session_id-logik)
+- `supabase/functions/tracker-script/index.ts` (duration tracking + heartbeat + scroll depth)
+- `src/hooks/useInbound.ts` (uppdatera typer, ny session-aggregering)
+- `src/pages/Inbound.tsx` (visa duration + sessions)
+
+## Att tänka på
+- **Privacy:** scroll-depth och tid är inte personuppgifter, ingen extra consent behövs
+- **Bandbredd:** beacon vid pagehide är gratis, heartbeat var 15s är försumbart
+- **Pålitlighet:** `pagehide` triggas inte alltid → kombinera med `visibilitychange` + sista heartbeat som fallback

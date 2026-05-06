@@ -1157,9 +1157,13 @@ export type Database = {
           company_id: string | null
           country: string | null
           created_at: string
+          duration_ms: number | null
+          ended_at: string | null
           id: string
           path: string | null
           referrer: string | null
+          scroll_depth: number | null
+          session_id: string | null
           site_id: string
           url: string
           user_agent: string | null
@@ -1174,9 +1178,13 @@ export type Database = {
           company_id?: string | null
           country?: string | null
           created_at?: string
+          duration_ms?: number | null
+          ended_at?: string | null
           id?: string
           path?: string | null
           referrer?: string | null
+          scroll_depth?: number | null
+          session_id?: string | null
           site_id: string
           url: string
           user_agent?: string | null
@@ -1191,9 +1199,13 @@ export type Database = {
           company_id?: string | null
           country?: string | null
           created_at?: string
+          duration_ms?: number | null
+          ended_at?: string | null
           id?: string
           path?: string | null
           referrer?: string | null
+          scroll_depth?: number | null
+          session_id?: string | null
           site_id?: string
           url?: string
           user_agent?: string | null
