@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
     }
 
     // === PAGEVIEW MODE ===
-    if (!site_key || !visitor_id || !url) {
+    if (!site_key || (!visitor_id && !client_seed) || !url) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -151,12 +151,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // (admin client created above)
-
     // Look up tracking site
     const { data: site } = await admin
       .from("tracking_sites")
-      .select("id, user_id, is_active, verified_at")
+      .select("id, user_id, is_active, verified_at, require_consent")
       .eq("site_key", site_key)
       .maybeSingle();
 
@@ -167,9 +165,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    // If site requires consent, refuse pageviews without consent flag
+    if ((site as any).require_consent && consent !== true) {
+      return new Response(JSON.stringify({ ok: true, skipped: "no_consent" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const userId = site.user_id;
     const ip = getClientIp(req);
     const anonIp = anonymizeIp(ip);
+
+    // Derive cookieless visitor_id from client_seed + anonIp + UA + day
+    if (!visitor_id && client_seed) {
+      const day = new Date().toISOString().slice(0, 10);
+      const material = `${site_key}|${client_seed}|${anonIp}|${ua}|${day}`;
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(material));
+      visitor_id = Array.from(new Uint8Array(buf)).slice(0, 16).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
 
     // Update verification ping fields (fire-and-forget)
     admin
