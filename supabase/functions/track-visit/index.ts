@@ -293,10 +293,28 @@ Deno.serve(async (req) => {
       path = new URL(url).pathname;
     } catch (_e) { /* ignore */ }
 
-    await admin.from("visits").insert({
+    // Resolve session_id: use client-provided, else derive from last visit (<30min)
+    let resolvedSession: string = session_id || "";
+    if (!resolvedSession) {
+      const { data: lastVisit } = await admin
+        .from("visits")
+        .select("session_id, created_at")
+        .eq("visitor_id", visitor_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lastVisit?.session_id && lastVisit.created_at) {
+        const ageMs = Date.now() - new Date(lastVisit.created_at).getTime();
+        if (ageMs < 30 * 60 * 1000) resolvedSession = lastVisit.session_id;
+      }
+      if (!resolvedSession) resolvedSession = crypto.randomUUID();
+    }
+
+    const { data: insertedVisit } = await admin.from("visits").insert({
       user_id: userId,
       site_id: site.id,
       visitor_id,
+      session_id: resolvedSession,
       company_id: companyId,
       url,
       path,
@@ -307,9 +325,9 @@ Deno.serve(async (req) => {
       country: lookup?.country || null,
       city: lookup?.city || null,
       user_agent: ua.slice(0, 500),
-    });
+    }).select("id").single();
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, visit_id: insertedVisit?.id, session_id: resolvedSession }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
