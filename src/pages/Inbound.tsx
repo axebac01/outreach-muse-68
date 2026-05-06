@@ -12,6 +12,15 @@ import { Link } from "react-router-dom";
 import EmptyState from "@/components/EmptyState";
 import { formatDistanceToNow } from "date-fns";
 
+function formatDuration(ms?: number | null) {
+  if (!ms || ms < 1000) return null;
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rs = s % 60;
+  return rs ? `${m}m ${rs}s` : `${m}m`;
+}
+
 const Inbound = () => {
   const [filter, setFilter] = useState<"all" | "known" | "live">("all");
   const [search, setSearch] = useState("");
