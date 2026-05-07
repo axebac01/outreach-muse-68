@@ -119,7 +119,7 @@ Skriv en förbättrad version.`;
     let newBody = sanitizeBody(String(parsed.body ?? ""));
     newBody = newBody.replace(/\{\{\s*unsubscribe\s*\}\}/gi, "").trimEnd();
     if (isLast) {
-      newBody = `${newBody}\n\nVill du inte höra mer? {{unsubscribe}}`;
+      newBody = `${newBody}<p>Vill du inte höra mer? {{unsubscribe}}</p>`;
     }
 
     return new Response(JSON.stringify({
