@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { corsHeaders, googleAuthUrl, signState } from "../_shared/oauth.ts";
+import { corsHeaders, googleAuthUrl, microsoftAuthUrl, signState } from "../_shared/oauth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
