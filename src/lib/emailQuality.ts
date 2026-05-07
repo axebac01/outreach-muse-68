@@ -27,9 +27,16 @@ const SPAM_PATTERNS: { pattern: RegExp; label: string }[] = [
 
 const PERSONALIZATION_TOKENS = /\{\{\s*(first_name|full_name|company|role)\s*\}\}/i;
 
+const stripHtml = (s: string) =>
+  (s ?? "")
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi, "\n")
+    .replace(/<[^>]+>/g, "");
+
 export const analyzeEmail = (subject: string, body: string): QualityResult => {
-  const text = `${subject ?? ""}\n${body ?? ""}`;
-  const cleanWords = (body ?? "")
+  const plainBody = stripHtml(body);
+  const text = `${subject ?? ""}\n${plainBody}`;
+  const cleanWords = plainBody
     .replace(/\{\{[^}]+\}\}/g, "x")
     .split(/\s+/)
     .filter(Boolean);
