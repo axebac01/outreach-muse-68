@@ -228,6 +228,160 @@ export async function fetchGoogleUserInfo(accessToken: string): Promise<{
 
 // ---------- Get a valid access token for an account (refresh if needed) ----------
 
+// ---------- Microsoft OAuth config ----------
+
+export const MICROSOFT_SCOPES = [
+  "openid",
+  "email",
+  "profile",
+  "offline_access",
+  "User.Read",
+  "Mail.Send",
+  "Mail.Read",
+  "Mail.ReadWrite",
+];
+
+export function microsoftAuthUrl(opts: {
+  clientId: string;
+  redirectUri: string;
+  state: string;
+  loginHint?: string;
+}): string {
+  const params = new URLSearchParams({
+    client_id: opts.clientId,
+    redirect_uri: opts.redirectUri,
+    response_type: "code",
+    scope: MICROSOFT_SCOPES.join(" "),
+    response_mode: "query",
+    prompt: "select_account",
+    state: opts.state,
+  });
+  if (opts.loginHint) params.set("login_hint", opts.loginHint);
+  return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
+}
+
+export interface MicrosoftTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+  scope: string;
+  token_type: string;
+  id_token?: string;
+}
+
+export async function exchangeMicrosoftCode(opts: {
+  code: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+}): Promise<MicrosoftTokenResponse> {
+  const body = new URLSearchParams({
+    code: opts.code,
+    client_id: opts.clientId,
+    client_secret: opts.clientSecret,
+    redirect_uri: opts.redirectUri,
+    grant_type: "authorization_code",
+    scope: MICROSOFT_SCOPES.join(" "),
+  });
+  const res = await fetch(
+    "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    },
+  );
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Microsoft token exchange failed: ${res.status} ${txt}`);
+  }
+  return await res.json();
+}
+
+export async function refreshMicrosoftToken(opts: {
+  refreshToken: string;
+  clientId: string;
+  clientSecret: string;
+}): Promise<MicrosoftTokenResponse> {
+  const body = new URLSearchParams({
+    refresh_token: opts.refreshToken,
+    client_id: opts.clientId,
+    client_secret: opts.clientSecret,
+    grant_type: "refresh_token",
+    scope: MICROSOFT_SCOPES.join(" "),
+  });
+  const res = await fetch(
+    "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    },
+  );
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Microsoft token refresh failed: ${res.status} ${txt}`);
+  }
+  return await res.json();
+}
+
+export async function fetchMicrosoftUserInfo(accessToken: string): Promise<{
+  id: string;
+  email: string;
+  name?: string;
+}> {
+  const res = await fetch("https://graph.microsoft.com/v1.0/me", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`Microsoft userinfo failed: ${res.status}`);
+  const j = await res.json();
+  return {
+    id: j.id,
+    email: j.mail || j.userPrincipalName,
+    name: j.displayName,
+  };
+}
+
+export async function getValidMicrosoftAccessToken(
+  admin: ReturnType<typeof createClient>,
+  account: {
+    id: string;
+    access_token_enc: Uint8Array | string | null;
+    refresh_token_enc: Uint8Array | string | null;
+    token_expires_at: string | null;
+  },
+): Promise<string> {
+  const expiresAt = account.token_expires_at
+    ? new Date(account.token_expires_at).getTime()
+    : 0;
+  if (expiresAt - Date.now() > 60_000 && account.access_token_enc) {
+    return await decryptToken(admin, account.access_token_enc);
+  }
+  if (!account.refresh_token_enc) {
+    throw new Error("No refresh token on file — reconnect the account");
+  }
+  const refreshToken = await decryptToken(admin, account.refresh_token_enc);
+  const tokens = await refreshMicrosoftToken({
+    refreshToken,
+    clientId: Deno.env.get("MICROSOFT_CLIENT_ID")!,
+    clientSecret: Deno.env.get("MICROSOFT_CLIENT_SECRET")!,
+  });
+  const newAccessEnc = await encryptToken(admin, tokens.access_token);
+  const update: Record<string, unknown> = {
+    access_token_enc: newAccessEnc,
+    token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+    status: "active",
+    status_message: null,
+  };
+  if (tokens.refresh_token) {
+    update.refresh_token_enc = await encryptToken(admin, tokens.refresh_token);
+  }
+  await admin.from("email_accounts").update(update).eq("id", account.id);
+  return tokens.access_token;
+}
+
+// ---------- Get a valid Google access token (refresh if needed) ----------
+
 export async function getValidGoogleAccessToken(
   admin: ReturnType<typeof createClient>,
   account: {
