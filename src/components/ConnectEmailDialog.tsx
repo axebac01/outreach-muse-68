@@ -56,23 +56,23 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tested, setTested] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<null | "google" | "microsoft">(null);
   const [smtpOpen, setSmtpOpen] = useState(false);
 
-  const handleGoogleConnect = async () => {
-    setOauthLoading(true);
+  const startOauth = async (provider: "google" | "microsoft") => {
+    setOauthLoading(provider);
     try {
       const redirect_uri = `${window.location.origin}/oauth/callback`;
       const { data, error } = await supabase.functions.invoke("oauth-start", {
-        body: { provider: "google", redirect_uri },
+        body: { provider, redirect_uri },
       });
       if (error || data?.error || !data?.url) {
         throw new Error(error?.message || data?.error || "Failed to start");
       }
       window.location.href = data.url;
     } catch (e: any) {
-      toast.error(e?.message || "Failed to start Google sign-in");
-      setOauthLoading(false);
+      toast.error(e?.message || "Failed to start sign-in");
+      setOauthLoading(null);
     }
   };
 
@@ -179,11 +179,11 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           {/* OAuth providers */}
           <button
             type="button"
-            onClick={handleGoogleConnect}
-            disabled={oauthLoading}
+            onClick={() => startOauth("google")}
+            disabled={!!oauthLoading}
             className="w-full flex items-center justify-center gap-3 rounded-xl border bg-background hover:bg-accent transition px-5 py-3.5 font-medium disabled:opacity-60"
           >
-            {oauthLoading ? (
+            {oauthLoading === "google" ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -194,6 +194,25 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               </svg>
             )}
             <span>{t("emailAccounts.connectGoogle", "Connect with Google")}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => startOauth("microsoft")}
+            disabled={!!oauthLoading}
+            className="w-full flex items-center justify-center gap-3 rounded-xl border bg-background hover:bg-accent transition px-5 py-3.5 font-medium disabled:opacity-60"
+          >
+            {oauthLoading === "microsoft" ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#F25022" d="M1 1h10v10H1z"/>
+                <path fill="#7FBA00" d="M13 1h10v10H13z"/>
+                <path fill="#00A4EF" d="M1 13h10v10H1z"/>
+                <path fill="#FFB900" d="M13 13h10v10H13z"/>
+              </svg>
+            )}
+            <span>{t("emailAccounts.connectMicrosoft", "Connect with Microsoft")}</span>
           </button>
 
           <div className="relative">

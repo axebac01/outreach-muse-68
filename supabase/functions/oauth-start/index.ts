@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { corsHeaders, googleAuthUrl, signState } from "../_shared/oauth.ts";
+import { corsHeaders, googleAuthUrl, microsoftAuthUrl, signState } from "../_shared/oauth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -29,9 +29,9 @@ Deno.serve(async (req) => {
     }
 
     const { provider, redirect_uri } = await req.json();
-    if (provider !== "google") {
+    if (provider !== "google" && provider !== "microsoft") {
       return new Response(
-        JSON.stringify({ error: "Only google supported right now" }),
+        JSON.stringify({ error: "Unsupported provider" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -45,10 +45,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+    const clientId = provider === "google"
+      ? Deno.env.get("GOOGLE_CLIENT_ID")
+      : Deno.env.get("MICROSOFT_CLIENT_ID");
     if (!clientId) {
       return new Response(
-        JSON.stringify({ error: "GOOGLE_CLIENT_ID not configured" }),
+        JSON.stringify({ error: `${provider.toUpperCase()}_CLIENT_ID not configured` }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -58,17 +60,15 @@ Deno.serve(async (req) => {
 
     const state = await signState({
       user_id: userData.user.id,
-      provider: "google",
+      provider,
       redirect_uri,
       nonce: crypto.randomUUID(),
-      exp: Date.now() + 10 * 60 * 1000, // 10 min
+      exp: Date.now() + 10 * 60 * 1000,
     });
 
-    const url = googleAuthUrl({
-      clientId,
-      redirectUri: redirect_uri,
-      state,
-    });
+    const url = provider === "google"
+      ? googleAuthUrl({ clientId, redirectUri: redirect_uri, state })
+      : microsoftAuthUrl({ clientId, redirectUri: redirect_uri, state });
 
     return new Response(JSON.stringify({ url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

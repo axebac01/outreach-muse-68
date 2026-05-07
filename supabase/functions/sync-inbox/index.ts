@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { corsHeaders, decryptToken, getValidGoogleAccessToken } from "../_shared/oauth.ts";
+import { corsHeaders, decryptToken, getValidGoogleAccessToken, getValidMicrosoftAccessToken } from "../_shared/oauth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -313,6 +313,69 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
   }
 }
 
+async function syncOutlook(admin: any, account: any) {
+  const accessToken = await getValidMicrosoftAccessToken(admin, account);
+  // Last 14 days, inbox, not from self
+  const sinceIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+  const filter = `receivedDateTime ge ${sinceIso}`;
+  const url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filter)}&$select=id,internetMessageId,internetMessageHeaders,subject,from,toRecipients,receivedDateTime,bodyPreview,body,conversationId`;
+  const resp = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Prefer: 'outlook.body-content-type="html"',
+    },
+  });
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw new Error(`Outlook list failed: ${resp.status} ${t.slice(0, 200)}`);
+  }
+  const list = await resp.json();
+  const accountEmailLower = String(account.email).toLowerCase();
+  let inserted = 0;
+  for (const msg of list.value ?? []) {
+    const fromAddr = msg.from?.emailAddress?.address || "";
+    if (fromAddr.toLowerCase() === accountEmailLower) continue;
+    const providerId: string = msg.id;
+    const { data: existing } = await admin
+      .from("email_messages")
+      .select("id")
+      .eq("provider_message_id", providerId)
+      .eq("email_account_id", account.id)
+      .maybeSingle();
+    if (existing) continue;
+
+    const headers = (msg.internetMessageHeaders ?? []) as { name: string; value: string }[];
+    const h = (k: string) => headers.find((x) => x.name.toLowerCase() === k.toLowerCase())?.value ?? null;
+    const refsRaw = h("References") || "";
+    const references = refsRaw.split(/\s+/).filter(Boolean);
+    const bodyHtml = msg.body?.contentType === "html" ? msg.body?.content || null : null;
+    const bodyText = msg.body?.contentType === "text" ? msg.body?.content || "" : (bodyHtml ? htmlToText(bodyHtml) : "");
+    const fromName = msg.from?.emailAddress?.name;
+    const toAddr = (msg.toRecipients ?? []).map((r: any) => r.emailAddress?.address).filter(Boolean).join(", ");
+
+    const parsed: ParsedMessage = {
+      message_id_header: msg.internetMessageId || h("Message-ID") || null,
+      in_reply_to: h("In-Reply-To"),
+      references,
+      thread_id: msg.conversationId ?? null,
+      from: fromName ? `${fromName} <${fromAddr}>` : fromAddr,
+      to: toAddr || account.email,
+      subject: msg.subject || "",
+      date: msg.receivedDateTime || new Date().toISOString(),
+      body_text: bodyText,
+      body_html: bodyHtml,
+      snippet: (msg.bodyPreview || bodyText.slice(0, 160)).slice(0, 220),
+    };
+    await persistInbound(admin, account, parsed, providerId);
+    inserted++;
+  }
+  await admin
+    .from("email_accounts")
+    .update({ last_synced_at: new Date().toISOString(), status_message: null })
+    .eq("id", account.id);
+  return inserted;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -340,6 +403,8 @@ Deno.serve(async (req) => {
       try {
         if (acc.auth_type === "oauth" && (acc.provider === "gmail" || acc.provider === "google")) {
           totalNew += await syncGmail(admin, acc);
+        } else if (acc.auth_type === "oauth" && acc.provider === "outlook") {
+          totalNew += await syncOutlook(admin, acc);
         } else {
           // IMAP path not yet implemented in this iteration
           continue;
