@@ -229,7 +229,7 @@ Generera kampanjen nu.`;
         // Always strip any unsubscribe mention then re-append on last step (guaranteed)
         body = body.replace(/\{\{\s*unsubscribe\s*\}\}/gi, "").trimEnd();
         if (isLast) {
-          body = `${body}\n\n${unsubFooter}`;
+          body = `${body}<p>${unsubFooter}</p>`;
         }
         return {
           step_order: i,
