@@ -43,9 +43,16 @@ export const EmailPreview = ({ subject, body, lead, inheritedSubject }: Props) =
         </div>
       </CardHeader>
       <CardContent>
-        <div className="whitespace-pre-wrap text-sm leading-relaxed min-h-[200px]">
-          {renderedBody || <span className="text-muted-foreground italic">Email body preview will appear here.</span>}
-        </div>
+        {renderedBody ? (
+          <div
+            className="prose prose-sm max-w-none text-sm leading-relaxed min-h-[200px]"
+            dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(renderedBody) }}
+          />
+        ) : (
+          <div className="text-sm leading-relaxed min-h-[200px] text-muted-foreground italic">
+            Email body preview will appear here.
+          </div>
+        )}
       </CardContent>
     </Card>
   );
