@@ -3,7 +3,9 @@ import {
   corsHeaders,
   encryptToken,
   exchangeGoogleCode,
+  exchangeMicrosoftCode,
   fetchGoogleUserInfo,
+  fetchMicrosoftUserInfo,
   verifyState,
 } from "../_shared/oauth.ts";
 
@@ -25,18 +27,23 @@ Deno.serve(async (req) => {
     }
 
     const verified = await verifyState(state);
-    if (verified.provider !== "google") {
+    if (verified.provider !== "google" && verified.provider !== "microsoft") {
       return new Response(JSON.stringify({ error: "Unsupported provider" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
-    const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+    const isGoogle = verified.provider === "google";
+    const clientId = isGoogle
+      ? Deno.env.get("GOOGLE_CLIENT_ID")
+      : Deno.env.get("MICROSOFT_CLIENT_ID");
+    const clientSecret = isGoogle
+      ? Deno.env.get("GOOGLE_CLIENT_SECRET")
+      : Deno.env.get("MICROSOFT_CLIENT_SECRET");
     if (!clientId || !clientSecret) {
       return new Response(
-        JSON.stringify({ error: "Google OAuth not configured" }),
+        JSON.stringify({ error: `${verified.provider} OAuth not configured` }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -44,14 +51,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    const tokens = await exchangeGoogleCode({
-      code,
-      clientId,
-      clientSecret,
-      redirectUri: verified.redirect_uri,
-    });
+    const tokens = isGoogle
+      ? await exchangeGoogleCode({
+          code, clientId, clientSecret, redirectUri: verified.redirect_uri,
+        })
+      : await exchangeMicrosoftCode({
+          code, clientId, clientSecret, redirectUri: verified.redirect_uri,
+        });
 
-    const userInfo = await fetchGoogleUserInfo(tokens.access_token);
+    const userInfo = isGoogle
+      ? await fetchGoogleUserInfo(tokens.access_token)
+      : await fetchMicrosoftUserInfo(tokens.access_token);
+
+    const providerKey = isGoogle ? "gmail" : "outlook";
+    const providerAccountId = isGoogle
+      ? (userInfo as any).sub
+      : (userInfo as any).id;
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -63,21 +78,20 @@ Deno.serve(async (req) => {
       ? await encryptToken(admin, tokens.refresh_token)
       : null;
 
-    // Upsert by (user_id, provider, provider_account_id)
     const { data: existing } = await admin
       .from("email_accounts")
       .select("id, refresh_token_enc")
       .eq("user_id", verified.user_id)
-      .eq("provider", "gmail")
-      .eq("provider_account_id", userInfo.sub)
+      .eq("provider", providerKey)
+      .eq("provider_account_id", providerAccountId)
       .maybeSingle();
 
     const payload: Record<string, unknown> = {
       user_id: verified.user_id,
       email: userInfo.email,
       display_name: userInfo.name ?? null,
-      provider: "gmail",
-      provider_account_id: userInfo.sub,
+      provider: providerKey,
+      provider_account_id: providerAccountId,
       auth_type: "oauth",
       status: "active",
       status_message: null,
@@ -86,7 +100,6 @@ Deno.serve(async (req) => {
         .toISOString(),
       oauth_scopes: tokens.scope,
     };
-    // Only overwrite refresh token if Google actually returned a new one
     if (refreshEnc) payload.refresh_token_enc = refreshEnc;
 
     let id: string;
@@ -115,7 +128,6 @@ Deno.serve(async (req) => {
     );
   } catch (err: any) {
     console.error("oauth-callback error", err);
-    // Return 200 with error payload so the client can read it cleanly
     return new Response(
       JSON.stringify({ ok: false, error: err?.message ?? "Failed" }),
       {
