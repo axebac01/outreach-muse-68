@@ -59,20 +59,20 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const [oauthLoading, setOauthLoading] = useState(false);
   const [smtpOpen, setSmtpOpen] = useState(false);
 
-  const handleGoogleConnect = async () => {
-    setOauthLoading(true);
+  const startOauth = async (provider: "google" | "microsoft") => {
+    setOauthLoading(provider);
     try {
       const redirect_uri = `${window.location.origin}/oauth/callback`;
       const { data, error } = await supabase.functions.invoke("oauth-start", {
-        body: { provider: "google", redirect_uri },
+        body: { provider, redirect_uri },
       });
       if (error || data?.error || !data?.url) {
         throw new Error(error?.message || data?.error || "Failed to start");
       }
       window.location.href = data.url;
     } catch (e: any) {
-      toast.error(e?.message || "Failed to start Google sign-in");
-      setOauthLoading(false);
+      toast.error(e?.message || "Failed to start sign-in");
+      setOauthLoading(null);
     }
   };
 
