@@ -339,6 +339,19 @@ Deno.serve(async (req) => {
           extraHeaders,
         );
         providerMessageId = r.messageId;
+      } else if (account.auth_type === "oauth" && account.provider === "outlook") {
+        const r = await sendViaOutlook(
+          admin,
+          account,
+          fromAddr,
+          to,
+          subject,
+          finalBody.html,
+          finalBody.text,
+          in_reply_to,
+          extraHeaders,
+        );
+        providerMessageId = r.messageId;
       } else if (account.auth_type === "smtp") {
         const password = await decryptToken(admin, account.smtp_password_enc);
         const client = new SMTPClient({
