@@ -58,7 +58,7 @@ export const analyzeEmail = (subject: string, body: string): QualityResult => {
   if (wordCount < 20 && body.trim()) warnings.push("Väldigt kort – kanske för tunt?");
   if (subject && subject.length > 60) warnings.push("Lång ämnesrad – håll under 60 tecken");
 
-  const isPersonalized = PERSONALIZATION_TOKENS.test(body ?? "");
+  const isPersonalized = PERSONALIZATION_TOKENS.test(plainBody);
 
   return { wordCount, readingTimeSec, spamScore, spamHits: hits, warnings, isPersonalized };
 };
