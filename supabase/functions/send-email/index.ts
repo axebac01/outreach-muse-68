@@ -10,6 +10,7 @@ import {
   buildUnsubscribeUrl,
 } from "../_shared/unsubscribe.ts";
 import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
+import { htmlToPlainText, looksLikeHtml } from "../_shared/htmlToText.ts";
 
 function buildRfc2822(opts: {
   from: string;
