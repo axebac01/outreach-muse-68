@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { Editor } from "@tiptap/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +10,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Trash2, Mail, AlertTriangle, CheckCircle2, Sparkles, Loader2, Clock, FileText, ShieldAlert } from "lucide-react";
 import { VARIABLE_DEFS, hasUnsubscribeToken } from "@/lib/renderTemplate";
 import { analyzeEmail, spamLevel } from "@/lib/emailQuality";
+import { RichTextEditor } from "./RichTextEditor";
 import type { SequenceStep } from "@/hooks/useSequence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -27,7 +29,7 @@ export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChan
   const [subject, setSubject] = useState(step.subject ?? "");
   const [body, setBody] = useState(step.body ?? "");
   const [waitDays, setWaitDays] = useState(step.wait_days ?? (index === 0 ? 0 : 3));
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<Editor | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [improveOpen, setImproveOpen] = useState(false);
   const [improveText, setImproveText] = useState("");
@@ -74,24 +76,15 @@ export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChan
   };
 
   const insertVariable = (variable: string) => {
-    const ta = bodyRef.current;
     const token = `{{${variable}}}`;
-    if (!ta) {
-      const next = body + token;
-      setBody(next);
-      queueSave({ body: next });
+    const ed = editorRef.current;
+    if (ed) {
+      ed.chain().focus().insertContent(token).run();
       return;
     }
-    const start = ta.selectionStart ?? body.length;
-    const end = ta.selectionEnd ?? body.length;
-    const next = body.slice(0, start) + token + body.slice(end);
+    const next = body + token;
     setBody(next);
     queueSave({ body: next });
-    requestAnimationFrame(() => {
-      ta.focus();
-      const pos = start + token.length;
-      ta.setSelectionRange(pos, pos);
-    });
   };
 
   return (
@@ -206,14 +199,13 @@ export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChan
               </div>
             ))}
           </div>
-          <Textarea
-            ref={bodyRef}
+          <RichTextEditor
             value={body}
-            placeholder={`Hi {{first_name}},\n\nI noticed {{company}} ...`}
-            rows={10}
-            onChange={(e) => {
-              setBody(e.target.value);
-              queueSave({ body: e.target.value });
+            placeholder={"Hi {{first_name}}, I noticed {{company}} ..."}
+            editorRef={editorRef}
+            onChange={(html) => {
+              setBody(html);
+              queueSave({ body: html });
             }}
           />
           {body.trim() && (() => {

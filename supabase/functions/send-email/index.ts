@@ -10,6 +10,7 @@ import {
   buildUnsubscribeUrl,
 } from "../_shared/unsubscribe.ts";
 import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
+import { htmlToPlainText, looksLikeHtml } from "../_shared/htmlToText.ts";
 
 function buildRfc2822(opts: {
   from: string;
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
       userId = userData.user.id;
     }
 
-    const {
+    let {
       email_account_id,
       to,
       subject,
@@ -159,6 +160,16 @@ Deno.serve(async (req) => {
       thread_key: clientThreadKey,
       in_reply_to,
     } = payload;
+
+    // Normalize body: if body_text contains HTML, treat as html. Always derive
+    // a plaintext alternative when only HTML is provided (better deliverability).
+    if (!body_html && body_text && looksLikeHtml(body_text)) {
+      body_html = body_text;
+      body_text = undefined;
+    }
+    if (body_html && !body_text) {
+      body_text = htmlToPlainText(body_html);
+    }
 
     if (!email_account_id || !to || !subject) {
       return new Response(JSON.stringify({ error: "Missing fields" }), {

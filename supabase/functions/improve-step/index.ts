@@ -57,7 +57,10 @@ Deno.serve(async (req) => {
 
 REGLER:
 - Returnera bara den nya versionen (subject + body).
-- Max ~120 ord. Kort och personligt.
+- Bodyn är HTML. Använd enkla taggar: <p>, <br>, <strong>, <em>, <a href="...">. Inga <html>, <head>, <body>, <style>, <script>, inga inline styles.
+- Behåll befintliga <a href> exakt som de är (URL får inte ändras).
+- Behåll befintliga <img>-taggar oförändrade.
+- Max ~120 ord (räknas på text utan taggar). Kort och personligt.
 - Använd ENDAST variabler: ${ALLOWED_VARS.join(", ")}.
 - Inga [hakparenteser]. Inga andra placeholders.
 ${isLast ? "- Detta är sista steget — behåll det som mjuk break-up." : ""}
@@ -116,7 +119,7 @@ Skriv en förbättrad version.`;
     let newBody = sanitizeBody(String(parsed.body ?? ""));
     newBody = newBody.replace(/\{\{\s*unsubscribe\s*\}\}/gi, "").trimEnd();
     if (isLast) {
-      newBody = `${newBody}\n\nVill du inte höra mer? {{unsubscribe}}`;
+      newBody = `${newBody}<p>Vill du inte höra mer? {{unsubscribe}}</p>`;
     }
 
     return new Response(JSON.stringify({

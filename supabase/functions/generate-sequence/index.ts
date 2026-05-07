@@ -109,6 +109,7 @@ REGLER (kritiska):
 - Sista steget = mjuk break-up ("vill du att jag slutar höra av mig?").
 - Ämnesrad max 6 ord, lowercase känns mer personligt. Steg 2+ kan ha tom ämnesrad (= svar i samma tråd).
 - Sista stegets body MÅSTE innehålla {{unsubscribe}} på egen rad i slutet.
+- Bodyn är HTML. Använd <p> för stycken, <br> för radbrytningar, <strong>/<em> för betoning. Inga inline styles, inga <html>/<body>/<style>/<script>.
 - Använd ENBART dessa variabler (med {{...}}-syntax): ${ALLOWED_VARS.join(", ")}.
 - Inga andra placeholders, inga [hakparenteser], inga "Hi {first}".
 - Skriv på ${lang}. Ton: ${finalTone}.`;
@@ -228,7 +229,7 @@ Generera kampanjen nu.`;
         // Always strip any unsubscribe mention then re-append on last step (guaranteed)
         body = body.replace(/\{\{\s*unsubscribe\s*\}\}/gi, "").trimEnd();
         if (isLast) {
-          body = `${body}\n\n${unsubFooter}`;
+          body = `${body}<p>${unsubFooter}</p>`;
         }
         return {
           step_order: i,

@@ -27,9 +27,16 @@ const SPAM_PATTERNS: { pattern: RegExp; label: string }[] = [
 
 const PERSONALIZATION_TOKENS = /\{\{\s*(first_name|full_name|company|role)\s*\}\}/i;
 
+const stripHtml = (s: string) =>
+  (s ?? "")
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi, "\n")
+    .replace(/<[^>]+>/g, "");
+
 export const analyzeEmail = (subject: string, body: string): QualityResult => {
-  const text = `${subject ?? ""}\n${body ?? ""}`;
-  const cleanWords = (body ?? "")
+  const plainBody = stripHtml(body);
+  const text = `${subject ?? ""}\n${plainBody}`;
+  const cleanWords = plainBody
     .replace(/\{\{[^}]+\}\}/g, "x")
     .split(/\s+/)
     .filter(Boolean);
@@ -48,10 +55,10 @@ export const analyzeEmail = (subject: string, body: string): QualityResult => {
 
   const warnings: string[] = [];
   if (wordCount > 180) warnings.push("Långt mejl – kortare presterar oftast bättre");
-  if (wordCount < 20 && body.trim()) warnings.push("Väldigt kort – kanske för tunt?");
+  if (wordCount < 20 && plainBody.trim()) warnings.push("Väldigt kort – kanske för tunt?");
   if (subject && subject.length > 60) warnings.push("Lång ämnesrad – håll under 60 tecken");
 
-  const isPersonalized = PERSONALIZATION_TOKENS.test(body ?? "");
+  const isPersonalized = PERSONALIZATION_TOKENS.test(plainBody);
 
   return { wordCount, readingTimeSec, spamScore, spamHits: hits, warnings, isPersonalized };
 };
