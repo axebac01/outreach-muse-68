@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { Editor } from "@tiptap/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +10,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Trash2, Mail, AlertTriangle, CheckCircle2, Sparkles, Loader2, Clock, FileText, ShieldAlert } from "lucide-react";
 import { VARIABLE_DEFS, hasUnsubscribeToken } from "@/lib/renderTemplate";
 import { analyzeEmail, spamLevel } from "@/lib/emailQuality";
+import { RichTextEditor } from "./RichTextEditor";
 import type { SequenceStep } from "@/hooks/useSequence";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
