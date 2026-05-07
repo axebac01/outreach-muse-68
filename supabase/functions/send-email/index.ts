@@ -4,6 +4,7 @@ import {
   corsHeaders,
   decryptToken,
   getValidGoogleAccessToken,
+  getValidMicrosoftAccessToken,
 } from "../_shared/oauth.ts";
 import {
   signUnsubscribeToken,
