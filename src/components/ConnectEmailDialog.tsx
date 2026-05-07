@@ -56,7 +56,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tested, setTested] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<null | "google" | "microsoft">(null);
   const [smtpOpen, setSmtpOpen] = useState(false);
 
   const startOauth = async (provider: "google" | "microsoft") => {
