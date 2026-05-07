@@ -200,7 +200,8 @@ Deno.serve(async (req) => {
         email: lead.email,
       };
       const subject = renderTemplate(step.subject || "", vars);
-      const bodyText = renderTemplate(step.body || "", vars);
+      const rawBody = renderTemplate(step.body || "", vars);
+      const isHtml = /<\/?[a-z][\s\S]*?>/i.test(rawBody);
 
       // Find prior outbound for this lead/sequence to chain reply
       const { data: prior } = await admin
