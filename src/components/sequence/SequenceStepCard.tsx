@@ -29,7 +29,7 @@ export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChan
   const [subject, setSubject] = useState(step.subject ?? "");
   const [body, setBody] = useState(step.body ?? "");
   const [waitDays, setWaitDays] = useState(step.wait_days ?? (index === 0 ? 0 : 3));
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<Editor | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [improveOpen, setImproveOpen] = useState(false);
   const [improveText, setImproveText] = useState("");
