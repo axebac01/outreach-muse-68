@@ -76,24 +76,15 @@ export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChan
   };
 
   const insertVariable = (variable: string) => {
-    const ta = bodyRef.current;
     const token = `{{${variable}}}`;
-    if (!ta) {
-      const next = body + token;
-      setBody(next);
-      queueSave({ body: next });
+    const ed = editorRef.current;
+    if (ed) {
+      ed.chain().focus().insertContent(token).run();
       return;
     }
-    const start = ta.selectionStart ?? body.length;
-    const end = ta.selectionEnd ?? body.length;
-    const next = body.slice(0, start) + token + body.slice(end);
+    const next = body + token;
     setBody(next);
     queueSave({ body: next });
-    requestAnimationFrame(() => {
-      ta.focus();
-      const pos = start + token.length;
-      ta.setSelectionRange(pos, pos);
-    });
   };
 
   return (
