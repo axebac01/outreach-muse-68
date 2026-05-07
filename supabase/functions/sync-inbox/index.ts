@@ -403,6 +403,8 @@ Deno.serve(async (req) => {
       try {
         if (acc.auth_type === "oauth" && (acc.provider === "gmail" || acc.provider === "google")) {
           totalNew += await syncGmail(admin, acc);
+        } else if (acc.auth_type === "oauth" && acc.provider === "outlook") {
+          totalNew += await syncOutlook(admin, acc);
         } else {
           // IMAP path not yet implemented in this iteration
           continue;
