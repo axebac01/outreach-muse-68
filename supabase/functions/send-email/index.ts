@@ -109,6 +109,65 @@ async function sendViaGmail(
   return { messageId: json.id ?? null };
 }
 
+function parseAddr(addr: string): { name?: string; address: string } {
+  const m = addr.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  if (m) return { name: m[1] || undefined, address: m[2].trim() };
+  return { address: addr.trim() };
+}
+
+async function sendViaOutlook(
+  admin: ReturnType<typeof createClient>,
+  account: any,
+  fromAddr: string,
+  toAddr: string,
+  subject: string,
+  bodyHtml: string | undefined,
+  bodyText: string | undefined,
+  inReplyTo: string | undefined,
+  extraHeaders: string[],
+): Promise<{ messageId: string | null }> {
+  const accessToken = await getValidMicrosoftAccessToken(admin, account);
+  const from = parseAddr(fromAddr);
+  const to = parseAddr(toAddr);
+
+  // Internet message headers must start with "x-" in Graph
+  const internetHeaders = extraHeaders
+    .map((h) => {
+      const idx = h.indexOf(":");
+      if (idx < 0) return null;
+      let name = h.slice(0, idx).trim();
+      const value = h.slice(idx + 1).trim();
+      if (!/^x-/i.test(name)) name = "x-" + name;
+      return { name, value };
+    })
+    .filter(Boolean);
+
+  const message: any = {
+    subject,
+    body: {
+      contentType: bodyHtml ? "HTML" : "Text",
+      content: bodyHtml || bodyText || "",
+    },
+    from: { emailAddress: { address: from.address, name: from.name } },
+    toRecipients: [{ emailAddress: { address: to.address } }],
+    internetMessageHeaders: internetHeaders,
+  };
+
+  const res = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message, saveToSentItems: true }),
+  });
+  if (!res.ok && res.status !== 202) {
+    const txt = await res.text();
+    throw new Error(`Outlook send failed: ${res.status} ${txt}`);
+  }
+  return { messageId: null };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
