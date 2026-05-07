@@ -199,14 +199,13 @@ export const SequenceStepCard = ({ step, index, isLast, inheritedSubject, onChan
               </div>
             ))}
           </div>
-          <Textarea
-            ref={bodyRef}
+          <RichTextEditor
             value={body}
-            placeholder={`Hi {{first_name}},\n\nI noticed {{company}} ...`}
-            rows={10}
-            onChange={(e) => {
-              setBody(e.target.value);
-              queueSave({ body: e.target.value });
+            placeholder={"Hi {{first_name}}, I noticed {{company}} ..."}
+            editorRef={editorRef}
+            onChange={(html) => {
+              setBody(html);
+              queueSave({ body: html });
             }}
           />
           {body.trim() && (() => {
