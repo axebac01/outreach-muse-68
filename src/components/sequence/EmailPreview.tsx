@@ -1,4 +1,5 @@
 import { renderTemplate, type RenderVars, type LeadVars } from "@/lib/renderTemplate";
+import { sanitizeEmailHtml } from "@/lib/sanitizeHtml";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 interface Props {
