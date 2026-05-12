@@ -141,40 +141,12 @@ Generera kampanjen nu.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: systemPrompt + `\n\nReturnera ENDAST giltig JSON i formatet: {"steps":[{"step_order":number,"subject":string,"body":string,"wait_days":number}]}` },
           { role: "user", content: userPrompt },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_sequence",
-              description: "Returnera en komplett mejlsekvens",
-              parameters: {
-                type: "object",
-                properties: {
-                  steps: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        step_order: { type: "number" },
-                        subject: { type: "string" },
-                        body: { type: "string" },
-                        wait_days: { type: "number" },
-                      },
-                      required: ["step_order", "subject", "body", "wait_days"],
-                    },
-                  },
-                },
-                required: ["steps"],
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_sequence" } },
+        response_format: { type: "json_object" },
       }),
     });
 
