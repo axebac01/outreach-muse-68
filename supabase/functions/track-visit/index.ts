@@ -225,10 +225,10 @@ Deno.serve(async (req) => {
       } else {
         // Try to match against existing leads by domain
         const { data: matchingLead } = await admin
-          .from("leads")
+          .from("sequence_leads")
           .select("id")
           .eq("user_id", userId)
-          .or(`email.ilike.%@${domain},website.ilike.%${domain}%`)
+          .ilike("email", `%@${domain}`)
           .limit(1)
           .maybeSingle();
 
