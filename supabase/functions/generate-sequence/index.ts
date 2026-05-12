@@ -172,10 +172,10 @@ Generera kampanjen nu.`;
     }
 
     const aiJson = await aiResp.json();
-    const args = aiJson.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    const content = aiJson.choices?.[0]?.message?.content ?? "";
     let parsed: any = {};
     try {
-      parsed = JSON.parse(args ?? "{}");
+      parsed = JSON.parse(content);
     } catch {
       parsed = {};
     }
