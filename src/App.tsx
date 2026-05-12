@@ -12,16 +12,10 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import CreateCampaign from "./pages/CreateCampaign";
 import CampaignDetails from "./pages/CampaignDetails";
-import Outreach from "./pages/Outreach";
 import Pricing from "./pages/Pricing";
 import Settings from "./pages/Settings";
 import EmailAccounts from "./pages/EmailAccounts";
 import OAuthCallback from "./pages/OAuthCallback";
-import SequenceBuilder from "./pages/SequenceBuilder";
-import StepLeads from "./pages/sequence/StepLeads";
-import StepSequence from "./pages/sequence/StepSequence";
-import StepSchedule from "./pages/sequence/StepSchedule";
-import StepSending from "./pages/sequence/StepSending";
 import Analytics from "./pages/Analytics";
 import Onboarding from "./pages/Onboarding";
 import Inbox from "./pages/Inbox";
@@ -47,14 +41,8 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><OnboardingGate><Dashboard /></OnboardingGate></ProtectedRoute>} />
             <Route path="/campaign/new" element={<ProtectedRoute><OnboardingGate><CreateCampaign /></OnboardingGate></ProtectedRoute>} />
             <Route path="/campaign/:id" element={<ProtectedRoute><OnboardingGate><CampaignDetails /></OnboardingGate></ProtectedRoute>} />
-            <Route path="/outreach/:id" element={<ProtectedRoute><OnboardingGate><Outreach /></OnboardingGate></ProtectedRoute>} />
-            <Route path="/sequence/:id" element={<ProtectedRoute><OnboardingGate><SequenceBuilder /></OnboardingGate></ProtectedRoute>}>
-              <Route index element={<Navigate to="leads" replace />} />
-              <Route path="leads" element={<StepLeads />} />
-              <Route path="sequence" element={<StepSequence />} />
-              <Route path="schedule" element={<StepSchedule />} />
-              <Route path="sending" element={<StepSending />} />
-            </Route>
+            <Route path="/outreach/:id" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/sequence/*" element={<Navigate to="/dashboard" replace />} />
             <Route path="/settings" element={<ProtectedRoute><OnboardingGate><Settings /></OnboardingGate></ProtectedRoute>} />
             <Route path="/email-accounts" element={<ProtectedRoute><OnboardingGate><EmailAccounts /></OnboardingGate></ProtectedRoute>} />
             <Route path="/inbox" element={<ProtectedRoute><OnboardingGate><Inbox /></OnboardingGate></ProtectedRoute>} />

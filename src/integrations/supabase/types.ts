@@ -324,13 +324,6 @@ export type Database = {
             referencedRelation: "email_accounts_safe"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "email_messages_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
         ]
       }
       email_threads: {
@@ -395,53 +388,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      generated_outreach: {
-        Row: {
-          cold_email: string | null
-          created_at: string
-          follow_up_1: string | null
-          follow_up_2: string | null
-          id: string
-          lead_id: string
-          opener: string | null
-          status: string
-          subject_line: string | null
-          user_id: string
-        }
-        Insert: {
-          cold_email?: string | null
-          created_at?: string
-          follow_up_1?: string | null
-          follow_up_2?: string | null
-          id?: string
-          lead_id: string
-          opener?: string | null
-          status?: string
-          subject_line?: string | null
-          user_id: string
-        }
-        Update: {
-          cold_email?: string | null
-          created_at?: string
-          follow_up_1?: string | null
-          follow_up_2?: string | null
-          id?: string
-          lead_id?: string
-          opener?: string | null
-          status?: string
-          subject_line?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "generated_outreach_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       inbound_companies: {
         Row: {
@@ -609,56 +555,6 @@ export type Database = {
             columns: ["api_key_id"]
             isOneToOne: false
             referencedRelation: "integration_api_keys"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leads: {
-        Row: {
-          campaign_id: string
-          company: string
-          created_at: string
-          email: string | null
-          full_name: string
-          id: string
-          linkedin_url: string | null
-          notes: string | null
-          role: string | null
-          user_id: string
-          website: string | null
-        }
-        Insert: {
-          campaign_id: string
-          company: string
-          created_at?: string
-          email?: string | null
-          full_name: string
-          id?: string
-          linkedin_url?: string | null
-          notes?: string | null
-          role?: string | null
-          user_id: string
-          website?: string | null
-        }
-        Update: {
-          campaign_id?: string
-          company?: string
-          created_at?: string
-          email?: string | null
-          full_name?: string
-          id?: string
-          linkedin_url?: string | null
-          notes?: string | null
-          role?: string | null
-          user_id?: string
-          website?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leads_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -967,6 +863,7 @@ export type Database = {
       }
       sequences: {
         Row: {
+          campaign_id: string | null
           created_at: string
           daily_limit_per_account: number
           id: string
@@ -982,6 +879,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          campaign_id?: string | null
           created_at?: string
           daily_limit_per_account?: number
           id?: string
@@ -997,6 +895,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          campaign_id?: string | null
           created_at?: string
           daily_limit_per_account?: number
           id?: string
@@ -1011,7 +910,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sequences_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tracking_sites: {
         Row: {

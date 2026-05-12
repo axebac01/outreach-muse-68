@@ -34,7 +34,7 @@ const TEMPLATES: { id: string; label: string; goal: string }[] = [
   { id: "demo", label: "Boka demo", goal: "Få bokade produktdemos med rätt persona." },
 ];
 
-export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, onOpenChange }: Props) => {
+export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, onOpenChange }: Props) => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [goal, setGoal] = useState(() => localStorage.getItem("ai_seq_goal") ?? "");
@@ -84,13 +84,13 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
         const status = (error as any).context?.status;
         if (status === 402) toast.error("Slut på AI-credits — fyll på i Inställningar.");
         else if (status === 429) toast.error("AI är upptagen, försök igen om en stund.");
-        else toast.error("Kunde inte generera kampanj.");
+        else toast.error("Kunde inte generera sekvens.");
         setLoading(false);
         return;
       }
 
       if (!data?.ok || !Array.isArray(data.steps)) {
-        toast.error(data?.error === "missing_company" ? "Slutför onboardingen först." : "Kunde inte generera kampanj.");
+        toast.error(data?.error === "missing_company" ? "Slutför onboardingen först." : "Kunde inte generera sekvens.");
         setLoading(false);
         return;
       }
@@ -123,11 +123,11 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
       }));
       const { error: insErr } = await supabase.from("sequence_steps").insert(rows);
       if (insErr) {
-        toast.error("Kunde inte spara kampanjen.");
+        toast.error("Kunde inte spara sekvensen.");
         setSaving(false);
         return;
       }
-      toast.success(`Kampanj sparad – ${rows.length} steg`);
+      toast.success(`Sekvens sparad – ${rows.length} steg`);
       qc.invalidateQueries({ queryKey: ["sequence_steps", sequenceId] });
       reset();
       onOpenChange(false);
@@ -144,7 +144,7 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            {preview ? "Förhandsgranska kampanj" : "Generera kampanj med AI"}
+            {preview ? "Förhandsgranska sekvens" : "Skriv sekvens med AI"}
           </DialogTitle>
           <DialogDescription>
             {preview
@@ -166,7 +166,7 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
                 ))}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">Skriver din kampanj…</p>
+            <p className="text-sm text-muted-foreground">Skriver din sekvens…</p>
           </div>
         ) : preview ? (
           <ScrollArea className="max-h-[55vh] pr-3 -mr-3">
@@ -272,7 +272,7 @@ export const GenerateSequenceDialog = ({ sequenceId, hasExistingContent, open, o
               </Button>
               <Button onClick={handleAccept} disabled={saving} className="gap-2">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Använd kampanjen
+                Använd sekvensen
               </Button>
             </>
           ) : (
