@@ -137,16 +137,49 @@ Generera kampanjen nu.`;
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Lovable-API-Key": LOVABLE_API_KEY,
+        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: systemPrompt + `\n\nReturnera ENDAST giltig JSON i formatet: {"steps":[{"step_order":number,"subject":string,"body":string,"wait_days":number}]}` },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        response_format: { type: "json_object" },
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "generate_sequence",
+              description: `Returnera exakt ${stepCount} mejlsteg för en kall outreach-sekvens.`,
+              parameters: {
+                type: "object",
+                properties: {
+                  steps: {
+                    type: "array",
+                    minItems: stepCount,
+                    maxItems: stepCount,
+                    items: {
+                      type: "object",
+                      properties: {
+                        step_order: { type: "number" },
+                        subject: { type: "string" },
+                        body: { type: "string" },
+                        wait_days: { type: "number" },
+                      },
+                      required: ["step_order", "subject", "body", "wait_days"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["steps"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "generate_sequence" } },
       }),
     });
 
@@ -172,10 +205,10 @@ Generera kampanjen nu.`;
     }
 
     const aiJson = await aiResp.json();
-    const content = aiJson.choices?.[0]?.message?.content ?? "";
+    const args = aiJson.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     let parsed: any = {};
     try {
-      parsed = JSON.parse(content);
+      parsed = JSON.parse(args ?? "{}");
     } catch {
       parsed = {};
     }
