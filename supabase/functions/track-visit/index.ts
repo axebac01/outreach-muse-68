@@ -225,10 +225,10 @@ Deno.serve(async (req) => {
       } else {
         // Try to match against existing leads by domain
         const { data: matchingLead } = await admin
-          .from("leads")
+          .from("sequence_leads")
           .select("id")
           .eq("user_id", userId)
-          .or(`email.ilike.%@${domain},website.ilike.%${domain}%`)
+          .ilike("email", `%@${domain}`)
           .limit(1)
           .maybeSingle();
 
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
         const tokenLeadId = await verifyLeadToken(ml_e, secret);
         if (tokenLeadId) {
           const { data: lead } = await admin
-            .from("leads")
+            .from("sequence_leads")
             .select("id")
             .eq("user_id", userId)
             .eq("id", tokenLeadId)
@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
     }
     if (!leadId && email) {
       const { data: lead } = await admin
-        .from("leads")
+        .from("sequence_leads")
         .select("id")
         .eq("user_id", userId)
         .ilike("email", email)

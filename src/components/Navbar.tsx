@@ -16,11 +16,9 @@ const Navbar = () => {
   const { t } = useTranslation();
   const isApp = location.pathname.startsWith("/dashboard") ||
     location.pathname.startsWith("/campaign") ||
-    location.pathname.startsWith("/outreach") ||
     location.pathname.startsWith("/email-accounts") ||
     location.pathname.startsWith("/inbox") ||
     location.pathname.startsWith("/inbound") ||
-    location.pathname.startsWith("/sequence") ||
     location.pathname.startsWith("/analytics") ||
     location.pathname.startsWith("/settings");
   const [mobileOpen, setMobileOpen] = useState(false);

@@ -97,80 +97,68 @@ Deno.serve(async (req) => {
   let resolvedTargetId = targetId;
 
   try {
+    let seqId: string | null = null;
+
     if (targetType === "campaign") {
       if (!targetId) throw new Error("target.id required for campaign");
-      // Verify campaign belongs to user
       const { data: c } = await supabase.from("campaigns").select("id").eq("id", targetId).eq("user_id", userId).maybeSingle();
       if (!c) throw new Error("Campaign not found");
-      const rows = valid.map((l) => ({
+      const { data: seq } = await supabase.from("sequences").select("id").eq("campaign_id", targetId).eq("user_id", userId).maybeSingle();
+      if (!seq) throw new Error("Linked sequence not found for campaign");
+      seqId = seq.id;
+    } else if (targetType === "sequence" && targetId) {
+      const { data: s } = await supabase.from("sequences").select("id").eq("id", targetId).eq("user_id", userId).maybeSingle();
+      if (!s) throw new Error("Sequence not found");
+      seqId = targetId;
+    } else {
+      // none -> find or create default "Imported leads" sequence
+      const { data: existing } = await supabase
+        .from("sequences")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("name", "Imported leads")
+        .is("campaign_id", null)
+        .maybeSingle();
+      if (existing) {
+        seqId = existing.id;
+      } else {
+        const { data: created, error: cErr } = await supabase
+          .from("sequences")
+          .insert({ user_id: userId, name: "Imported leads", timezone: "UTC" })
+          .select("id")
+          .single();
+        if (cErr) throw cErr;
+        seqId = created.id;
+      }
+    }
+    resolvedTargetId = seqId;
+
+    // De-dup against existing emails in the sequence
+    const { data: existingLeads } = await supabase
+      .from("sequence_leads")
+      .select("email")
+      .eq("sequence_id", seqId!)
+      .in("email", valid.map((l) => l.email));
+    const existingSet = new Set((existingLeads ?? []).map((r: any) => r.email));
+    const fresh = valid.filter((l) => !existingSet.has(l.email));
+    const dedupSkipped = valid.length - fresh.length;
+    skipped += dedupSkipped;
+
+    if (fresh.length > 0) {
+      const rows = fresh.map((l) => ({
         user_id: userId,
-        campaign_id: targetId,
+        sequence_id: seqId!,
         email: l.email,
-        full_name: l.full_name || l.email.split("@")[0],
-        company: l.company || (l.email.split("@")[1]?.split(".")[0] ?? "Unknown"),
+        full_name: l.full_name,
+        first_name: l.first_name,
+        last_name: l.last_name,
+        company: l.company,
         role: l.role,
-        website: l.website,
-        linkedin_url: l.linkedin_url,
-        notes: l.notes,
+        phone: l.phone,
       }));
-      const { data, error } = await supabase.from("leads").insert(rows).select("id");
+      const { data, error } = await supabase.from("sequence_leads").insert(rows).select("id");
       if (error) throw error;
       inserted = data?.length ?? 0;
-    } else {
-      // sequence or none -> sequence_leads
-      let seqId = targetId;
-      if (targetType === "none" || !seqId) {
-        // Find or create default "Imported leads" sequence
-        const { data: existing } = await supabase
-          .from("sequences")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("name", "Imported leads")
-          .maybeSingle();
-        if (existing) {
-          seqId = existing.id;
-        } else {
-          const { data: created, error: cErr } = await supabase
-            .from("sequences")
-            .insert({ user_id: userId, name: "Imported leads", timezone: "UTC" })
-            .select("id")
-            .single();
-          if (cErr) throw cErr;
-          seqId = created.id;
-        }
-      } else {
-        const { data: s } = await supabase.from("sequences").select("id").eq("id", seqId).eq("user_id", userId).maybeSingle();
-        if (!s) throw new Error("Sequence not found");
-      }
-      resolvedTargetId = seqId;
-
-      // De-dup against existing emails in the sequence
-      const { data: existingLeads } = await supabase
-        .from("sequence_leads")
-        .select("email")
-        .eq("sequence_id", seqId)
-        .in("email", valid.map((l) => l.email));
-      const existingSet = new Set((existingLeads ?? []).map((r: any) => r.email));
-      const fresh = valid.filter((l) => !existingSet.has(l.email));
-      const dedupSkipped = valid.length - fresh.length;
-      skipped += dedupSkipped;
-
-      if (fresh.length > 0) {
-        const rows = fresh.map((l) => ({
-          user_id: userId,
-          sequence_id: seqId,
-          email: l.email,
-          full_name: l.full_name,
-          first_name: l.first_name,
-          last_name: l.last_name,
-          company: l.company,
-          role: l.role,
-          phone: l.phone,
-        }));
-        const { data, error } = await supabase.from("sequence_leads").insert(rows).select("id");
-        if (error) throw error;
-        inserted = data?.length ?? 0;
-      }
     }
   } catch (e: any) {
     errorMsg = e?.message || String(e);

@@ -203,7 +203,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
   }
   if (!leadId) {
     const { data: lead } = await admin
-      .from("leads")
+      .from("sequence_leads")
       .select("id")
       .eq("user_id", account.user_id)
       .ilike("email", fromEmail)
