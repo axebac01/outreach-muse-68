@@ -1,4 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { generateText, Output } from "npm:ai";
+import { z } from "npm:zod";
+import { createLovableAiGatewayProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -134,83 +137,48 @@ ${(leads?.length ?? 0) === 0 ? "Inga leads ännu — håll mejlen generella mot 
 
 Generera kampanjen nu.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Lovable-API-Key": LOVABLE_API_KEY,
-        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_sequence",
-              description: `Returnera exakt ${stepCount} mejlsteg för en kall outreach-sekvens.`,
-              parameters: {
-                type: "object",
-                properties: {
-                  steps: {
-                    type: "array",
-                    minItems: stepCount,
-                    maxItems: stepCount,
-                    items: {
-                      type: "object",
-                      properties: {
-                        step_order: { type: "number" },
-                        subject: { type: "string" },
-                        body: { type: "string" },
-                        wait_days: { type: "number" },
-                      },
-                      required: ["step_order", "subject", "body", "wait_days"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ["steps"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_sequence" } },
-      }),
-    });
+    const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
+    const model = gateway("google/gemini-3-flash-preview");
+    let parsed: any = {};
 
-    if (aiResp.status === 429) {
-      return new Response(JSON.stringify({ error: "rate_limited" }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    try {
+      const { output } = await generateText({
+        model,
+        system: systemPrompt,
+        prompt: userPrompt,
+        output: Output.object({
+          schema: z.object({
+            steps: z.array(z.object({
+              step_order: z.number(),
+              subject: z.string(),
+              body: z.string(),
+              wait_days: z.number(),
+            })).min(stepCount).max(stepCount),
+          }),
+        }),
       });
-    }
-    if (aiResp.status === 402) {
-      return new Response(JSON.stringify({ error: "no_credits" }), {
-        status: 402,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!aiResp.ok) {
-      const t = await aiResp.text();
-      console.error("AI gateway error", aiResp.status, t);
+      parsed = output;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("AI gateway error", message);
+
+      if (message.includes("429")) {
+        return new Response(JSON.stringify({ error: "rate_limited" }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (message.includes("402")) {
+        return new Response(JSON.stringify({ error: "no_credits" }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(JSON.stringify({ error: "ai_failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    const aiJson = await aiResp.json();
-    const args = aiJson.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-    let parsed: any = {};
-    try {
-      parsed = JSON.parse(args ?? "{}");
-    } catch {
-      parsed = {};
     }
     const rawSteps: any[] = Array.isArray(parsed.steps) ? parsed.steps : [];
     if (rawSteps.length === 0) {
