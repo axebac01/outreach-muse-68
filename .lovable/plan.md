@@ -1,53 +1,85 @@
-## Mål
+# Slå ihop kampanjer och sekvenser
 
-Lägg till ett tredje, jämbördigt alternativ "IMAP / SMTP" i `ConnectEmailDialog` — precis som Instantly visar Google, Microsoft och "Any provider (IMAP)" som tre likvärdiga val.
+## Målbild
+En **kampanj** är allt: kontext (målgrupp, produkt, erbjudande, ton), leads, mejl-steg, schema och avsändare. Sekvensen finns inte längre som ett separat koncept i UI:t — den är en flik **inne i** kampanjen. AI används som hjälpknapp när man skriver mejl-stegen, baserat på kampanjens kontext + företagsinfo.
 
-Idag finns SMTP/IMAP-formuläret redan i koden men är gömt under en liten "Advanced"-collapsible längst ner. Det ska lyftas upp till en riktig tredje knapp och öppna ett dedikerat formulär-läge.
+Unibox AI (klassning av inkommande svar + föreslagna svar) påverkas inte — den ligger kvar oförändrad.
 
-## Ändringar
+## Ny kampanj-vy (`/campaign/:id`)
 
-**Endast frontend** — ingen backend, ingen DB, inga edge functions ändras. `connect-smtp-account` och `test-smtp` används redan av det befintliga formuläret.
+Tabbar i ordning:
 
-### `src/components/ConnectEmailDialog.tsx`
+1. **Översikt** — namn, kontext (målgrupp, produkt, erbjudande, ton), status (utkast/aktiv/pausad), enkel statistik (skickat, svar, bounces).
+2. **Leads** — lista, lägg till manuellt, importera CSV, ta emot från Mailhunter.
+3. **Sekvens** — bygg mejl-stegen (steg 0 = första mejlet, steg 1 = uppföljning efter X dagar, osv). På varje steg finns en **"Skriv med AI"**-knapp som genererar ämne + brödtext utifrån kampanjkontexten + företagets info. Variabler som `{{first_name}}` stöds.
+4. **Schema** — sändningsdagar, tidsfönster, tidszon, dagligt tak per konto, paus-på-svar, startdatum.
+5. **Avsändare** — välj vilka kopplade mejlkonton som ska skicka.
+6. **Launch / Status** — knapp "Starta kampanj" som schemalägger utskick. När aktiv visas progress.
 
-1. Lägg till state `view: "providers" | "smtp"` (default `"providers"`).
-2. **Vy 1 — providers**: Visa tre knappar i samma stil:
-   - Connect with Google (befintlig)
-   - Connect with Microsoft (befintlig)
-   - **Connect with IMAP / SMTP** (ny) — samma kort-stil, ikon `Mail` från lucide, sätter `view = "smtp"` vid klick
-   - Ta bort divider + Collapsible-omslaget
-3. **Vy 2 — smtp**: 
-   - Visa en "← Back"-knapp överst som återgår till providers
-   - Rendera det befintliga SMTP/IMAP-formuläret (presets, email, display_name, SMTP-block, IMAP-block, Test/Save-knappar)
-   - Ingen logikändring i `handleTest` / `handleSave`
-4. Återställ `view` till `"providers"` när dialogen stängs.
+## Vad som tas bort från UI
 
-### i18n-strängar (`src/i18n/locales/en.json` och `sv.json`)
+- Egen sida för att skapa fristående sekvens (`/sequence/:id` + dess flow).
+- Outreach-vyn (`/outreach/:id`) där man godkänner AI-mejl per lead — ersätts av AI-knappen i sekvens-fliken.
+- "Sekvenser"-länk i sidomenyn (om den finns).
+- Dashboard visar bara kampanjer, inte separata sekvenser.
 
-Lägg till:
-- `emailAccounts.connectImap` — "Connect with IMAP / SMTP" / "Anslut med IMAP / SMTP"
-- `emailAccounts.imapDescription` — kort undertext, t.ex. "Use any email provider" / "Använd valfri e-postleverantör"
-- `emailAccounts.back` — "Back" / "Tillbaka"
+## Datamodell
 
-Befintliga `showSmtp` / `hideSmtp` / `orAdvanced` kan tas bort (eller lämnas oanvända).
+Vi behåller båda tabellerna i databasen för att hålla edge-funktionerna (`launch-sequence`, `process-scheduled-sends`, `import-leads`, schemalagda jobb) intakta — men kopplar dem 1-till-1:
 
-## Layout
+- Lägg till `sequences.campaign_id` (uuid, unique). När en kampanj skapas skapas automatiskt en tillhörande sequence-rad.
+- Allt UI läser/skriver via kampanjen och slår upp den länkade sekvensen i bakgrunden.
+- `sequence_steps`, `sequence_leads`, `sequence_senders`, `scheduled_sends` är oförändrade.
+- `generated_outreach`-tabellen och `generate-outreach`-edge-funktionen tas bort (ersätts av en enklare AI-funktion som returnerar ämne+body till sekvens-stegs-editorn).
+- `leads.campaign_id` används fortfarande som "lead i kampanj"; vid launch synkas dessa till `sequence_leads` på den länkade sekvensen.
 
-```
-┌─────────────────────────────────────┐
-│ Connect email account               │
-├─────────────────────────────────────┤
-│ [G]  Connect with Google         →  │
-│ [M]  Connect with Microsoft      →  │
-│ [✉]  Connect with IMAP / SMTP    →  │
-│       Use any email provider        │
-└─────────────────────────────────────┘
-```
+## Rensning av befintlig data
 
-Efter klick på IMAP/SMTP byts hela innehållet ut mot formuläret med en Back-knapp överst.
+Innan migreringen körs: töm `campaigns`, `sequences`, `sequence_steps`, `sequence_leads`, `sequence_senders`, `scheduled_sends`, `generated_outreach`, `leads`. Ingen produktionsdata att rädda enligt ditt besked.
 
-## Inte med i denna ändring
+## AI-hjälp i sekvens-editorn
 
-- Inga schemaändringar — `email_accounts` har redan alla SMTP/IMAP-kolumner
-- Ingen ny edge function — `connect-smtp-account` och `test-smtp` finns
-- Ingen ändring i listvy / `useEmailAccounts`
+Ny edge-funktion `ai-write-step`:
+- Input: `campaign_id`, `step_index`, valfri "instruktion" (t.ex. "kortare", "mer formell"), tidigare stegs text för kontext.
+- Slår upp kampanjkontext + företagsprofil (`profiles.company_*`).
+- Anropar Lovable AI Gateway (`google/gemini-2.5-flash`) och returnerar `{ subject, body }`.
+- Skriver inte direkt till databasen — användaren får förhandsgranska och spara.
+
+## Mailhunter-import
+
+Endpoint `import-leads` ändras minimalt: tar emot `campaign_id` istället för `sequence_id`/`campaign_id`-val. Leads landar i kampanjen och syns i Leads-fliken. När kampanjen startas följer de med till sekvensen.
+
+## Översättningar
+
+Sv/en strängar för: tabb-namn, AI-knapp, tomma-tillstånd, "Starta kampanj", borttagna sekvens-strängar.
+
+---
+
+## Tekniska detaljer
+
+**Filer att skapa:**
+- `src/pages/CampaignDetails.tsx` — skrivs om till tabbad layout
+- `src/components/campaign/OverviewTab.tsx`
+- `src/components/campaign/LeadsTab.tsx` (återanvänd nuvarande `StepLeads`-logik)
+- `src/components/campaign/SequenceTab.tsx` (återanvänd `StepSequence` + AI-knapp)
+- `src/components/campaign/ScheduleTab.tsx` (återanvänd `StepSchedule`)
+- `src/components/campaign/SendersTab.tsx` (återanvänd `StepSending`)
+- `src/components/campaign/AiWriteStepDialog.tsx`
+- `supabase/functions/ai-write-step/index.ts`
+
+**Filer att ta bort:**
+- `src/pages/SequenceBuilder.tsx` + `src/pages/sequence/*`
+- `src/pages/Outreach.tsx`
+- `supabase/functions/generate-outreach/`
+
+**Routes:**
+- Behåll `/campaign/new` och `/campaign/:id` (med valfri `?tab=`).
+- Ta bort `/sequence/:id/*` och `/outreach/:id`.
+
+**Migrationer (i ordning, efter godkännande):**
+1. `ALTER TABLE sequences ADD COLUMN campaign_id uuid UNIQUE REFERENCES campaigns(id) ON DELETE CASCADE;`
+2. Trigger `after insert on campaigns` som skapar en tom `sequences`-rad länkad till kampanjen.
+3. `DROP TABLE generated_outreach;`
+4. Data-rensning (TRUNCATE) körs som separat insert-call.
+
+**Launch-flöde:** "Starta kampanj"-knappen kallar befintlig `launch-sequence` med den länkade `sequence_id`. Ingen ny edge-funktion behövs där.
