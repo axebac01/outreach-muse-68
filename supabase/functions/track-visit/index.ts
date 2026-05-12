@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
         const tokenLeadId = await verifyLeadToken(ml_e, secret);
         if (tokenLeadId) {
           const { data: lead } = await admin
-            .from("leads")
+            .from("sequence_leads")
             .select("id")
             .eq("user_id", userId)
             .eq("id", tokenLeadId)
@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
     }
     if (!leadId && email) {
       const { data: lead } = await admin
-        .from("leads")
+        .from("sequence_leads")
         .select("id")
         .eq("user_id", userId)
         .ilike("email", email)
