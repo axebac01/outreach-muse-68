@@ -1,85 +1,27 @@
-# Slå ihop kampanjer och sekvenser
+## Problem
 
-## Målbild
-En **kampanj** är allt: kontext (målgrupp, produkt, erbjudande, ton), leads, mejl-steg, schema och avsändare. Sekvensen finns inte längre som ett separat koncept i UI:t — den är en flik **inne i** kampanjen. AI används som hjälpknapp när man skriver mejl-stegen, baserat på kampanjens kontext + företagsinfo.
+On the Schedule tab, clicking "Idag", "Imorgon", "Nästa måndag" or picking a date in the calendar saves correctly to the database (verified: `PATCH /sequences` returns `204` with body `{"start_at":"..."}`), but the UI keeps showing "Välj datum" — making it look like nothing happens.
 
-Unibox AI (klassning av inkommande svar + föreslagna svar) påverkas inte — den ligger kvar oförändrad.
+## Root cause
 
-## Ny kampanj-vy (`/campaign/:id`)
+`CampaignDetails.tsx` reads the sequence via `useCampaignSequence(id)` which uses the React Query key `["campaign_sequence", campaignId]`.
 
-Tabbar i ordning:
+`useUpdateSequence` (in `src/hooks/useSequence.ts`) only invalidates `["sequence", id]` and `["sequences"]` after a successful mutation. The `["campaign_sequence", ...]` cache is never invalidated, so `ScheduleTab` keeps receiving the stale `sequence` prop with `start_at = null`, and the button label / calendar selection never updates.
 
-1. **Översikt** — namn, kontext (målgrupp, produkt, erbjudande, ton), status (utkast/aktiv/pausad), enkel statistik (skickat, svar, bounces).
-2. **Leads** — lista, lägg till manuellt, importera CSV, ta emot från Mailhunter.
-3. **Sekvens** — bygg mejl-stegen (steg 0 = första mejlet, steg 1 = uppföljning efter X dagar, osv). På varje steg finns en **"Skriv med AI"**-knapp som genererar ämne + brödtext utifrån kampanjkontexten + företagets info. Variabler som `{{first_name}}` stöds.
-4. **Schema** — sändningsdagar, tidsfönster, tidszon, dagligt tak per konto, paus-på-svar, startdatum.
-5. **Avsändare** — välj vilka kopplade mejlkonton som ska skicka.
-6. **Launch / Status** — knapp "Starta kampanj" som schemalägger utskick. När aktiv visas progress.
+The same staleness affects every other field edited from the Schedule, Senders and other tabs (timezone, sending window, days, pause_on_reply, etc.) — they all persist but only appear after a hard reload.
 
-## Vad som tas bort från UI
+## Fix
 
-- Egen sida för att skapa fristående sekvens (`/sequence/:id` + dess flow).
-- Outreach-vyn (`/outreach/:id`) där man godkänner AI-mejl per lead — ersätts av AI-knappen i sekvens-fliken.
-- "Sekvenser"-länk i sidomenyn (om den finns).
-- Dashboard visar bara kampanjer, inte separata sekvenser.
+In `src/hooks/useUpdateSequence` (`src/hooks/useSequence.ts`), also invalidate the `campaign_sequence` query in `onSuccess`:
 
-## Datamodell
+```ts
+qc.invalidateQueries({ queryKey: ["sequence", id] });
+qc.invalidateQueries({ queryKey: ["sequences"] });
+qc.invalidateQueries({ queryKey: ["campaign_sequence"] });
+```
 
-Vi behåller båda tabellerna i databasen för att hålla edge-funktionerna (`launch-sequence`, `process-scheduled-sends`, `import-leads`, schemalagda jobb) intakta — men kopplar dem 1-till-1:
+That's the only change needed — one line in one file. After this, picking "Idag" or any date will immediately update the button label and calendar highlight.
 
-- Lägg till `sequences.campaign_id` (uuid, unique). När en kampanj skapas skapas automatiskt en tillhörande sequence-rad.
-- Allt UI läser/skriver via kampanjen och slår upp den länkade sekvensen i bakgrunden.
-- `sequence_steps`, `sequence_leads`, `sequence_senders`, `scheduled_sends` är oförändrade.
-- `generated_outreach`-tabellen och `generate-outreach`-edge-funktionen tas bort (ersätts av en enklare AI-funktion som returnerar ämne+body till sekvens-stegs-editorn).
-- `leads.campaign_id` används fortfarande som "lead i kampanj"; vid launch synkas dessa till `sequence_leads` på den länkade sekvensen.
+## Out of scope
 
-## Rensning av befintlig data
-
-Innan migreringen körs: töm `campaigns`, `sequences`, `sequence_steps`, `sequence_leads`, `sequence_senders`, `scheduled_sends`, `generated_outreach`, `leads`. Ingen produktionsdata att rädda enligt ditt besked.
-
-## AI-hjälp i sekvens-editorn
-
-Ny edge-funktion `ai-write-step`:
-- Input: `campaign_id`, `step_index`, valfri "instruktion" (t.ex. "kortare", "mer formell"), tidigare stegs text för kontext.
-- Slår upp kampanjkontext + företagsprofil (`profiles.company_*`).
-- Anropar Lovable AI Gateway (`google/gemini-2.5-flash`) och returnerar `{ subject, body }`.
-- Skriver inte direkt till databasen — användaren får förhandsgranska och spara.
-
-## Mailhunter-import
-
-Endpoint `import-leads` ändras minimalt: tar emot `campaign_id` istället för `sequence_id`/`campaign_id`-val. Leads landar i kampanjen och syns i Leads-fliken. När kampanjen startas följer de med till sekvensen.
-
-## Översättningar
-
-Sv/en strängar för: tabb-namn, AI-knapp, tomma-tillstånd, "Starta kampanj", borttagna sekvens-strängar.
-
----
-
-## Tekniska detaljer
-
-**Filer att skapa:**
-- `src/pages/CampaignDetails.tsx` — skrivs om till tabbad layout
-- `src/components/campaign/OverviewTab.tsx`
-- `src/components/campaign/LeadsTab.tsx` (återanvänd nuvarande `StepLeads`-logik)
-- `src/components/campaign/SequenceTab.tsx` (återanvänd `StepSequence` + AI-knapp)
-- `src/components/campaign/ScheduleTab.tsx` (återanvänd `StepSchedule`)
-- `src/components/campaign/SendersTab.tsx` (återanvänd `StepSending`)
-- `src/components/campaign/AiWriteStepDialog.tsx`
-- `supabase/functions/ai-write-step/index.ts`
-
-**Filer att ta bort:**
-- `src/pages/SequenceBuilder.tsx` + `src/pages/sequence/*`
-- `src/pages/Outreach.tsx`
-- `supabase/functions/generate-outreach/`
-
-**Routes:**
-- Behåll `/campaign/new` och `/campaign/:id` (med valfri `?tab=`).
-- Ta bort `/sequence/:id/*` och `/outreach/:id`.
-
-**Migrationer (i ordning, efter godkännande):**
-1. `ALTER TABLE sequences ADD COLUMN campaign_id uuid UNIQUE REFERENCES campaigns(id) ON DELETE CASCADE;`
-2. Trigger `after insert on campaigns` som skapar en tom `sequences`-rad länkad till kampanjen.
-3. `DROP TABLE generated_outreach;`
-4. Data-rensning (TRUNCATE) körs som separat insert-call.
-
-**Launch-flöde:** "Starta kampanj"-knappen kallar befintlig `launch-sequence` med den länkade `sequence_id`. Ingen ny edge-funktion behövs där.
+No DB, RLS, or component changes. The Calendar / Popover already work correctly; the bug is purely a stale React Query cache.
