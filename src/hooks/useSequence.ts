@@ -108,6 +108,7 @@ export const useUpdateSequence = (id: string) => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sequence", id] });
       qc.invalidateQueries({ queryKey: ["sequences"] });
+      qc.invalidateQueries({ queryKey: ["campaign_sequence"] });
     },
   });
 };
