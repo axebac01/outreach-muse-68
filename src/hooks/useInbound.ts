@@ -176,7 +176,7 @@ export const useIdentifiedVisitors = (limit = 50) => {
       let leadsMap: Record<string, any> = {};
       if (leadIds.length > 0) {
         const { data: leads } = await supabase
-          .from("leads")
+          .from("sequence_leads")
           .select("id, full_name, email, company, role")
           .in("id", leadIds);
         leadsMap = Object.fromEntries((leads || []).map((l: any) => [l.id, l]));
