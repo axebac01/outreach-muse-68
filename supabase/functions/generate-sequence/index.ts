@@ -1,4 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { generateText, Output } from "npm:ai";
+import { z } from "npm:zod";
+import { createLovableAiGatewayProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +32,66 @@ function sanitizeBody(text: string): string {
   return text.replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (m, key: string) =>
     ALLOWED_VARS.includes(key.toLowerCase()) ? `{{${key.toLowerCase()}}}` : "",
   );
+}
+
+function buildFallbackSteps(params: {
+  stepCount: number;
+  lang: string;
+  goal: string;
+  valueProp?: string | null;
+  companyName?: string | null;
+  offerings?: string[] | null;
+  proofPoints?: string[] | null;
+  leadCompanies: string[];
+  leadRoles: string[];
+}) {
+  const isEnglish = params.lang === "engelska";
+  const offering = params.offerings?.find(Boolean) ?? (isEnglish ? "our solution" : "vår lösning");
+  const proof = params.proofPoints?.find(Boolean) ?? "";
+  const companyRef = params.leadCompanies[0] ? `{{company}}` : (isEnglish ? "your team" : "er verksamhet");
+  const roleRef = params.leadRoles[0] ? ` som ${params.leadRoles[0]}` : "";
+  const subjects = isEnglish
+    ? [
+      `idea for ${companyRef}`,
+      "quick follow-up",
+      "worth exploring?",
+      "one last thought",
+      "should I close this?",
+      "last nudge",
+    ]
+    : [
+      `idé för ${companyRef}`,
+      "snabb följdfråga",
+      "värt att kika på?",
+      "en sista tanke",
+      "ska jag stänga detta?",
+      "sista puffen",
+    ];
+
+  const bodies = isEnglish
+    ? [
+      `<p>Hi {{first_name}},</p><p>I noticed ${companyRef}${roleRef} may be working on ${params.goal.toLowerCase()}.</p><p>${params.companyName ?? "We"} help teams with ${params.valueProp ?? offering} in a way that keeps outreach practical and personal.</p><p>Open to seeing whether this could be relevant for ${companyRef}?</p>`,
+      `<p>Hi {{first_name}},</p><p>Following up in case this is on your radar.</p><p>We often help companies like ${companyRef} simplify ${offering.toLowerCase()} without adding heavy process.</p><p>Would it be useful if I sent over 2–3 concrete ideas tailored to your setup?</p>`,
+      `<p>Hi {{first_name}},</p><p>Another angle: teams in a similar position usually care about response quality, speed, and keeping the message personal.</p><p>${proof ? `<strong>${proof}</strong><br>` : ""}Happy to share what we would test first for ${companyRef}.</p><p>Worth sending a short outline?</p>`,
+      `<p>Hi {{first_name}},</p><p>Just resurfacing this in case timing was the issue.</p><p>If improving ${params.goal.toLowerCase()} is relevant this quarter, I can send a very short recommendation for ${companyRef}.</p><p>Should I do that?</p>`,
+      `<p>Hi {{first_name}},</p><p>I have not heard back, which usually means this is either not a priority or bad timing.</p><p>If helpful, I can stop here — or send one concise suggestion before I do.</p>`,
+      `<p>Hi {{first_name}},</p><p>Last note from me.</p><p>If ${params.goal.toLowerCase()} is still on the table later, I am happy to reconnect.</p>`,
+    ]
+    : [
+      `<p>Hej {{first_name}},</p><p>Jag såg att ${companyRef}${roleRef} sannolikt jobbar med ${params.goal.toLowerCase()}.</p><p>${params.companyName ?? "Vi"} hjälper team med ${params.valueProp ?? offering} på ett sätt som känns personligt och lätt att agera på.</p><p>Är det värt att se om detta kan vara relevant för ${companyRef}?</p>`,
+      `<p>Hej {{first_name}},</p><p>Följer upp ifall detta ligger på bordet hos er just nu.</p><p>Vi hjälper ofta bolag som ${companyRef} att förenkla ${offering.toLowerCase()} utan att skapa mer manuellt arbete.</p><p>Vill du att jag skickar 2–3 konkreta idéer anpassade för er?</p>`,
+      `<p>Hej {{first_name}},</p><p>En annan vinkel: team i liknande läge brukar vilja förbättra kvalitet, svarsfrekvens och personlig relevans samtidigt.</p><p>${proof ? `<strong>${proof}</strong><br>` : ""}Jag kan gärna dela vad jag hade testat först för ${companyRef}.</p><p>Vill du att jag skickar en kort skiss?</p>`,
+      `<p>Hej {{first_name}},</p><p>Lyfter denna igen om tajmingen var problemet sist.</p><p>Om ${params.goal.toLowerCase()} är relevant i kvartalet kan jag skicka ett väldigt kort förslag för ${companyRef}.</p><p>Ska jag göra det?</p>`,
+      `<p>Hej {{first_name}},</p><p>Jag har inte hört något tillbaka, vilket ofta betyder att det inte är prioriterat just nu eller att tajmingen är fel.</p><p>Jag kan antingen stänga här — eller skicka ett sista konkret förslag innan jag gör det.</p>`,
+      `<p>Hej {{first_name}},</p><p>Sista notisen från mig.</p><p>Om ${params.goal.toLowerCase()} blir aktuellt längre fram tar jag gärna upp tråden igen.</p>`,
+    ];
+
+  return Array.from({ length: params.stepCount }, (_, i) => ({
+    step_order: i,
+    subject: i === 0 ? subjects[0] : (i >= params.stepCount - 1 ? subjects[4] ?? "" : subjects[i] ?? ""),
+    body: bodies[i] ?? bodies[bodies.length - 1],
+    wait_days: i === 0 ? 0 : 3,
+  }));
 }
 
 Deno.serve(async (req) => {
@@ -134,64 +197,67 @@ ${(leads?.length ?? 0) === 0 ? "Inga leads ännu — håll mejlen generella mot 
 
 Generera kampanjen nu.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt + `\n\nReturnera ENDAST giltig JSON i formatet: {"steps":[{"step_order":number,"subject":string,"body":string,"wait_days":number}]}` },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
+    const model = gateway("google/gemini-3-flash-preview");
+    let parsed: any = {};
+    const fallbackSteps = buildFallbackSteps({
+      stepCount,
+      lang,
+      goal,
+      valueProp: profile.company_value_prop,
+      companyName: profile.company_name,
+      offerings: profile.company_key_offerings,
+      proofPoints: profile.company_proof_points,
+      leadCompanies,
+      leadRoles,
     });
 
-    if (aiResp.status === 429) {
-      return new Response(JSON.stringify({ error: "rate_limited" }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (aiResp.status === 402) {
-      return new Response(JSON.stringify({ error: "no_credits" }), {
-        status: 402,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!aiResp.ok) {
-      const t = await aiResp.text();
-      console.error("AI gateway error", aiResp.status, t);
-      return new Response(JSON.stringify({ error: "ai_failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const aiJson = await aiResp.json();
-    const content = aiJson.choices?.[0]?.message?.content ?? "";
-    let parsed: any = {};
     try {
-      parsed = JSON.parse(content);
-    } catch {
-      parsed = {};
+      const { output } = await generateText({
+        model,
+        system: systemPrompt,
+        prompt: userPrompt,
+        output: Output.object({
+          schema: z.object({
+            steps: z.array(z.object({
+              step_order: z.number(),
+              subject: z.string(),
+              body: z.string(),
+              wait_days: z.number(),
+            })).min(stepCount).max(stepCount),
+          }),
+        }),
+      });
+      parsed = output;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("AI gateway error", message);
+
+      if (message.includes("429")) {
+        return new Response(JSON.stringify({ error: "rate_limited" }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (message.includes("402")) {
+        return new Response(JSON.stringify({ error: "no_credits" }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      parsed = { steps: fallbackSteps };
     }
     const rawSteps: any[] = Array.isArray(parsed.steps) ? parsed.steps : [];
     if (rawSteps.length === 0) {
-      return new Response(JSON.stringify({ error: "empty_response" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      parsed = { steps: fallbackSteps };
     }
 
     const unsubFooter = lang === "engelska"
       ? "Not interested? {{unsubscribe}}"
       : "Vill du inte höra mer? {{unsubscribe}}";
 
-    const steps = rawSteps
+    const steps = (Array.isArray(parsed.steps) ? parsed.steps : fallbackSteps)
       .sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0))
       .map((s, i) => {
         let body = sanitizeBody(String(s.body ?? ""));
