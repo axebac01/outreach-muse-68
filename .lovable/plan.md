@@ -1,62 +1,34 @@
-## Problem
+## Mål
+Visa tydlig bekräftelse när autosave sparar ändringar i en kampanj, så det inte känns osäkert om datan kommer fram.
 
-Subject "[TEST] idé för TEST" arrived as `[TEST] idÃƒÂ© fÃƒÂ¶r TEST`. The body (which has an explicit `Content-Type: ...; charset="UTF-8"`) renders fine — only the subject is broken.
+## Approach
+En subtil, global "Sparar… / Sparat ✓" indikator (likt Notion/Linear) — bättre än toast som blir spammigt vid varje knapptryck under autosave-debouncen.
 
-Cause: in `supabase/functions/send-email/index.ts`, `buildRfc2822()` writes the Subject header as raw UTF-8 bytes:
+Komplettera med en `toast.error(...)` ifall sparning faktiskt misslyckas.
 
-```
-Subject: ${opts.subject}
-```
+## Implementation
 
-Email headers are 7-bit ASCII by definition. Non-ASCII bytes in headers must be wrapped in an RFC 2047 "encoded-word", e.g. `=?UTF-8?B?aWTDqSBmw7ZyIFRFU1Q=?=`. Without that, Gmail/Outlook treat the bytes as Latin-1, then re-encode them as UTF-8 down the chain, producing the classic double-mojibake "ÃƒÂ©" / "ÃƒÂ¶" pattern.
+### 1. Ny hook `useSaveStatus`
+`src/hooks/useSaveStatus.ts` — Zustand- eller Context-baserad global store med tre states: `idle | saving | saved | error`. Visar "Sparat ✓" i ~2s efter senaste lyckade mutation, sen tillbaka till `idle`.
 
-The same issue affects the display name in the `From:` header when the user's `sender_name` contains non-ASCII (å, ä, ö, é, …).
+### 2. Ny komponent `SaveStatusIndicator`
+`src/components/SaveStatusIndicator.tsx` — liten textbadge med ikon (Loader2 spin / Check / AlertCircle) som visar nuvarande status. Placeras i kampanjens header (`CampaignDetails.tsx`) bredvid kampanjnamnet.
 
-## Fix
+### 3. Koppla in i autosave-mutationerna
+Lägg till `onMutate`/`onSuccess`/`onError` som anropar store-actions i:
+- `useUpdateCampaign` (kampanjnamn, Overview-fält, Schedule, Senders, Settings)
+- `useUpdateSequenceStep` och övriga sequence-mutations som triggas av debounce i `SequenceStepCard.tsx`
 
-In `supabase/functions/send-email/index.ts`:
+Görs centralt i hooks → automatiskt täckning för alla flikar (Overview, Sequence, Schedule, Senders, Leads, Settings).
 
-1. Add a small helper:
-   ```ts
-   function encodeMimeWord(s: string): string {
-     // ASCII-only? leave as-is
-     // eslint-disable-next-line no-control-regex
-     if (/^[\x00-\x7F]*$/.test(s)) return s;
-     const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(s)));
-     return `=?UTF-8?B?${b64}?=`;
-   }
-   function encodeAddress(addr: string): string {
-     // "Name <email>" → encode only Name
-     const m = addr.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
-     if (m) return `${encodeMimeWord(m[1])} <${m[2]}>`;
-     return addr;
-   }
-   ```
+### 4. Felhantering
+Vid `onError`: status = `error` + `toast.error("Kunde inte spara ändringen")` med felmeddelandet.
 
-2. In `buildRfc2822`, encode the Subject and From:
-   ```ts
-   `From: ${encodeAddress(opts.from)}`,
-   `To: ${opts.to}`,
-   `Subject: ${encodeMimeWord(opts.subject)}`,
-   ```
-   (Gmail path goes through `buildRfc2822` → already covered.)
+## Filer som ändras
+- ny: `src/hooks/useSaveStatus.ts`
+- ny: `src/components/SaveStatusIndicator.tsx`
+- `src/hooks/useCampaigns.ts` — koppla status i `useUpdateCampaign`
+- `src/hooks/useSequence.ts` — koppla status i relevanta update-mutations
+- `src/pages/CampaignDetails.tsx` — rendera `<SaveStatusIndicator />` i headern
 
-3. SMTP path (`denomailer`) — denomailer is supposed to encode headers itself, but it has known gaps. To be safe, pass an already-encoded subject:
-   ```ts
-   subject: encodeMimeWord(subject),
-   from: encodeAddress(fromAddr),
-   ```
-
-4. Outlook (Graph API) path — JSON, no change needed; Graph handles UTF-8 natively.
-
-5. Strip the `[TEST] ` prefix added in `SendTestEmailDialog` so it isn't double-encoded inside the encoded-word? Not needed — `[TEST] ` is ASCII; only the non-ASCII suffix gets base64-wrapped. Encoded-words can be mixed with ASCII text in the same Subject line.
-
-## Files to change
-
-- `supabase/functions/send-email/index.ts` — add helpers, wrap Subject + From for Gmail (`buildRfc2822`) and SMTP send.
-
-No DB / frontend changes.
-
-## Verification
-
-After deploy: re-send the same test ("idé för TEST"). Subject should arrive intact in Gmail and any SMTP inbox. Existing ASCII-only subjects are unchanged (helper is a no-op for ASCII).
+Inga DB- eller backendändringar.
