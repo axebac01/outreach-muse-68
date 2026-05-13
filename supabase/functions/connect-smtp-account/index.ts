@@ -6,27 +6,37 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Encrypts a string with the EMAIL_TOKEN_ENCRYPTION_KEY using pgp_sym_encrypt.
-// Falls back to base64 if no key is configured (dev only).
+// Encrypts a string with EMAIL_TOKEN_ENCRYPTION_KEY using pgp_sym_encrypt
+// and returns a Postgres `\x...` hex string suitable for direct insertion
+// into a bytea column via supabase-js. Returning a Uint8Array would be
+// JSON.stringify'd by PostgREST and silently corrupt the bytea.
 async function encryptIfPossible(
   supabaseAdmin: ReturnType<typeof createClient>,
   plaintext: string,
-): Promise<Uint8Array> {
+): Promise<string> {
+  const bytesToHex = (bytes: Uint8Array) => {
+    let hex = "\\x";
+    for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, "0");
+    return hex;
+  };
   const key = Deno.env.get("EMAIL_TOKEN_ENCRYPTION_KEY");
   if (!key) {
-    // Dev fallback — base64 encoded bytes; replace once secret is set.
-    return new TextEncoder().encode(plaintext);
+    // Dev fallback — store plaintext bytes as bytea hex.
+    return bytesToHex(new TextEncoder().encode(plaintext));
   }
-  // Use a SQL call via the rest API to pgp_sym_encrypt
   const { data, error } = await supabaseAdmin.rpc("encrypt_secret", {
     plaintext,
     key,
   });
   if (error) {
-    console.warn("encrypt_secret RPC missing — storing plaintext bytes", error);
-    return new TextEncoder().encode(plaintext);
+    console.warn("encrypt_secret RPC failed — storing plaintext bytes", error);
+    return bytesToHex(new TextEncoder().encode(plaintext));
   }
-  return data as Uint8Array;
+  if (typeof data === "string") {
+    return data.startsWith("\\x") ? data : bytesToHex(new TextEncoder().encode(data));
+  }
+  if (data instanceof Uint8Array) return bytesToHex(data);
+  return bytesToHex(new TextEncoder().encode(String(data)));
 }
 
 Deno.serve(async (req) => {
