@@ -127,6 +127,7 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
         open={testOpen}
         onOpenChange={setTestOpen}
         defaultStepId={previewStep?.id ?? null}
+      />
     </div>
   );
 };
