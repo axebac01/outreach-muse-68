@@ -1,27 +1,48 @@
-## Problem
+# Visa mejlstatus inne i kampanjer
 
-On the Schedule tab, clicking "Idag", "Imorgon", "Nästa måndag" or picking a date in the calendar saves correctly to the database (verified: `PATCH /sequences` returns `204` with body `{"start_at":"..."}`), but the UI keeps showing "Välj datum" — making it look like nothing happens.
+Idag finns ingen synlighet i kampanjvyn över hur många mejl som faktiskt har skickats eller vad status är per lead. All sändningsdata finns redan i `scheduled_sends` (status: `scheduled`, `sent`, `failed`, etc.) — vi behöver bara exponera den.
 
-## Root cause
+## Vad som byggs
 
-`CampaignDetails.tsx` reads the sequence via `useCampaignSequence(id)` which uses the React Query key `["campaign_sequence", campaignId]`.
+### 1. Översikt-fliken — sammanfattning
+Lägg till statistikkort ovanpå befintliga kort:
+- **Skickade mejl** (status = `sent`)
+- **Schemalagda** (status = `scheduled`, framtida `scheduled_for`)
+- **Misslyckade** (status = `failed`)
+- **Svar** (leads med `status = 'replied'`)
 
-`useUpdateSequence` (in `src/hooks/useSequence.ts`) only invalidates `["sequence", id]` and `["sequences"]` after a successful mutation. The `["campaign_sequence", ...]` cache is never invalidated, so `ScheduleTab` keeps receiving the stale `sequence` prop with `start_at = null`, and the button label / calendar selection never updates.
+### 2. Leads-fliken — per-lead status
+Utöka leads-tabellen med två nya kolumner:
+- **Status** — färgkodad badge baserad på senaste sändning för leaden:
+  - "Inte skickat" (grå) — ingen `scheduled_sends`-rad
+  - "Schemalagt" (blå) — har `scheduled` rader
+  - "Skickat" (grön) — minst ett `sent`
+  - "Misslyckades" (röd) — senaste är `failed`
+  - "Svarat" (lila) — `sequence_leads.status = 'replied'`
+- **Skickade / Totalt steg** — t.ex. "2 / 5" (antal `sent` / antal `sequence_steps`)
+- **Senaste aktivitet** — tidsstämpel (`sent_at` eller `scheduled_for`)
 
-The same staleness affects every other field edited from the Schedule, Senders and other tabs (timezone, sending window, days, pause_on_reply, etc.) — they all persist but only appear after a hard reload.
+Tabellen får också ett enkelt status-filter ovanför (Alla / Skickat / Schemalagt / Misslyckades / Inte skickat).
 
-## Fix
+## Tekniska detaljer
 
-In `src/hooks/useUpdateSequence` (`src/hooks/useSequence.ts`), also invalidate the `campaign_sequence` query in `onSuccess`:
+**Ny hook** `useSequenceSendStats(sequenceId)` i `src/hooks/useSequence.ts`:
+- Hämtar alla `scheduled_sends` för sekvensen i en query
+- Hämtar antal `sequence_steps` för "X / Y"-räknaren
+- Returnerar:
+  - `summary`: `{ sent, scheduled, failed, replied }` (för Översikt)
+  - `byLeadId`: `Map<leadId, { sent, total, lastStatus, lastAt }>` (för Leads-tabellen)
 
-```ts
-qc.invalidateQueries({ queryKey: ["sequence", id] });
-qc.invalidateQueries({ queryKey: ["sequences"] });
-qc.invalidateQueries({ queryKey: ["campaign_sequence"] });
-```
+Genom att aggregera klientsidan slipper vi nya RPC:er. `scheduled_sends` har redan rätt RLS (user_id = auth.uid).
 
-That's the only change needed — one line in one file. After this, picking "Idag" or any date will immediately update the button label and calendar highlight.
+**Filer som ändras:**
+- `src/hooks/useSequence.ts` — ny hook
+- `src/components/campaign/OverviewTab.tsx` — fyra nya stat-kort
+- `src/components/campaign/LeadsTab.tsx` — nya kolumner + filter
 
-## Out of scope
+Inga DB-ändringar behövs.
 
-No DB, RLS, or component changes. The Calendar / Popover already work correctly; the bug is purely a stale React Query cache.
+## Utanför scope
+- Klick/öppning-tracking per mejl (kräver ny pixel-data)
+- Detaljerad timeline per lead (kan läggas till senare som expanderbar rad)
+- Export
