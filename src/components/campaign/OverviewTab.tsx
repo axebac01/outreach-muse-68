@@ -3,13 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Target, Package, Gift, MessageSquare } from "lucide-react";
-import { useUpdateCampaign } from "@/hooks/useCampaigns";
+import { Target, Package, Gift, MessageSquare, Send, Clock, AlertTriangle, MessageCircle } from "lucide-react";
+import { useUpdateCampaign, useCampaignSequence } from "@/hooks/useCampaigns";
+import { useSequenceSendStats } from "@/hooks/useSequence";
 import { useRef } from "react";
 
 interface Props {
   campaign: any;
   sequenceStatus: string;
+  sequenceId: string;
   leadCount: number;
 }
 
@@ -20,14 +22,17 @@ const STATUS_LABEL: Record<string, string> = {
   completed: "Slutförd",
 };
 
-export const OverviewTab = ({ campaign, sequenceStatus, leadCount }: Props) => {
+export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }: Props) => {
   const update = useUpdateCampaign(campaign.id);
+  const { data: stats } = useSequenceSendStats(sequenceId);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const queueSave = (patch: Record<string, any>) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => update.mutate(patch), 500);
   };
+
+  const s = stats?.summary ?? { sent: 0, scheduled: 0, failed: 0, replied: 0 };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -40,20 +45,35 @@ export const OverviewTab = ({ campaign, sequenceStatus, leadCount }: Props) => {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Leads</div>
-          <div className="text-2xl font-semibold">{leadCount}</div>
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5"><Send className="h-3.5 w-3.5" /> Skickade mejl</div>
+          <div className="text-2xl font-semibold">{s.sent}</div>
         </div>
         <div className="rounded-xl border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Status</div>
-          <div className="text-sm font-medium pt-1">{STATUS_LABEL[sequenceStatus] ?? sequenceStatus}</div>
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Schemalagda</div>
+          <div className="text-2xl font-semibold">{s.scheduled}</div>
+        </div>
+        <div className="rounded-xl border bg-card p-4">
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5" /> Misslyckade</div>
+          <div className="text-2xl font-semibold">{s.failed}</div>
+        </div>
+        <div className="rounded-xl border bg-card p-4">
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Svar</div>
+          <div className="text-2xl font-semibold">{s.replied}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl border bg-card p-4">
+          <div className="text-xs text-muted-foreground">Leads</div>
+          <div className="text-sm font-medium pt-1">{leadCount}</div>
         </div>
         <div className="rounded-xl border bg-card p-4">
           <div className="text-xs text-muted-foreground">Skapad</div>
           <div className="text-sm font-medium pt-1">{new Date(campaign.created_at).toLocaleDateString()}</div>
         </div>
         <div className="rounded-xl border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Senast uppdaterad</div>
-          <div className="text-sm font-medium pt-1">{new Date(campaign.created_at).toLocaleDateString()}</div>
+          <div className="text-xs text-muted-foreground">Status</div>
+          <div className="text-sm font-medium pt-1">{STATUS_LABEL[sequenceStatus] ?? sequenceStatus}</div>
         </div>
       </div>
 

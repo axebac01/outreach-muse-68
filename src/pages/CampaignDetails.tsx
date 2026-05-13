@@ -86,7 +86,7 @@ const CampaignDetails = () => {
 
       <div className="container py-8">
         <Tabs value={activeTab} onValueChange={setTab}>
-          <TabsContent value="overview"><OverviewTab campaign={campaign} sequenceStatus={sequence.status} leadCount={leads.length} /></TabsContent>
+          <TabsContent value="overview"><OverviewTab campaign={campaign} sequenceStatus={sequence.status} sequenceId={sequence.id} leadCount={leads.length} /></TabsContent>
           <TabsContent value="leads"><LeadsTab sequenceId={sequence.id} /></TabsContent>
           <TabsContent value="sequence"><SequenceTab sequenceId={sequence.id} /></TabsContent>
           <TabsContent value="schedule"><ScheduleTab sequence={sequence as any} /></TabsContent>

@@ -124,6 +124,80 @@ export const useDeleteSequence = () => {
   });
 };
 
+// ---------- Send stats ----------
+export type LeadSendStat = {
+  sent: number;
+  scheduled: number;
+  failed: number;
+  total: number;
+  lastStatus: string | null;
+  lastAt: string | null;
+};
+
+export const useSequenceSendStats = (sequenceId: string | undefined) => {
+  return useQuery({
+    queryKey: ["sequence_send_stats", sequenceId],
+    queryFn: async () => {
+      const [sendsRes, stepsRes, leadsRes] = await Promise.all([
+        supabase
+          .from("scheduled_sends")
+          .select("id, lead_id, status, scheduled_for, updated_at")
+          .eq("sequence_id", sequenceId!),
+        supabase
+          .from("sequence_steps")
+          .select("id", { count: "exact", head: true })
+          .eq("sequence_id", sequenceId!),
+        supabase
+          .from("sequence_leads")
+          .select("id, status")
+          .eq("sequence_id", sequenceId!),
+      ]);
+      if (sendsRes.error) throw sendsRes.error;
+      if (stepsRes.error) throw stepsRes.error;
+      if (leadsRes.error) throw leadsRes.error;
+
+      const sends = sendsRes.data ?? [];
+      const totalSteps = stepsRes.count ?? 0;
+      const leads = leadsRes.data ?? [];
+
+      const summary = { sent: 0, scheduled: 0, failed: 0, replied: 0 };
+      const byLeadId = new Map<string, LeadSendStat>();
+
+      for (const s of sends) {
+        if (s.status === "sent") summary.sent++;
+        else if (s.status === "scheduled") summary.scheduled++;
+        else if (s.status === "failed") summary.failed++;
+
+        const cur = byLeadId.get(s.lead_id) ?? {
+          sent: 0,
+          scheduled: 0,
+          failed: 0,
+          total: totalSteps,
+          lastStatus: null as string | null,
+          lastAt: null as string | null,
+        };
+        if (s.status === "sent") cur.sent++;
+        else if (s.status === "scheduled") cur.scheduled++;
+        else if (s.status === "failed") cur.failed++;
+
+        const ts = s.updated_at ?? s.scheduled_for;
+        if (!cur.lastAt || (ts && ts > cur.lastAt)) {
+          cur.lastAt = ts;
+          cur.lastStatus = s.status;
+        }
+        byLeadId.set(s.lead_id, cur);
+      }
+
+      for (const l of leads) {
+        if (l.status === "replied") summary.replied++;
+      }
+
+      return { summary, byLeadId, totalSteps };
+    },
+    enabled: !!sequenceId,
+  });
+};
+
 // ---------- Leads ----------
 export const useSequenceLeads = (sequenceId: string | undefined) => {
   return useQuery({
