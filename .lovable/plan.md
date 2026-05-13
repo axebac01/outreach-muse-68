@@ -1,41 +1,58 @@
 ## Mål
-Göra "Sparar… / Sparat ✓"-indikatorn konsekvent i hela appen och förbättra robustheten kring autosave.
+Visa autosave-bekräftelser som små toast-badges nere till höger, med tydligt namn på vad som sparades, utan att det blir spammigt.
 
-## Var den ska in (consistency)
+## Approach
 
-Indikatorn finns idag bara i kampanjheadern. Flytta den till **`src/components/Layout.tsx`** (i toppraden, t.ex. höger om logotypen/navigationen) så att den syns globalt på alla sidor. Tas bort från `CampaignDetails.tsx` för att undvika dubbelt.
+Byt ut den globala "Sparar/Sparat"-indikatorn i navbaren mot **sonner-toasts** positionerade `bottom-right`. Varje autosave-mutation taggas med en **etikett** ("Schema", "Sekvenssteg 1", "Profil"…) som visas i toasten.
 
-Koppla `saveStatusStore` till alla mutationer som triggas implicit (utan egen "Spara"-knapp), eftersom det är där osäkerheten finns:
+### Anti-spam-strategi (viktigast)
 
-| Hook | Mutation | Var i UI |
-|---|---|---|
-| `useProfile.ts` | `useUpdateProfile` | Settings (namn, företag) |
-| `useEmailAccounts.ts` | `useUpdateEmailAccount` | EmailAccounts (toggle aktiv, daily limit, signature) |
-| `useSendingLimits.ts` | update-mutation | EmailAccounts/Settings |
-| `useInbound.ts` | (om inline-redigering finns) | TrackingSettings |
+1. **Stabilt toast-id per etikett** — `id: "save:<label>"`. När samma fält sparas flera gånger i rad uppdateras samma toast istället för att stapla nya.
+2. **Loading → success-övergång** på samma id: medan debouncen pågår visas "Sparar …", som flippar till "Sparat: …" när skrivningen lyckas. Inga mellanliggande toasts.
+3. **Kort `duration`** (1500 ms) på success-toasten så de försvinner snabbt.
+4. **Ingen toast för triviala mutationer** som har egna explicita feedbacks (skapa kampanj, ta bort lead, skicka test etc.) — vi använder bara denna för **autosave-mutationer**.
 
-**Skippas avsiktligt** (de har egna explicit success/fel-toasts eller dialog-confirm): `useCreateCampaign`, `useDeleteCampaign`, `useDeleteSequenceLead`, `useAddSequenceLeads`, `useCreate/RevokeApiKey`, `useCreate/DeleteTrackingSite`, send-test-email m.fl. Dubbla notifikationer blir störande.
+## Implementation
 
-## Förbättringar
+### 1. `withSaveStatus` får `label`-argument
+`src/hooks/useSaveStatus.ts`:
+```ts
+withSaveStatus({ label: "Schema", mutationFn, onSuccess })
+```
+Internt:
+- `onMutate` → `toast.loading("Sparar " + label, { id: "save:" + label })`
+- `onSuccess` → `toast.success("Sparat: " + label, { id: "save:" + label, duration: 1500 })`
+- `onError` → `toast.error("Kunde inte spara " + label, { id: "save:" + label, description: err.message, duration: 5000 })`
 
-1. **Helper `withSaveStatus(options)`** i `useSaveStatus.ts` som lindar in `onMutate/onSuccess/onError` automatiskt — minskar boilerplate och säkrar att inget glöms:
-   ```ts
-   useMutation(withSaveStatus({ mutationFn, onSuccess: ... }))
-   ```
+Behåller pendingCount för `useUnsavedChangesGuard` (beforeunload-skydd).
 
-2. **Dedupera felmeddelanden** — om flera autosaves failar samtidigt visa bara en toast (`toast.error(..., { id: "save-error" })`).
+### 2. Sätt etiketter per mutation
+| Hook | label |
+|---|---|
+| `useUpdateCampaign` | "Kampanj" |
+| `useUpdateSequence` | "Sekvensinställningar" |
+| `useUpsertStep` | "Sekvenssteg" |
+| `useToggleSender` | "Avsändare" |
+| `useUpdateProfile` | "Profil" |
+| `useUpdateEmailAccount` | "E-postkonto" |
+| `useUpdateSendingLimit` | "Sändningsgränser" |
 
-3. **`beforeunload`-skydd** — om `status === "saving"` när användaren försöker stänga fliken, visa webbläsarens "Är du säker?"-prompt så inga ändringar tappas.
+För mutationer där ett mer specifikt namn är värdefullt (sekvenssteg har t.ex. `step_order`), tillåts `label` vara en funktion av mutationens variabler:
+```ts
+withSaveStatus({ label: (vars) => `Sekvenssteg ${vars.step_order}`, ... })
+```
 
-4. **Klick-att-försöka-igen** — vid fel-status, gör indikatorn klickbar och invalidera/refetcha senaste mutation. Enkel variant: visa "Försök igen" som länk i toasten.
+### 3. Toaster-konfiguration
+`src/App.tsx` — sätt `<Sonner position="bottom-right" />` (default är top-right för shadcn-mallen). Ingen annan styling behövs, sonner-toasterna använder redan design-tokens.
 
-5. **Tillgänglighet** — indikatorn har redan `role="status" aria-live="polite"`, behåll. Lägg till `prefers-reduced-motion` så loader-spinnern inte snurrar för användare med rörelseaversion.
+### 4. Ta bort navbar-indikatorn
+`src/components/Navbar.tsx` — ta bort `<SaveStatusIndicator />` och importen. Komponentfilen kan ligga kvar oanvänd (ev. radera).
 
 ## Filer som ändras
-- `src/hooks/useSaveStatus.ts` — lägg till `withSaveStatus` helper, deduperad error-toast, reduced-motion-flagga
-- `src/components/Layout.tsx` — rendera global `<SaveStatusIndicator />` + `beforeunload`-listener
-- `src/pages/CampaignDetails.tsx` — ta bort lokala indikatorn
-- `src/hooks/useCampaigns.ts`, `useSequence.ts` — refaktorera till `withSaveStatus(...)`
-- `src/hooks/useProfile.ts`, `useEmailAccounts.ts`, `useSendingLimits.ts` — koppla in `withSaveStatus(...)` på update-mutationerna
+- `src/hooks/useSaveStatus.ts` — `label`-stöd, byt indikator-store mot sonner-anrop, behåll beforeunload
+- `src/App.tsx` — `position="bottom-right"` på `<Sonner />`
+- `src/components/Navbar.tsx` — ta bort indikatorn
+- `src/components/SaveStatusIndicator.tsx` — radera (oanvänd)
+- `src/hooks/useCampaigns.ts`, `useSequence.ts`, `useProfile.ts`, `useEmailAccounts.ts`, `useSendingLimits.ts` — lägg till `label` i varje `withSaveStatus(...)`-anrop
 
 Inga DB- eller backendändringar.

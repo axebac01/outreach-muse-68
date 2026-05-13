@@ -42,6 +42,7 @@ export const useEmailAccounts = () => {
 export const useUpdateEmailAccount = () => {
   const qc = useQueryClient();
   return useMutation(withSaveStatus({
+    label: "E-postkonto",
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<EmailAccount, "signature" | "sender_name">> }) => {
       const { error } = await supabase
         .from("email_accounts")

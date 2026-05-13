@@ -8,7 +8,6 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { SaveStatusIndicator } from "./SaveStatusIndicator";
 import { useUnsavedChangesGuard } from "@/hooks/useSaveStatus";
 
 const Navbar = () => {
@@ -101,7 +100,6 @@ const Navbar = () => {
             <Button variant="ghost" asChild><Link to="/email-accounts">{t("nav.emailAccounts")}</Link></Button>
             <Button variant="ghost" asChild><Link to="/analytics">{t("nav.analytics")}</Link></Button>
             <div className="w-px h-5 bg-border mx-1" />
-            <SaveStatusIndicator className="mx-2" />
             <Button variant="ghost" size="icon" asChild>
               <Link to="/settings"><Settings className="h-4 w-4" /></Link>
             </Button>
