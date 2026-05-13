@@ -26,7 +26,7 @@ export function withSaveStatus<TVars, TOptions extends {
 }>(options: TOptions & { label: LabelArg<TVars> }): TOptions {
   const { label, ...rest } = options;
   return {
-    ...(rest as TOptions),
+    ...(rest as unknown as TOptions),
     onMutate: (vars: TVars) => {
       pendingCount++;
       const l = resolveLabel(label, vars);
