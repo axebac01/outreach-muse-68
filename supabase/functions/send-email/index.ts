@@ -384,9 +384,9 @@ Deno.serve(async (req) => {
         });
         try {
           const result = await client.send({
-            from: fromAddr,
+            from: encodeAddress(fromAddr),
             to,
-            subject,
+            subject: encodeMimeWord(subject),
             content: finalBody.text || "",
             html: finalBody.html || undefined,
             inReplyTo: in_reply_to || undefined,
