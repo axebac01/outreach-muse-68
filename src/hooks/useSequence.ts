@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { saveStatusStore } from "./useSaveStatus";
+
+const saveStatusCallbacks = {
+  onMutate: () => saveStatusStore.begin(),
+  onError: (err: any) => {
+    saveStatusStore.error();
+    toast.error("Kunde inte spara ändringen", { description: err?.message });
+  },
+};
 
 export type Sequence = {
   id: string;
@@ -105,7 +115,10 @@ export const useUpdateSequence = (id: string) => {
       const { error } = await supabase.from("sequences").update(patch).eq("id", id);
       if (error) throw error;
     },
+    onMutate: saveStatusCallbacks.onMutate,
+    onError: saveStatusCallbacks.onError,
     onSuccess: () => {
+      saveStatusStore.success();
       qc.invalidateQueries({ queryKey: ["sequence", id] });
       qc.invalidateQueries({ queryKey: ["sequences"] });
       qc.invalidateQueries({ queryKey: ["campaign_sequence"] });
@@ -297,7 +310,12 @@ export const useUpsertStep = (sequenceId: string) => {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sequence_steps", sequenceId] }),
+    onMutate: saveStatusCallbacks.onMutate,
+    onError: saveStatusCallbacks.onError,
+    onSuccess: () => {
+      saveStatusStore.success();
+      qc.invalidateQueries({ queryKey: ["sequence_steps", sequenceId] });
+    },
   });
 };
 
@@ -347,6 +365,11 @@ export const useToggleSender = (sequenceId: string) => {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sequence_senders", sequenceId] }),
+    onMutate: saveStatusCallbacks.onMutate,
+    onError: saveStatusCallbacks.onError,
+    onSuccess: () => {
+      saveStatusStore.success();
+      qc.invalidateQueries({ queryKey: ["sequence_senders", sequenceId] });
+    },
   });
 };
