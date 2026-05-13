@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { withSaveStatus } from "./useSaveStatus";
 
 export const useProfile = () => {
   const { user } = useAuth();
@@ -24,7 +25,7 @@ export const useUpdateProfile = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation(withSaveStatus({
     mutationFn: async (updates: { full_name: string }) => {
       const { data, error } = await supabase
         .from("profiles")
@@ -38,5 +39,5 @@ export const useUpdateProfile = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
-  });
+  }));
 };

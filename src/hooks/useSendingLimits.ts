@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { withSaveStatus } from "./useSaveStatus";
 
 export interface SendingLimit {
   id: string;
@@ -52,7 +53,7 @@ export function useSentToday() {
 export function useUpdateSendingLimit() {
   const qc = useQueryClient();
   const { user } = useAuth();
-  return useMutation({
+  return useMutation(withSaveStatus({
     mutationFn: async (vars: { email_account_id: string; warmup_enabled?: boolean; daily_cap_override?: number | null }) => {
       const { email_account_id, ...rest } = vars;
       const { data: existing } = await supabase
@@ -71,7 +72,7 @@ export function useUpdateSendingLimit() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sending_limits"] }),
-  });
+  }));
 }
 
 export function effectiveCap(limit: SendingLimit | undefined, accountCreatedAt: string, fallback = 25): { cap: number; warmupDay: number | null } {
