@@ -127,15 +127,6 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
         open={testOpen}
         onOpenChange={setTestOpen}
         defaultStepId={previewStep?.id ?? null}
-      />
-      </div>
-
-      <AiWriteSequenceDialog
-        sequenceId={sequenceId}
-        hasExistingContent={steps.some((s) => (s.subject?.trim() || s.body?.trim()))}
-        open={aiOpen}
-        onOpenChange={setAiOpen}
-      />
     </div>
   );
 };
