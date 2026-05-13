@@ -1,16 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { saveStatusStore } from "./useSaveStatus";
-
-const saveStatusCallbacks = {
-  onMutate: () => saveStatusStore.begin(),
-  onError: (err: any) => {
-    saveStatusStore.error();
-    toast.error("Kunde inte spara ändringen", { description: err?.message });
-  },
-};
+import { withSaveStatus } from "./useSaveStatus";
 
 export type Sequence = {
   id: string;
@@ -110,20 +101,17 @@ export const useCreateSequence = () => {
 
 export const useUpdateSequence = (id: string) => {
   const qc = useQueryClient();
-  return useMutation({
+  return useMutation(withSaveStatus({
     mutationFn: async (patch: Partial<Sequence>) => {
       const { error } = await supabase.from("sequences").update(patch).eq("id", id);
       if (error) throw error;
     },
-    onMutate: saveStatusCallbacks.onMutate,
-    onError: saveStatusCallbacks.onError,
     onSuccess: () => {
-      saveStatusStore.success();
       qc.invalidateQueries({ queryKey: ["sequence", id] });
       qc.invalidateQueries({ queryKey: ["sequences"] });
       qc.invalidateQueries({ queryKey: ["campaign_sequence"] });
     },
-  });
+  }));
 };
 
 export const useDeleteSequence = () => {
@@ -286,7 +274,7 @@ export const useSequenceSteps = (sequenceId: string | undefined) => {
 export const useUpsertStep = (sequenceId: string) => {
   const qc = useQueryClient();
   const { user } = useAuth();
-  return useMutation({
+  return useMutation(withSaveStatus({
     mutationFn: async (step: Partial<SequenceStep> & { step_order: number }) => {
       if (step.id) {
         const { error } = await supabase
@@ -310,13 +298,10 @@ export const useUpsertStep = (sequenceId: string) => {
         if (error) throw error;
       }
     },
-    onMutate: saveStatusCallbacks.onMutate,
-    onError: saveStatusCallbacks.onError,
     onSuccess: () => {
-      saveStatusStore.success();
       qc.invalidateQueries({ queryKey: ["sequence_steps", sequenceId] });
     },
-  });
+  }));
 };
 
 export const useDeleteStep = (sequenceId: string) => {
@@ -349,7 +334,7 @@ export const useSequenceSenders = (sequenceId: string | undefined) => {
 export const useToggleSender = (sequenceId: string) => {
   const qc = useQueryClient();
   const { user } = useAuth();
-  return useMutation({
+  return useMutation(withSaveStatus({
     mutationFn: async ({ accountId, enabled }: { accountId: string; enabled: boolean }) => {
       if (enabled) {
         const { error } = await supabase
@@ -365,11 +350,8 @@ export const useToggleSender = (sequenceId: string) => {
         if (error) throw error;
       }
     },
-    onMutate: saveStatusCallbacks.onMutate,
-    onError: saveStatusCallbacks.onError,
     onSuccess: () => {
-      saveStatusStore.success();
       qc.invalidateQueries({ queryKey: ["sequence_senders", sequenceId] });
     },
-  });
+  }));
 };

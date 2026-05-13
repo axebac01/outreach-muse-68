@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { withSaveStatus } from "./useSaveStatus";
 
 export type EmailAccount = {
   id: string;
@@ -40,7 +41,7 @@ export const useEmailAccounts = () => {
 
 export const useUpdateEmailAccount = () => {
   const qc = useQueryClient();
-  return useMutation({
+  return useMutation(withSaveStatus({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<EmailAccount, "signature" | "sender_name">> }) => {
       const { error } = await supabase
         .from("email_accounts")
@@ -49,7 +50,7 @@ export const useUpdateEmailAccount = () => {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["email_accounts"] }),
-  });
+  }));
 };
 
 export const useDeleteEmailAccount = () => {
