@@ -54,6 +54,7 @@ export function useUpdateSendingLimit() {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation(withSaveStatus({
+    label: "Sändningsgränser",
     mutationFn: async (vars: { email_account_id: string; warmup_enabled?: boolean; daily_cap_override?: number | null }) => {
       const { email_account_id, ...rest } = vars;
       const { data: existing } = await supabase

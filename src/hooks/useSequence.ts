@@ -102,6 +102,7 @@ export const useCreateSequence = () => {
 export const useUpdateSequence = (id: string) => {
   const qc = useQueryClient();
   return useMutation(withSaveStatus({
+    label: "Sekvensinställningar",
     mutationFn: async (patch: Partial<Sequence>) => {
       const { error } = await supabase.from("sequences").update(patch).eq("id", id);
       if (error) throw error;
@@ -275,6 +276,7 @@ export const useUpsertStep = (sequenceId: string) => {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation(withSaveStatus({
+    label: (step: Partial<SequenceStep> & { step_order: number }) => `Sekvenssteg ${step.step_order + 1}`,
     mutationFn: async (step: Partial<SequenceStep> & { step_order: number }) => {
       if (step.id) {
         const { error } = await supabase
@@ -335,6 +337,7 @@ export const useToggleSender = (sequenceId: string) => {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation(withSaveStatus({
+    label: "Avsändare",
     mutationFn: async ({ accountId, enabled }: { accountId: string; enabled: boolean }) => {
       if (enabled) {
         const { error } = await supabase

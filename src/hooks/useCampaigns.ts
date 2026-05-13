@@ -125,6 +125,7 @@ export const useCreateCampaign = () => {
 export const useUpdateCampaign = (id: string) => {
   const queryClient = useQueryClient();
   return useMutation(withSaveStatus({
+    label: "Kampanj",
     mutationFn: async (patch: Record<string, any>) => {
       const { error } = await supabase.from("campaigns").update(patch as any).eq("id", id);
       if (error) throw error;
