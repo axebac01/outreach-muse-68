@@ -44,9 +44,9 @@ function buildRfc2822(opts: {
 }): string {
   const boundary = "boundary_" + crypto.randomUUID().replace(/-/g, "");
   const headers: string[] = [
-    `From: ${opts.from}`,
+    `From: ${encodeAddress(opts.from)}`,
     `To: ${opts.to}`,
-    `Subject: ${opts.subject}`,
+    `Subject: ${encodeMimeWord(opts.subject)}`,
     "MIME-Version: 1.0",
   ];
   if (opts.extraHeaders) headers.push(...opts.extraHeaders);
