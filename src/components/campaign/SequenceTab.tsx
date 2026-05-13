@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Send } from "lucide-react";
 import {
   useSequenceSteps,
   useUpsertStep,
@@ -8,8 +8,9 @@ import {
   useSequenceLeads,
 } from "@/hooks/useSequence";
 import { SequenceStepCard } from "@/components/sequence/SequenceStepCard";
-import { EmailPreview } from "@/components/sequence/EmailPreview";
+import { EmailPreview, type PreviewLead } from "@/components/sequence/EmailPreview";
 import { AiWriteSequenceDialog } from "./AiWriteSequenceDialog";
+import { SendTestEmailDialog } from "./SendTestEmailDialog";
 
 export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
   const { data: steps = [] } = useSequenceSteps(sequenceId);
@@ -19,6 +20,27 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [aiOpen, setAiOpen] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
+  const [previewLeadId, setPreviewLeadId] = useState<string | null>(null);
+
+  const leadOptions: PreviewLead[] = useMemo(
+    () =>
+      leads.map((l) => ({
+        id: l.id,
+        label: l.full_name || l.email,
+        email: l.email,
+        full_name: l.full_name,
+        first_name: l.first_name,
+        last_name: l.last_name,
+        company: l.company,
+        role: l.role,
+        phone: l.phone,
+      })),
+    [leads],
+  );
+  const selectedPreviewLead = previewLeadId
+    ? leadOptions.find((l) => l.id === previewLeadId) ?? null
+    : leadOptions[0] ?? null;
 
   // Säkerställ att första steget existerar
   useEffect(() => {
