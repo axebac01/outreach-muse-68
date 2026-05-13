@@ -3,8 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Target, Package, Gift, MessageSquare } from "lucide-react";
-import { useUpdateCampaign } from "@/hooks/useCampaigns";
+import { Target, Package, Gift, MessageSquare, Send, Clock, AlertTriangle, MessageCircle } from "lucide-react";
+import { useUpdateCampaign, useCampaignSequence } from "@/hooks/useCampaigns";
+import { useSequenceSendStats } from "@/hooks/useSequence";
 import { useRef } from "react";
 
 interface Props {
