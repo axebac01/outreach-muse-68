@@ -1,88 +1,53 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 
-export type SaveStatus = "idle" | "saving" | "saved" | "error";
-
 let pendingCount = 0;
-let status: SaveStatus = "idle";
-let savedTimer: ReturnType<typeof setTimeout> | null = null;
-const listeners = new Set<() => void>();
 
-const emit = () => listeners.forEach((l) => l());
+type LabelArg<TVars> = string | ((vars: TVars) => string);
 
-const setStatus = (s: SaveStatus) => {
-  status = s;
-  emit();
-};
+const resolveLabel = <T,>(label: LabelArg<T>, vars: T): string =>
+  typeof label === "function" ? (label as (v: T) => string)(vars) : label;
 
-export const saveStatusStore = {
-  begin() {
-    pendingCount++;
-    if (savedTimer) {
-      clearTimeout(savedTimer);
-      savedTimer = null;
-    }
-    setStatus("saving");
-  },
-  success() {
-    pendingCount = Math.max(0, pendingCount - 1);
-    if (pendingCount === 0) {
-      setStatus("saved");
-      if (savedTimer) clearTimeout(savedTimer);
-      savedTimer = setTimeout(() => {
-        if (pendingCount === 0 && status === "saved") setStatus("idle");
-      }, 2000);
-    }
-  },
-  error(message?: string) {
-    pendingCount = Math.max(0, pendingCount - 1);
-    setStatus("error");
-    // Dedupera: samma toast-id överskrivs istället för att stapla
-    toast.error("Kunde inte spara ändringen", {
-      id: "save-status-error",
-      description: message,
-    });
-    if (savedTimer) clearTimeout(savedTimer);
-    savedTimer = setTimeout(() => {
-      if (status === "error") setStatus("idle");
-    }, 4000);
-  },
-  isSaving() {
-    return pendingCount > 0;
-  },
-};
-
-const subscribe = (l: () => void) => {
-  listeners.add(l);
-  return () => listeners.delete(l);
-};
-
-export const useSaveStatus = (): SaveStatus =>
-  useSyncExternalStore(subscribe, () => status, () => status);
+const toastId = (label: string) => `save:${label}`;
 
 /**
- * Wrap mutation options to automatically report progress to the global
- * save-status store. Preserves any user-provided onMutate/onSuccess/onError.
+ * Wrap mutation options so autosave-mutations show a single, deduplicated
+ * sonner toast (bottom-right) describing what was saved.
+ *
+ * Anti-spam:
+ * - Stable id per label so consecutive saves to the same field reuse the same toast.
+ * - loading → success/error transitions on the same id, no stacking.
  */
-export function withSaveStatus<TOptions extends {
-  onMutate?: (...args: any[]) => any;
+export function withSaveStatus<TVars, TOptions extends {
+  mutationFn: (vars: TVars) => Promise<any>;
+  onMutate?: (vars: TVars) => any;
   onSuccess?: (...args: any[]) => any;
   onError?: (...args: any[]) => any;
-}>(options: TOptions): TOptions {
+}>(options: TOptions & { label: LabelArg<TVars> }): TOptions {
+  const { label, ...rest } = options;
   return {
-    ...options,
-    onMutate: (...args: any[]) => {
-      saveStatusStore.begin();
-      return options.onMutate?.(...args);
+    ...(rest as TOptions),
+    onMutate: (vars: TVars) => {
+      pendingCount++;
+      const l = resolveLabel(label, vars);
+      toast.loading(`Sparar ${l.toLowerCase()}…`, { id: toastId(l) });
+      return options.onMutate?.(vars);
     },
-    onSuccess: (...args: any[]) => {
-      saveStatusStore.success();
-      return options.onSuccess?.(...args);
+    onSuccess: (data: any, vars: TVars, ctx: any) => {
+      pendingCount = Math.max(0, pendingCount - 1);
+      const l = resolveLabel(label, vars);
+      toast.success(`${l} sparat`, { id: toastId(l), duration: 1500 });
+      return options.onSuccess?.(data, vars, ctx);
     },
-    onError: (...args: any[]) => {
-      const err = args[0];
-      saveStatusStore.error(err?.message);
-      return options.onError?.(...args);
+    onError: (err: any, vars: TVars, ctx: any) => {
+      pendingCount = Math.max(0, pendingCount - 1);
+      const l = resolveLabel(label, vars);
+      toast.error(`Kunde inte spara ${l.toLowerCase()}`, {
+        id: toastId(l),
+        description: err?.message,
+        duration: 5000,
+      });
+      return options.onError?.(err, vars, ctx);
     },
   };
 }
@@ -94,7 +59,7 @@ export function withSaveStatus<TOptions extends {
 export const useUnsavedChangesGuard = () => {
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (saveStatusStore.isSaving()) {
+      if (pendingCount > 0) {
         e.preventDefault();
         e.returnValue = "";
       }
