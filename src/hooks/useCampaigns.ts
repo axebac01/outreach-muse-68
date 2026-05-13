@@ -124,22 +124,16 @@ export const useCreateCampaign = () => {
 
 export const useUpdateCampaign = (id: string) => {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useMutation(withSaveStatus({
     mutationFn: async (patch: Record<string, any>) => {
       const { error } = await supabase.from("campaigns").update(patch as any).eq("id", id);
       if (error) throw error;
     },
-    onMutate: () => saveStatusStore.begin(),
     onSuccess: () => {
-      saveStatusStore.success();
       queryClient.invalidateQueries({ queryKey: ["campaign", id] });
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
     },
-    onError: (err: any) => {
-      saveStatusStore.error();
-      toast.error("Kunde inte spara ändringen", { description: err?.message });
-    },
-  });
+  }));
 };
 
 export const useDeleteCampaign = () => {
