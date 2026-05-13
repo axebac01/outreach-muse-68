@@ -12,7 +12,6 @@ import { LeadsTab } from "@/components/campaign/LeadsTab";
 import { SequenceTab } from "@/components/campaign/SequenceTab";
 import { ScheduleTab } from "@/components/campaign/ScheduleTab";
 import { SendersTab } from "@/components/campaign/SendersTab";
-import { SaveStatusIndicator } from "@/components/SaveStatusIndicator";
 
 const TABS = ["overview", "leads", "sequence", "schedule", "senders"] as const;
 
@@ -72,7 +71,6 @@ const CampaignDetails = () => {
               onChange={(e) => handleNameChange(e.target.value)}
               className="text-lg font-semibold border-none shadow-none px-2 focus-visible:ring-1 max-w-md"
             />
-            <SaveStatusIndicator className="ml-1" />
           </div>
           <Tabs value={activeTab} onValueChange={setTab}>
             <TabsList>
