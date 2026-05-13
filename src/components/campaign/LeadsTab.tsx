@@ -19,10 +19,31 @@ import {
 } from "@/hooks/useSequence";
 import { CsvColumnMapper } from "@/components/CsvColumnMapper";
 
+type LeadStatusFilter = "all" | "sent" | "scheduled" | "failed" | "none" | "replied";
+
+const STATUS_META: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  sent: { label: "Skickat", variant: "default" },
+  scheduled: { label: "Schemalagt", variant: "secondary" },
+  failed: { label: "Misslyckades", variant: "destructive" },
+  replied: { label: "Svarat", variant: "default" },
+  none: { label: "Inte skickat", variant: "outline" },
+};
+
+const deriveStatus = (leadStatus: string, stat?: LeadSendStat): keyof typeof STATUS_META => {
+  if (leadStatus === "replied") return "replied";
+  if (!stat) return "none";
+  if (stat.lastStatus === "failed") return "failed";
+  if (stat.sent > 0) return "sent";
+  if (stat.scheduled > 0) return "scheduled";
+  return "none";
+};
+
 export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const { data: leads = [] } = useSequenceLeads(sequenceId);
+  const { data: stats } = useSequenceSendStats(sequenceId);
   const addLeads = useAddSequenceLeads(sequenceId);
   const deleteLead = useDeleteSequenceLead(sequenceId);
+  const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("all");
 
   const [parsedHeaders, setParsedHeaders] = useState<string[]>([]);
   const [parsedRows, setParsedRows] = useState<Record<string, any>[]>([]);
