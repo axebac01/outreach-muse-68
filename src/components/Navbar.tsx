@@ -8,7 +8,6 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { SaveStatusIndicator } from "./SaveStatusIndicator";
 import { useUnsavedChangesGuard } from "@/hooks/useSaveStatus";
 
 const Navbar = () => {
