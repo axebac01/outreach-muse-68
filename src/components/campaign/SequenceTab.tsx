@@ -73,9 +73,14 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
             Skriv första mejlet och dina uppföljningar. Variabler som <code className="text-xs">{`{{first_name}}`}</code> personaliserar per lead.
           </p>
         </div>
-        <Button variant="outline" onClick={() => setAiOpen(true)} className="gap-2">
-          <Sparkles className="h-4 w-4 text-primary" /> Skriv med AI
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setTestOpen(true)} className="gap-2">
+            <Send className="h-4 w-4" /> Skicka test
+          </Button>
+          <Button variant="outline" onClick={() => setAiOpen(true)} className="gap-2">
+            <Sparkles className="h-4 w-4 text-primary" /> Skriv med AI
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
