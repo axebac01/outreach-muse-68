@@ -11,6 +11,7 @@ import { useRef } from "react";
 interface Props {
   campaign: any;
   sequenceStatus: string;
+  sequenceId: string;
   leadCount: number;
 }
 
