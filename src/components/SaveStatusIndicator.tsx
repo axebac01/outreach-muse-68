@@ -6,7 +6,7 @@ export const SaveStatusIndicator = ({ className }: { className?: string }) => {
   const status = useSaveStatus();
 
   if (status === "idle") {
-    return <div className={cn("h-5", className)} aria-hidden />;
+    return null;
   }
 
   const map = {
@@ -19,11 +19,11 @@ export const SaveStatusIndicator = ({ className }: { className?: string }) => {
 
   return (
     <div
-      className={cn("flex items-center gap-1.5 text-xs font-medium transition-opacity", cls, className)}
+      className={cn("flex items-center gap-1.5 text-xs font-medium", cls, className)}
       role="status"
       aria-live="polite"
     >
-      <Icon className={cn("h-3.5 w-3.5", spin && "animate-spin")} />
+      <Icon className={cn("h-3.5 w-3.5", spin && "animate-spin motion-reduce:animate-none")} />
       <span>{text}</span>
     </div>
   );
