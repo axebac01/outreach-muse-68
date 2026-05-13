@@ -107,9 +107,27 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
             subject={previewStep?.subject}
             body={previewStep?.body ?? ""}
             inheritedSubject={inheritedSubject}
-            lead={leads[0] ?? null}
+            lead={selectedPreviewLead}
+            leadOptions={leadOptions}
+            selectedLeadId={previewLeadId ?? selectedPreviewLead?.id ?? null}
+            onSelectLead={setPreviewLeadId}
           />
         </div>
+      </div>
+
+      <AiWriteSequenceDialog
+        sequenceId={sequenceId}
+        hasExistingContent={steps.some((s) => (s.subject?.trim() || s.body?.trim()))}
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+      />
+
+      <SendTestEmailDialog
+        sequenceId={sequenceId}
+        open={testOpen}
+        onOpenChange={setTestOpen}
+        defaultStepId={previewStep?.id ?? null}
+      />
       </div>
 
       <AiWriteSequenceDialog
