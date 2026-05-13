@@ -76,10 +76,31 @@ export async function verifyState(token: string): Promise<OAuthState> {
 
 // ---------- Token encryption ----------
 
+function bytesToHex(bytes: Uint8Array): string {
+  let hex = "\\x";
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, "0");
+  }
+  return hex;
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const h = hex.startsWith("\\x") ? hex.slice(2) : hex;
+  const out = new Uint8Array(h.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(h.substr(i * 2, 2), 16);
+  }
+  return out;
+}
+
+// Returns a Postgres bytea-compatible `\x...` hex string. We deliberately
+// do NOT return Uint8Array, because supabase-js will JSON.stringify a
+// Uint8Array into `{"0":..,"1":..}` when sent to PostgREST, corrupting bytea
+// columns. A `\x` hex string round-trips correctly into bytea.
 export async function encryptToken(
   admin: ReturnType<typeof createClient>,
   plaintext: string,
-): Promise<Uint8Array> {
+): Promise<string> {
   const key = Deno.env.get("EMAIL_TOKEN_ENCRYPTION_KEY");
   if (!key) throw new Error("EMAIL_TOKEN_ENCRYPTION_KEY is not configured");
   const { data, error } = await admin.rpc("encrypt_secret", {
@@ -87,37 +108,62 @@ export async function encryptToken(
     key,
   });
   if (error) throw new Error(`encrypt_secret failed: ${error.message}`);
-  // PostgREST returns bytea as a `\x...` hex string
-  if (typeof data === "string" && data.startsWith("\\x")) {
-    const hex = data.slice(2);
-    const out = new Uint8Array(hex.length / 2);
-    for (let i = 0; i < out.length; i++) {
-      out[i] = parseInt(hex.substr(i * 2, 2), 16);
-    }
-    return out;
+  if (typeof data === "string") {
+    return data.startsWith("\\x") ? data : bytesToHex(new TextEncoder().encode(data));
   }
-  return data as Uint8Array;
+  if (data instanceof Uint8Array) return bytesToHex(data);
+  throw new Error("Unexpected encrypt_secret response shape");
 }
 
 export async function decryptToken(
   admin: ReturnType<typeof createClient>,
-  ciphertext: Uint8Array | string,
+  ciphertext: Uint8Array | string | Record<string, number> | null,
 ): Promise<string> {
   const key = Deno.env.get("EMAIL_TOKEN_ENCRYPTION_KEY");
   if (!key) throw new Error("EMAIL_TOKEN_ENCRYPTION_KEY is not configured");
-  // Convert Uint8Array → \x hex string for RPC
-  let payload: string;
-  if (typeof ciphertext === "string") {
-    payload = ciphertext;
-  } else {
-    let hex = "\\x";
-    for (let i = 0; i < ciphertext.length; i++) {
-      hex += ciphertext[i].toString(16).padStart(2, "0");
-    }
-    payload = hex;
+  if (ciphertext == null) {
+    throw new Error("Missing token — please reconnect this email account");
   }
+
+  // Normalize whatever PostgREST or callers give us into raw ciphertext bytes.
+  let bytes: Uint8Array;
+  if (typeof ciphertext === "string") {
+    bytes = ciphertext.startsWith("\\x")
+      ? hexToBytes(ciphertext)
+      : new TextEncoder().encode(ciphertext);
+  } else if (ciphertext instanceof Uint8Array) {
+    bytes = ciphertext;
+  } else if (typeof ciphertext === "object") {
+    // Already JSON-deserialized Uint8Array shape: {"0":..,"1":..}
+    const obj = ciphertext as Record<string, number>;
+    const len = Object.keys(obj).length;
+    bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = obj[String(i)] ?? 0;
+  } else {
+    throw new Error("Unsupported ciphertext type");
+  }
+
+  // Legacy fix: earlier versions stored a Uint8Array via supabase-js, which
+  // was JSON.stringify'd into bytea as ASCII text like `{"0":195,"1":13,...}`.
+  // Detect that shape and reconstruct the original ciphertext bytes so
+  // pgp_sym_decrypt can read them.
+  if (bytes.length > 2 && bytes[0] === 0x7b /* '{' */) {
+    try {
+      const text = new TextDecoder().decode(bytes);
+      const obj = JSON.parse(text);
+      if (obj && typeof obj === "object" && "0" in obj) {
+        const len = Object.keys(obj).length;
+        const real = new Uint8Array(len);
+        for (let i = 0; i < len; i++) real[i] = obj[String(i)] ?? 0;
+        bytes = real;
+      }
+    } catch {
+      // not legacy JSON — fall through
+    }
+  }
+
   const { data, error } = await admin.rpc("decrypt_secret", {
-    ciphertext: payload,
+    ciphertext: bytesToHex(bytes),
     key,
   });
   if (error) throw new Error(`decrypt_secret failed: ${error.message}`);
