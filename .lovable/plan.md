@@ -1,28 +1,62 @@
-## Vad jag hittade
-- Backend ser frisk ut, så felet kommer inte från driftmiljön.
-- Dina mejlkonton finns sparade, men deras tokens ligger i fel format i databasen.
-- I stället för rå krypterad data är de sparade som JSON-liknande byteobjekt (`{"0":..., "1":...}`), vilket gör att dekrypteringen alltid kraschar i utskicksfunktionen.
-- Därför får båda kontona samma `decrypt_secret failed: Wrong key or corrupt data` även om själva kontona är korrekt anslutna.
+## Problem
 
-## Plan
-1. **Gör dekrypteringen bakåtkompatibel**
-   - Uppdatera den delade token-hanteringen så den klarar både korrekt lagrad krypterad data och det äldre felaktiga JSON-byteformatet.
-   - Samma fix ska täcka både OAuth-konton och SMTP-lösenord.
+Subject "[TEST] idé för TEST" arrived as `[TEST] idÃƒÂ© fÃƒÂ¶r TEST`. The body (which has an explicit `Content-Type: ...; charset="UTF-8"`) renders fine — only the subject is broken.
 
-2. **Självläka sparade konton**
-   - När ett konto läses och det äldre formatet upptäcks, konvertera det tillbaka till rätt binärt format och spara om kontot korrekt.
-   - Då slipper användaren normalt återansluta kontot bara för att komma runt denna bugg.
+Cause: in `supabase/functions/send-email/index.ts`, `buildRfc2822()` writes the Subject header as raw UTF-8 bytes:
 
-3. **Förbättra felhanteringen om något konto verkligen inte går att rädda**
-   - Om ett konto fortfarande inte går att dekryptera efter normalisering ska systemet markera det tydligt som att det behöver återanslutas, i stället för att bara kasta ett generiskt 502-fel.
-   - Visa ett begripligt felmeddelande i gränssnittet så det blir tydligt vad som krävs.
+```
+Subject: ${opts.subject}
+```
 
-4. **Verifiera hela flödet**
-   - Deploya uppdaterade backendfunktioner.
-   - Testa utskick med de befintliga kontona och säkerställ att testmejl går igenom utan 502-felet.
-   - Bekräfta även att synk-status och kontostatus inte längre fastnar på samma dekrypteringsfel.
+Email headers are 7-bit ASCII by definition. Non-ASCII bytes in headers must be wrapped in an RFC 2047 "encoded-word", e.g. `=?UTF-8?B?aWTDqSBmw7ZyIFRFU1Q=?=`. Without that, Gmail/Outlook treat the bytes as Latin-1, then re-encode them as UTF-8 down the chain, producing the classic double-mojibake "ÃƒÂ©" / "ÃƒÂ¶" pattern.
 
-## Tekniska detaljer
-- Trolig huvudfix ligger i de delade OAuth-/krypteringshjälparna och i mejlutskicksflödet.
-- Ingen ny datamodell verkar behövas; det här ser ut som ett serialiseringsproblem i hur krypterade bytes skrevs/lästes.
-- Om vissa poster visar sig vara genuint korrupta efter normalisering kommer de kontona behöva återanslutas, men planen är att först försöka rädda befintlig data automatiskt.
+The same issue affects the display name in the `From:` header when the user's `sender_name` contains non-ASCII (å, ä, ö, é, …).
+
+## Fix
+
+In `supabase/functions/send-email/index.ts`:
+
+1. Add a small helper:
+   ```ts
+   function encodeMimeWord(s: string): string {
+     // ASCII-only? leave as-is
+     // eslint-disable-next-line no-control-regex
+     if (/^[\x00-\x7F]*$/.test(s)) return s;
+     const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+     return `=?UTF-8?B?${b64}?=`;
+   }
+   function encodeAddress(addr: string): string {
+     // "Name <email>" → encode only Name
+     const m = addr.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+     if (m) return `${encodeMimeWord(m[1])} <${m[2]}>`;
+     return addr;
+   }
+   ```
+
+2. In `buildRfc2822`, encode the Subject and From:
+   ```ts
+   `From: ${encodeAddress(opts.from)}`,
+   `To: ${opts.to}`,
+   `Subject: ${encodeMimeWord(opts.subject)}`,
+   ```
+   (Gmail path goes through `buildRfc2822` → already covered.)
+
+3. SMTP path (`denomailer`) — denomailer is supposed to encode headers itself, but it has known gaps. To be safe, pass an already-encoded subject:
+   ```ts
+   subject: encodeMimeWord(subject),
+   from: encodeAddress(fromAddr),
+   ```
+
+4. Outlook (Graph API) path — JSON, no change needed; Graph handles UTF-8 natively.
+
+5. Strip the `[TEST] ` prefix added in `SendTestEmailDialog` so it isn't double-encoded inside the encoded-word? Not needed — `[TEST] ` is ASCII; only the non-ASCII suffix gets base64-wrapped. Encoded-words can be mixed with ASCII text in the same Subject line.
+
+## Files to change
+
+- `supabase/functions/send-email/index.ts` — add helpers, wrap Subject + From for Gmail (`buildRfc2822`) and SMTP send.
+
+No DB / frontend changes.
+
+## Verification
+
+After deploy: re-send the same test ("idé för TEST"). Subject should arrive intact in Gmail and any SMTP inbox. Existing ASCII-only subjects are unchanged (helper is a no-op for ASCII).

@@ -13,6 +13,26 @@ import {
 import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
 import { htmlToPlainText, looksLikeHtml } from "../_shared/htmlToText.ts";
 
+function encodeMimeWord(s: string): string {
+  if (!s) return s;
+  // eslint-disable-next-line no-control-regex
+  if (/^[\x00-\x7F]*$/.test(s)) return s;
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return `=?UTF-8?B?${btoa(bin)}?=`;
+}
+
+function encodeAddress(addr: string): string {
+  const m = addr.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  if (m) {
+    const name = m[1];
+    if (!name) return `<${m[2]}>`;
+    return `${encodeMimeWord(name)} <${m[2]}>`;
+  }
+  return addr;
+}
+
 function buildRfc2822(opts: {
   from: string;
   to: string;
@@ -24,9 +44,9 @@ function buildRfc2822(opts: {
 }): string {
   const boundary = "boundary_" + crypto.randomUUID().replace(/-/g, "");
   const headers: string[] = [
-    `From: ${opts.from}`,
+    `From: ${encodeAddress(opts.from)}`,
     `To: ${opts.to}`,
-    `Subject: ${opts.subject}`,
+    `Subject: ${encodeMimeWord(opts.subject)}`,
     "MIME-Version: 1.0",
   ];
   if (opts.extraHeaders) headers.push(...opts.extraHeaders);
@@ -364,9 +384,9 @@ Deno.serve(async (req) => {
         });
         try {
           const result = await client.send({
-            from: fromAddr,
+            from: encodeAddress(fromAddr),
             to,
-            subject,
+            subject: encodeMimeWord(subject),
             content: finalBody.text || "",
             html: finalBody.html || undefined,
             inReplyTo: in_reply_to || undefined,
