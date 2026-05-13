@@ -101,20 +101,17 @@ export const useCreateSequence = () => {
 
 export const useUpdateSequence = (id: string) => {
   const qc = useQueryClient();
-  return useMutation({
+  return useMutation(withSaveStatus({
     mutationFn: async (patch: Partial<Sequence>) => {
       const { error } = await supabase.from("sequences").update(patch).eq("id", id);
       if (error) throw error;
     },
-    onMutate: saveStatusCallbacks.onMutate,
-    onError: saveStatusCallbacks.onError,
     onSuccess: () => {
-      saveStatusStore.success();
       qc.invalidateQueries({ queryKey: ["sequence", id] });
       qc.invalidateQueries({ queryKey: ["sequences"] });
       qc.invalidateQueries({ queryKey: ["campaign_sequence"] });
     },
-  });
+  }));
 };
 
 export const useDeleteSequence = () => {
