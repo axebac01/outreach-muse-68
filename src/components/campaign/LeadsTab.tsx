@@ -219,8 +219,21 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
       )}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Leads ({leads.length})</CardTitle>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as LeadStatusFilter)}>
+            <SelectTrigger className="w-[180px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alla statusar</SelectItem>
+              <SelectItem value="sent">Skickat</SelectItem>
+              <SelectItem value="scheduled">Schemalagt</SelectItem>
+              <SelectItem value="failed">Misslyckades</SelectItem>
+              <SelectItem value="replied">Svarat</SelectItem>
+              <SelectItem value="none">Inte skickat</SelectItem>
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent>
           {leads.length === 0 ? (
@@ -235,24 +248,38 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                     <TableHead>E-post</TableHead>
                     <TableHead>Namn</TableHead>
                     <TableHead>Företag</TableHead>
-                    <TableHead>Roll</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Skickade</TableHead>
+                    <TableHead>Senaste aktivitet</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {leads.map((l) => (
-                    <TableRow key={l.id}>
-                      <TableCell className="text-sm">{l.email}</TableCell>
-                      <TableCell className="text-sm">{l.full_name ?? `${l.first_name ?? ""} ${l.last_name ?? ""}`.trim()}</TableCell>
-                      <TableCell className="text-sm">{l.company ?? "—"}</TableCell>
-                      <TableCell className="text-sm">{l.role ?? "—"}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => deleteLead.mutate(l.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {leads
+                    .filter((l) => statusFilter === "all" || deriveStatus(l.status, stats?.byLeadId.get(l.id)) === statusFilter)
+                    .map((l) => {
+                      const stat = stats?.byLeadId.get(l.id);
+                      const key = deriveStatus(l.status, stat);
+                      const meta = STATUS_META[key];
+                      const totalSteps = stats?.totalSteps ?? 0;
+                      return (
+                        <TableRow key={l.id}>
+                          <TableCell className="text-sm">{l.email}</TableCell>
+                          <TableCell className="text-sm">{l.full_name ?? `${l.first_name ?? ""} ${l.last_name ?? ""}`.trim()}</TableCell>
+                          <TableCell className="text-sm">{l.company ?? "—"}</TableCell>
+                          <TableCell><Badge variant={meta.variant}>{meta.label}</Badge></TableCell>
+                          <TableCell className="text-sm">{(stat?.sent ?? 0)} / {totalSteps}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {stat?.lastAt ? new Date(stat.lastAt).toLocaleString() : "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" onClick={() => deleteLead.mutate(l.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                 </TableBody>
               </Table>
             </div>
