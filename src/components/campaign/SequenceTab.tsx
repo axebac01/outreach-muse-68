@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Send } from "lucide-react";
 import {
   useSequenceSteps,
   useUpsertStep,
@@ -8,8 +8,9 @@ import {
   useSequenceLeads,
 } from "@/hooks/useSequence";
 import { SequenceStepCard } from "@/components/sequence/SequenceStepCard";
-import { EmailPreview } from "@/components/sequence/EmailPreview";
+import { EmailPreview, type PreviewLead } from "@/components/sequence/EmailPreview";
 import { AiWriteSequenceDialog } from "./AiWriteSequenceDialog";
+import { SendTestEmailDialog } from "./SendTestEmailDialog";
 
 export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
   const { data: steps = [] } = useSequenceSteps(sequenceId);
@@ -19,6 +20,27 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [aiOpen, setAiOpen] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
+  const [previewLeadId, setPreviewLeadId] = useState<string | null>(null);
+
+  const leadOptions: PreviewLead[] = useMemo(
+    () =>
+      leads.map((l) => ({
+        id: l.id,
+        label: l.full_name || l.email,
+        email: l.email,
+        full_name: l.full_name,
+        first_name: l.first_name,
+        last_name: l.last_name,
+        company: l.company,
+        role: l.role,
+        phone: l.phone,
+      })),
+    [leads],
+  );
+  const selectedPreviewLead = previewLeadId
+    ? leadOptions.find((l) => l.id === previewLeadId) ?? null
+    : leadOptions[0] ?? null;
 
   // Säkerställ att första steget existerar
   useEffect(() => {
@@ -51,9 +73,14 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
             Skriv första mejlet och dina uppföljningar. Variabler som <code className="text-xs">{`{{first_name}}`}</code> personaliserar per lead.
           </p>
         </div>
-        <Button variant="outline" onClick={() => setAiOpen(true)} className="gap-2">
-          <Sparkles className="h-4 w-4 text-primary" /> Skriv med AI
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setTestOpen(true)} className="gap-2">
+            <Send className="h-4 w-4" /> Skicka test
+          </Button>
+          <Button variant="outline" onClick={() => setAiOpen(true)} className="gap-2">
+            <Sparkles className="h-4 w-4 text-primary" /> Skriv med AI
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
@@ -80,7 +107,10 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
             subject={previewStep?.subject}
             body={previewStep?.body ?? ""}
             inheritedSubject={inheritedSubject}
-            lead={leads[0] ?? null}
+            lead={selectedPreviewLead}
+            leadOptions={leadOptions}
+            selectedLeadId={previewLeadId ?? selectedPreviewLead?.id ?? null}
+            onSelectLead={setPreviewLeadId}
           />
         </div>
       </div>
@@ -90,6 +120,13 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
         hasExistingContent={steps.some((s) => (s.subject?.trim() || s.body?.trim()))}
         open={aiOpen}
         onOpenChange={setAiOpen}
+      />
+
+      <SendTestEmailDialog
+        sequenceId={sequenceId}
+        open={testOpen}
+        onOpenChange={setTestOpen}
+        defaultStepId={previewStep?.id ?? null}
       />
     </div>
   );
