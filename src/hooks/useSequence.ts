@@ -115,7 +115,10 @@ export const useUpdateSequence = (id: string) => {
       const { error } = await supabase.from("sequences").update(patch).eq("id", id);
       if (error) throw error;
     },
+    onMutate: saveStatusCallbacks.onMutate,
+    onError: saveStatusCallbacks.onError,
     onSuccess: () => {
+      saveStatusStore.success();
       qc.invalidateQueries({ queryKey: ["sequence", id] });
       qc.invalidateQueries({ queryKey: ["sequences"] });
       qc.invalidateQueries({ queryKey: ["campaign_sequence"] });
@@ -307,7 +310,12 @@ export const useUpsertStep = (sequenceId: string) => {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sequence_steps", sequenceId] }),
+    onMutate: saveStatusCallbacks.onMutate,
+    onError: saveStatusCallbacks.onError,
+    onSuccess: () => {
+      saveStatusStore.success();
+      qc.invalidateQueries({ queryKey: ["sequence_steps", sequenceId] });
+    },
   });
 };
 
@@ -357,6 +365,11 @@ export const useToggleSender = (sequenceId: string) => {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sequence_senders", sequenceId] }),
+    onMutate: saveStatusCallbacks.onMutate,
+    onError: saveStatusCallbacks.onError,
+    onSuccess: () => {
+      saveStatusStore.success();
+      qc.invalidateQueries({ queryKey: ["sequence_senders", sequenceId] });
+    },
   });
 };
