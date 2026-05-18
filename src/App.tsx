@@ -58,8 +58,14 @@ const App = () => (
             <Route path="/settings/email-accounts" element={<Navigate to="/email-accounts" replace />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/legal/privacy" element={<Privacy />} />
+            <Route path="/legal/terms" element={<Terms />} />
+            <Route path="/legal/cookies" element={<CookiesPolicy />} />
+            <Route path="/legal/subprocessors" element={<Subprocessors />} />
+            <Route path="/dsr" element={<Dsr />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CookieConsent />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
