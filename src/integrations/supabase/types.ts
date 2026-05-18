@@ -77,6 +77,48 @@ export type Database = {
         }
         Relationships: []
       }
+      dsr_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          email: string
+          id: string
+          ip_address: string | null
+          notes: string | null
+          request_type: string
+          status: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          email: string
+          id?: string
+          ip_address?: string | null
+          notes?: string | null
+          request_type: string
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          email?: string
+          id?: string
+          ip_address?: string | null
+          notes?: string | null
+          request_type?: string
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       email_account_sending_limits: {
         Row: {
           created_at: string
