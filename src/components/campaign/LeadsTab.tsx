@@ -51,6 +51,18 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const [showMapper, setShowMapper] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
+  // GDPR / lawful basis confirmation — required before adding leads.
+  // Persisted per workspace so it isn't asked on every visit.
+  const CONSENT_KEY = "ml.lawfulBasisConfirmed.v1";
+  const [lawfulBasisConfirmed, setLawfulBasisConfirmed] = useState(false);
+  useEffect(() => {
+    setLawfulBasisConfirmed(localStorage.getItem(CONSENT_KEY) === "1");
+  }, []);
+  const toggleLawfulBasis = (v: boolean) => {
+    setLawfulBasisConfirmed(v);
+    localStorage.setItem(CONSENT_KEY, v ? "1" : "0");
+  };
+
   const [manual, setManual] = useState({
     email: "",
     full_name: "",
