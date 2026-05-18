@@ -18,14 +18,26 @@ function startOfDayUtc(d = new Date()) {
   return x;
 }
 
-function effectiveDailyCap(limit: any, accountCreatedAt: string, sequenceLimit: number): number {
+// Provider-specific safe ceilings — must match src/hooks/useSendingLimits.ts.
+function providerCeiling(provider: string | null | undefined): number {
+  switch ((provider || "").toLowerCase()) {
+    case "gmail": return 400;
+    case "outlook": return 300;
+    case "smtp": return 100;
+    default: return 100;
+  }
+}
+
+function effectiveDailyCap(limit: any, accountCreatedAt: string, sequenceLimit: number, provider?: string | null): number {
+  const ceiling = providerCeiling(provider);
+  const seqCap = Math.min(sequenceLimit, ceiling);
   if (!limit || !limit.warmup_enabled) {
-    return limit?.daily_cap_override ?? sequenceLimit;
+    return Math.min(limit?.daily_cap_override ?? seqCap, ceiling);
   }
   const start = new Date(limit.warmup_started_at || accountCreatedAt).getTime();
   const dayNum = Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24)) + 1;
-  if (dayNum >= 14) return limit.daily_cap_override ?? sequenceLimit;
-  return Math.min(20 + dayNum * 5, 50);
+  if (dayNum >= 14) return Math.min(limit.daily_cap_override ?? seqCap, ceiling);
+  return Math.min(20 + dayNum * 5, ceiling);
 }
 
 function inWindow(now: Date, sendingDays: string[], startHHmm: string, endHHmm: string, tz: string): { ok: boolean; nextSlot: Date } {
@@ -150,7 +162,7 @@ Deno.serve(async (req) => {
         limit = data;
         limitCache.set(row.email_account_id, limit);
       }
-      const cap = effectiveDailyCap(limit, acc.created_at, seq.daily_limit_per_account || 25);
+      const cap = effectiveDailyCap(limit, acc.created_at, seq.daily_limit_per_account || 25, acc.provider);
 
       // Sent today count
       let sentToday = sentTodayCache.get(row.email_account_id);

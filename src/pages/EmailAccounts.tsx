@@ -12,6 +12,7 @@ import {
 import { useSendingLimits, useSentToday, useUpdateSendingLimit, effectiveCap } from "@/hooks/useSendingLimits";
 import ConnectEmailDialog from "@/components/ConnectEmailDialog";
 import EditSignatureDialog from "@/components/EditSignatureDialog";
+import DeliverabilityCheck from "@/components/DeliverabilityCheck";
 import { toast } from "sonner";
 
 const EmailAccounts = () => {
@@ -82,7 +83,7 @@ const EmailAccounts = () => {
             <div className="space-y-3">
               {accounts.map((acc) => {
                 const limit = limitFor(acc.id);
-                const { cap, rampUpDay } = effectiveCap(limit, acc.created_at);
+                const { cap, rampUpDay, providerCeiling } = effectiveCap(limit, acc.created_at, acc.provider);
                 const used = sentToday[acc.id] || 0;
                 return (
                 <div key={acc.id} className="rounded-xl border bg-card p-4 space-y-3">
@@ -124,12 +125,13 @@ const EmailAccounts = () => {
                       {rampUpDay !== null && (
                         <span className="text-muted-foreground">· Ramp up dag {rampUpDay}/14</span>
                       )}
+                      <span className="text-muted-foreground">· Tak {providerCeiling}/dag ({acc.provider})</span>
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <span className="text-muted-foreground flex items-center gap-1">
                         Ramp up
                         <span
-                          title="Ramp up trappar gradvis upp ditt dagliga sändtak under de första 14 dagarna för ett nytt konto (start 20/dag → upp till 50/dag). Det här är inte domän-/inbox-warmup — vi skickar inga interna mejl och påverkar inte din avsändarreputation."
+                          title="Ramp up trappar gradvis upp ditt dagliga sändtak under de första 14 dagarna för ett nytt konto (start 20/dag → upp till providerns tak). Det här är inte domän-/inbox-warmup — vi skickar inga interna mejl och påverkar inte din avsändarreputation."
                           className="inline-flex"
                         >
                           <Info className="h-3 w-3" />
@@ -143,6 +145,8 @@ const EmailAccounts = () => {
                       />
                     </label>
                   </div>
+
+                  <DeliverabilityCheck email={acc.email} provider={acc.provider} />
                 </div>
               );})}
             </div>

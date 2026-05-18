@@ -76,12 +76,41 @@ export function useUpdateSendingLimit() {
   }));
 }
 
-export function effectiveCap(limit: SendingLimit | undefined, accountCreatedAt: string, fallback = 25): { cap: number; rampUpDay: number | null } {
+// Provider-specific safe daily sending caps based on each provider's published
+// limits and well-known deliverability heuristics. These are conservative
+// post-ramp-up ceilings; users with Workspace/Business tiers can raise the
+// override manually.
+//   - Gmail (free)         500/day  → we cap at 400 to leave room for replies
+//   - Gmail (Workspace)   2000/day  → we don't know the tier, default to 400
+//   - Outlook (personal)   300/day
+//   - Outlook (M365 biz)  10000/day → default to 300 (safe)
+//   - SMTP / unknown       100/day  (no provider trust signal)
+export function providerCap(provider: string | null | undefined): number {
+  switch ((provider || "").toLowerCase()) {
+    case "gmail": return 400;
+    case "outlook": return 300;
+    case "smtp": return 100;
+    default: return 100;
+  }
+}
+
+export function effectiveCap(
+  limit: SendingLimit | undefined,
+  accountCreatedAt: string,
+  provider?: string | null,
+): { cap: number; rampUpDay: number | null; providerCeiling: number } {
+  const ceiling = providerCap(provider);
   if (!limit || !limit.warmup_enabled) {
-    return { cap: limit?.daily_cap_override ?? fallback, rampUpDay: null };
+    const cap = Math.min(limit?.daily_cap_override ?? ceiling, ceiling);
+    return { cap, rampUpDay: null, providerCeiling: ceiling };
   }
   const start = new Date(limit.warmup_started_at || accountCreatedAt).getTime();
   const day = Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24)) + 1;
-  if (day >= 14) return { cap: limit.daily_cap_override ?? fallback, rampUpDay: null };
-  return { cap: Math.min(20 + day * 5, 50), rampUpDay: day };
+  if (day >= 14) {
+    const cap = Math.min(limit.daily_cap_override ?? ceiling, ceiling);
+    return { cap, rampUpDay: null, providerCeiling: ceiling };
+  }
+  // Ramp 20 → ceiling over 14 days, never above ceiling.
+  const rampCap = Math.min(20 + day * 5, ceiling);
+  return { cap: rampCap, rampUpDay: day, providerCeiling: ceiling };
 }
