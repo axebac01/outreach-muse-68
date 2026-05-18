@@ -12,6 +12,7 @@ import {
 import { useSendingLimits, useSentToday, useUpdateSendingLimit, effectiveCap } from "@/hooks/useSendingLimits";
 import ConnectEmailDialog from "@/components/ConnectEmailDialog";
 import EditSignatureDialog from "@/components/EditSignatureDialog";
+import DeliverabilityCheck from "@/components/DeliverabilityCheck";
 import { toast } from "sonner";
 
 const EmailAccounts = () => {
