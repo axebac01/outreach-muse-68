@@ -24,9 +24,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setLoading(false);
+        if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+          // Defer to avoid running inside the auth callback.
+          setTimeout(() => {
+            import("@/lib/audit").then(({ logAudit }) => {
+              logAudit(event === "SIGNED_IN" ? "auth.sign_in" : "auth.sign_out");
+            });
+          }, 0);
+        }
       }
     );
 
