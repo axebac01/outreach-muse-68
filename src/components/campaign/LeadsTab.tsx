@@ -159,6 +159,28 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
 
   return (
     <div className="space-y-6">
+      {!lawfulBasisConfirmed && (
+        <Card className="border-warning/40 bg-warning/5">
+          <CardContent className="flex items-start gap-3 py-4">
+            <ShieldCheck className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+            <div className="space-y-2 flex-1">
+              <div className="text-sm font-medium">Bekräfta laglig grund (GDPR)</div>
+              <p className="text-xs text-muted-foreground">
+                Innan du lägger till leads måste du intyga att du har en laglig grund att kontakta
+                dessa mottagare (t.ex. berättigat intresse i B2B-sammanhang eller samtycke). Du
+                ansvarar för att efterleva GDPR, ePrivacy och nationella anti-spam-lagar.
+              </p>
+              <label className="flex items-center gap-2 text-xs cursor-pointer pt-1">
+                <Checkbox
+                  checked={lawfulBasisConfirmed}
+                  onCheckedChange={(v) => toggleLawfulBasis(v === true)}
+                />
+                <span>Jag intygar att jag har laglig grund att kontakta dessa leads.</span>
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {showMapper ? (
         <Card>
           <CardHeader>
