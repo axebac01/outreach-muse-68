@@ -74,6 +74,10 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   });
 
   const onFile = async (file: File) => {
+    if (!lawfulBasisConfirmed) {
+      toast.error("Bekräfta laglig grund (GDPR) först");
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File too large (max 5MB)");
       return;
