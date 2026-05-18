@@ -35,7 +35,7 @@ export async function logAudit(
       event_type: event,
       resource_type: details?.resource_type,
       resource_id: details?.resource_id,
-      metadata: (details?.metadata ?? {}) as Record<string, unknown>,
+      metadata: (details?.metadata ?? {}) as never,
       user_agent: navigator.userAgent.slice(0, 500),
     }]);
   } catch {
