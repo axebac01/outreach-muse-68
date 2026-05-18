@@ -30,6 +30,7 @@ const Dsr = () => {
   const [email, setEmail] = useState("");
   const [type, setType] = useState<RequestType>("deletion");
   const [description, setDescription] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState(""); // honeypot
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +56,7 @@ const Dsr = () => {
             email: email.trim().toLowerCase(),
             request_type: type,
             description: description.trim() || null,
+            company_website: companyWebsite, // honeypot — must be empty
           }),
         }
       );
@@ -92,6 +94,19 @@ const Dsr = () => {
         </Alert>
       ) : (
         <form onSubmit={submit} className="not-prose space-y-4 mt-6 p-6 border rounded-lg bg-card">
+          {/* Honeypot — hidden from real users, bots fill it. */}
+          <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", height: 0, overflow: "hidden" }}>
+            <label htmlFor="company_website">Company website</label>
+            <input
+              id="company_website"
+              name="company_website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={companyWebsite}
+              onChange={(e) => setCompanyWebsite(e.target.value)}
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="dsr-email">Din e-postadress *</Label>
             <Input
