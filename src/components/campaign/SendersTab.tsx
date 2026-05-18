@@ -16,6 +16,7 @@ import {
 } from "@/hooks/useSequence";
 import { useEmailAccounts } from "@/hooks/useEmailAccounts";
 import { supabase } from "@/integrations/supabase/client";
+import { PreLaunchChecklist } from "./PreLaunchChecklist";
 
 export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
   const navigate = useNavigate();
