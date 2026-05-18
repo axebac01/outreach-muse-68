@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.sync-inbox-cron]
 verify_jwt = false
+
+[functions.submit-dsr]
+verify_jwt = false
