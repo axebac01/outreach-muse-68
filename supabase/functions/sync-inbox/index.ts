@@ -380,21 +380,30 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const isInternal = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
+    const internalUserId = req.headers.get("x-internal-user-id");
+    let userId: string;
+
+    if (isInternal && internalUserId) {
+      userId = internalUserId;
+    } else {
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: userData, error: userErr } = await userClient.auth.getUser();
+      if (userErr || !userData.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = userData.user.id;
     }
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: accounts } = await admin
       .from("email_accounts")
       .select("id, user_id, email, provider, auth_type, access_token_enc, refresh_token_enc, token_expires_at, status, history_id, imap_last_uid")
-      .eq("user_id", userData.user.id)
+      .eq("user_id", userId)
       .eq("status", "active");
 
     let totalNew = 0;
