@@ -83,7 +83,7 @@ const EmailAccounts = () => {
             <div className="space-y-3">
               {accounts.map((acc) => {
                 const limit = limitFor(acc.id);
-                const { cap, rampUpDay } = effectiveCap(limit, acc.created_at);
+                const { cap, rampUpDay, providerCeiling } = effectiveCap(limit, acc.created_at, acc.provider);
                 const used = sentToday[acc.id] || 0;
                 return (
                 <div key={acc.id} className="rounded-xl border bg-card p-4 space-y-3">
