@@ -23,6 +23,12 @@ import Inbound from "./pages/Inbound";
 import TrackingSettings from "./pages/TrackingSettings";
 import OnboardingGate from "@/components/OnboardingGate";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/legal/Privacy";
+import Terms from "./pages/legal/Terms";
+import CookiesPolicy from "./pages/legal/Cookies";
+import Subprocessors from "./pages/legal/Subprocessors";
+import Dsr from "./pages/legal/Dsr";
+import CookieConsent from "./components/CookieConsent";
 
 const queryClient = new QueryClient();
 
