@@ -76,12 +76,12 @@ export function useUpdateSendingLimit() {
   }));
 }
 
-export function effectiveCap(limit: SendingLimit | undefined, accountCreatedAt: string, fallback = 25): { cap: number; warmupDay: number | null } {
+export function effectiveCap(limit: SendingLimit | undefined, accountCreatedAt: string, fallback = 25): { cap: number; rampUpDay: number | null } {
   if (!limit || !limit.warmup_enabled) {
-    return { cap: limit?.daily_cap_override ?? fallback, warmupDay: null };
+    return { cap: limit?.daily_cap_override ?? fallback, rampUpDay: null };
   }
   const start = new Date(limit.warmup_started_at || accountCreatedAt).getTime();
   const day = Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24)) + 1;
-  if (day >= 14) return { cap: limit.daily_cap_override ?? fallback, warmupDay: null };
-  return { cap: Math.min(20 + day * 5, 50), warmupDay: day };
+  if (day >= 14) return { cap: limit.daily_cap_override ?? fallback, rampUpDay: null };
+  return { cap: Math.min(20 + day * 5, 50), rampUpDay: day };
 }
