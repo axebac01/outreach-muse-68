@@ -130,6 +130,10 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   };
 
   const addManual = async () => {
+    if (!lawfulBasisConfirmed) {
+      toast.error("Bekräfta laglig grund (GDPR) först");
+      return;
+    }
     if (!manual.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(manual.email)) {
       toast.error("Giltig e-post krävs");
       return;
