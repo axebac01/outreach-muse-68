@@ -30,6 +30,7 @@ const Dsr = () => {
   const [email, setEmail] = useState("");
   const [type, setType] = useState<RequestType>("deletion");
   const [description, setDescription] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState(""); // honeypot
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +56,7 @@ const Dsr = () => {
             email: email.trim().toLowerCase(),
             request_type: type,
             description: description.trim() || null,
+            company_website: companyWebsite, // honeypot — must be empty
           }),
         }
       );
