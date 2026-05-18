@@ -16,22 +16,28 @@ export type AuditEvent =
 export async function logAudit(
   event: AuditEvent,
   details?: {
+    user_id?: string;
     resource_type?: string;
     resource_id?: string;
     metadata?: Record<string, unknown>;
   },
 ): Promise<void> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from("audit_log").insert([{
-      user_id: user.id,
+    let userId = details?.user_id;
+    if (!userId) {
+      // Synchronously read cached session — no network roundtrip.
+      const { data } = await supabase.auth.getSession();
+      userId = data.session?.user.id;
+    }
+    if (!userId) return;
+    await supabase.from("audit_log").insert({
+      user_id: userId,
       event_type: event,
-      resource_type: details?.resource_type ?? undefined,
-      resource_id: details?.resource_id ?? undefined,
-      metadata: (details?.metadata ?? {}) as never,
+      resource_type: details?.resource_type,
+      resource_id: details?.resource_id,
+      metadata: details?.metadata ?? {},
       user_agent: navigator.userAgent.slice(0, 500),
-    }]);
+    });
   } catch {
     // Audit logging must never break the user flow.
   }

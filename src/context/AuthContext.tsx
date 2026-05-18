@@ -23,23 +23,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let prevUserId: string | null = null;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setLoading(false);
-        if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-          // Defer to avoid running inside the auth callback.
+        const newUserId = session?.user.id ?? null;
+        // Only log REAL transitions: anonymous→user (real sign-in) and
+        // user→anonymous (real sign-out). Skip INITIAL_SESSION and
+        // TOKEN_REFRESHED which also emit SIGNED_IN.
+        const realSignIn = event === "SIGNED_IN" && prevUserId === null && newUserId !== null;
+        const realSignOut = event === "SIGNED_OUT" && prevUserId !== null;
+        if (realSignIn || realSignOut) {
+          const userId = (realSignIn ? newUserId : prevUserId) as string;
           setTimeout(() => {
             import("@/lib/audit").then(({ logAudit }) => {
-              logAudit(event === "SIGNED_IN" ? "auth.sign_in" : "auth.sign_out");
+              logAudit(realSignIn ? "auth.sign_in" : "auth.sign_out", { user_id: userId });
             });
           }, 0);
         }
+        prevUserId = newUserId;
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      prevUserId = session?.user.id ?? null;
       setLoading(false);
     });
 
