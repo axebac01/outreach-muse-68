@@ -1,5 +1,6 @@
 // Checks SPF, DKIM, DMARC for a given email domain via Google DNS-over-HTTPS.
-// No external secrets required.
+// Requires a valid Supabase JWT to avoid being abused as a public DNS proxy.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/oauth.ts";
 
 type DnsAnswer = { name: string; type: number; TTL: number; data: string };
@@ -55,6 +56,27 @@ async function checkDmarc(domain: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    // JWT gate — prevents anonymous abuse of DNS-over-HTTPS proxy.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supa = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: claims, error: authErr } = await supa.auth.getClaims(
+      authHeader.replace("Bearer ", ""),
+    );
+    if (authErr || !claims?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { domain, provider } = await req.json();
     if (!domain || typeof domain !== "string") {
       return new Response(JSON.stringify({ error: "domain required" }), {
