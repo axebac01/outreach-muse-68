@@ -1,12 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Upload, Plus } from "lucide-react";
+import { Trash2, Upload, Plus, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,6 +51,18 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const [showMapper, setShowMapper] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
+  // GDPR / lawful basis confirmation — required before adding leads.
+  // Persisted per workspace so it isn't asked on every visit.
+  const CONSENT_KEY = "ml.lawfulBasisConfirmed.v1";
+  const [lawfulBasisConfirmed, setLawfulBasisConfirmed] = useState(false);
+  useEffect(() => {
+    setLawfulBasisConfirmed(localStorage.getItem(CONSENT_KEY) === "1");
+  }, []);
+  const toggleLawfulBasis = (v: boolean) => {
+    setLawfulBasisConfirmed(v);
+    localStorage.setItem(CONSENT_KEY, v ? "1" : "0");
+  };
+
   const [manual, setManual] = useState({
     email: "",
     full_name: "",
@@ -61,6 +74,10 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   });
 
   const onFile = async (file: File) => {
+    if (!lawfulBasisConfirmed) {
+      toast.error("Bekräfta laglig grund (GDPR) först");
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File too large (max 5MB)");
       return;
@@ -113,6 +130,10 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   };
 
   const addManual = async () => {
+    if (!lawfulBasisConfirmed) {
+      toast.error("Bekräfta laglig grund (GDPR) först");
+      return;
+    }
     if (!manual.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(manual.email)) {
       toast.error("Giltig e-post krävs");
       return;
@@ -138,6 +159,28 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
 
   return (
     <div className="space-y-6">
+      {!lawfulBasisConfirmed && (
+        <Card className="border-warning/40 bg-warning/5">
+          <CardContent className="flex items-start gap-3 py-4">
+            <ShieldCheck className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+            <div className="space-y-2 flex-1">
+              <div className="text-sm font-medium">Bekräfta laglig grund (GDPR)</div>
+              <p className="text-xs text-muted-foreground">
+                Innan du lägger till leads måste du intyga att du har en laglig grund att kontakta
+                dessa mottagare (t.ex. berättigat intresse i B2B-sammanhang eller samtycke). Du
+                ansvarar för att efterleva GDPR, ePrivacy och nationella anti-spam-lagar.
+              </p>
+              <label className="flex items-center gap-2 text-xs cursor-pointer pt-1">
+                <Checkbox
+                  checked={lawfulBasisConfirmed}
+                  onCheckedChange={(v) => toggleLawfulBasis(v === true)}
+                />
+                <span>Jag intygar att jag har laglig grund att kontakta dessa leads.</span>
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {showMapper ? (
         <Card>
           <CardHeader>

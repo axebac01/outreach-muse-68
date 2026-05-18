@@ -299,7 +299,12 @@ Deno.serve(async (req) => {
     // Unsubscribe token + headers
     const unsubToken = await signUnsubscribeToken(userId, toLower);
     const unsubUrl = buildUnsubscribeUrl(unsubToken);
-    const localMessageId = `<${crypto.randomUUID()}@maillead.local>`;
+    // Use the sender's own domain in the Message-ID — required for good
+    // deliverability. RFC 5322 expects the right-hand side to be a real
+    // host the sender controls. Falling back to a placeholder caused
+    // receivers to flag messages as suspicious.
+    const senderDomain = String(account.email).split("@")[1] || "localhost";
+    const localMessageId = `<${crypto.randomUUID()}@${senderDomain}>`;
     const extraHeaders = [
       `Message-ID: ${localMessageId}`,
       `List-Unsubscribe: <${unsubUrl}>`,
