@@ -119,6 +119,8 @@ export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
         </CardContent>
       </Card>
 
+      <PreLaunchChecklist sequence={sequence} />
+
       <div className="flex justify-end">
         <Button size="lg" variant="hero" onClick={launch}
           disabled={launching || isActive || senders.length === 0 || leads.length === 0}
