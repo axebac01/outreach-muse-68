@@ -30,14 +30,14 @@ export async function logAudit(
       userId = data.session?.user.id;
     }
     if (!userId) return;
-    await supabase.from("audit_log").insert({
+    await supabase.from("audit_log").insert([{
       user_id: userId,
       event_type: event,
       resource_type: details?.resource_type,
       resource_id: details?.resource_id,
-      metadata: details?.metadata ?? {},
+      metadata: (details?.metadata ?? {}) as Record<string, unknown>,
       user_agent: navigator.userAgent.slice(0, 500),
-    });
+    }]);
   } catch {
     // Audit logging must never break the user flow.
   }
