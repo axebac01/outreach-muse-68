@@ -28,6 +28,7 @@ import Terms from "./pages/legal/Terms";
 import CookiesPolicy from "./pages/legal/Cookies";
 import Subprocessors from "./pages/legal/Subprocessors";
 import Dsr from "./pages/legal/Dsr";
+import SecurityLog from "./pages/SecurityLog";
 import CookieConsent from "./components/CookieConsent";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/legal/cookies" element={<CookiesPolicy />} />
             <Route path="/legal/subprocessors" element={<Subprocessors />} />
             <Route path="/dsr" element={<Dsr />} />
+            <Route path="/settings/security" element={<ProtectedRoute><OnboardingGate><SecurityLog /></OnboardingGate></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <CookieConsent />
