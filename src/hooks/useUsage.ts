@@ -5,7 +5,7 @@ import { useProfile } from "./useProfile";
 
 const LIMITS = {
   starter: { campaigns: 1, leadsPerCampaign: 10, outreachPerMonth: 10 },
-  growth: { campaigns: Infinity, leadsPerCampaign: Infinity, outreachPerMonth: Infinity },
+  growth: { campaigns: 10, leadsPerCampaign: 2000, outreachPerMonth: 5000 },
 };
 
 export const useUsage = () => {
