@@ -125,12 +125,13 @@ const EmailAccounts = () => {
                       {rampUpDay !== null && (
                         <span className="text-muted-foreground">· Ramp up dag {rampUpDay}/14</span>
                       )}
+                      <span className="text-muted-foreground">· Tak {providerCeiling}/dag ({acc.provider})</span>
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <span className="text-muted-foreground flex items-center gap-1">
                         Ramp up
                         <span
-                          title="Ramp up trappar gradvis upp ditt dagliga sändtak under de första 14 dagarna för ett nytt konto (start 20/dag → upp till 50/dag). Det här är inte domän-/inbox-warmup — vi skickar inga interna mejl och påverkar inte din avsändarreputation."
+                          title="Ramp up trappar gradvis upp ditt dagliga sändtak under de första 14 dagarna för ett nytt konto (start 20/dag → upp till providerns tak). Det här är inte domän-/inbox-warmup — vi skickar inga interna mejl och påverkar inte din avsändarreputation."
                           className="inline-flex"
                         >
                           <Info className="h-3 w-3" />
@@ -144,6 +145,8 @@ const EmailAccounts = () => {
                       />
                     </label>
                   </div>
+
+                  <DeliverabilityCheck email={acc.email} provider={acc.provider} />
                 </div>
               );})}
             </div>
