@@ -94,6 +94,19 @@ const Dsr = () => {
         </Alert>
       ) : (
         <form onSubmit={submit} className="not-prose space-y-4 mt-6 p-6 border rounded-lg bg-card">
+          {/* Honeypot — hidden from real users, bots fill it. */}
+          <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", height: 0, overflow: "hidden" }}>
+            <label htmlFor="company_website">Company website</label>
+            <input
+              id="company_website"
+              name="company_website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={companyWebsite}
+              onChange={(e) => setCompanyWebsite(e.target.value)}
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="dsr-email">Din e-postadress *</Label>
             <Input
