@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
         limit = data;
         limitCache.set(row.email_account_id, limit);
       }
-      const cap = effectiveDailyCap(limit, acc.created_at, seq.daily_limit_per_account || 25);
+      const cap = effectiveDailyCap(limit, acc.created_at, seq.daily_limit_per_account || 25, acc.provider);
 
       // Sent today count
       let sentToday = sentTodayCache.get(row.email_account_id);
