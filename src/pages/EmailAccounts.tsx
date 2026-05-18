@@ -1,7 +1,7 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine, Flame } from "lucide-react";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine, Flame, Info } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -82,7 +82,7 @@ const EmailAccounts = () => {
             <div className="space-y-3">
               {accounts.map((acc) => {
                 const limit = limitFor(acc.id);
-                const { cap, warmupDay } = effectiveCap(limit, acc.created_at);
+                const { cap, rampUpDay } = effectiveCap(limit, acc.created_at);
                 const used = sentToday[acc.id] || 0;
                 return (
                 <div key={acc.id} className="rounded-xl border bg-card p-4 space-y-3">
@@ -121,12 +121,20 @@ const EmailAccounts = () => {
                     <div className="flex items-center gap-2">
                       <Flame className="h-3.5 w-3.5 text-orange-500" />
                       <span className="font-medium">{used} / {cap} skickade idag</span>
-                      {warmupDay !== null && (
-                        <span className="text-muted-foreground">· Warm-up dag {warmupDay}/14</span>
+                      {rampUpDay !== null && (
+                        <span className="text-muted-foreground">· Ramp up dag {rampUpDay}/14</span>
                       )}
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <span className="text-muted-foreground">Warm-up</span>
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        Ramp up
+                        <span
+                          title="Ramp up trappar gradvis upp ditt dagliga sändtak under de första 14 dagarna för ett nytt konto (start 20/dag → upp till 50/dag). Det här är inte domän-/inbox-warmup — vi skickar inga interna mejl och påverkar inte din avsändarreputation."
+                          className="inline-flex"
+                        >
+                          <Info className="h-3 w-3" />
+                        </span>
+                      </span>
                       <Switch
                         checked={limit?.warmup_enabled ?? true}
                         onCheckedChange={(v) =>
