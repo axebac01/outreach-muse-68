@@ -36,7 +36,23 @@
     "testFirst": "Testa anslutningen innan du sparar",
     "save": "Spara konto",
     "oauthSoon": "Bäst leverans med app-lösenord",
-    "oauthSoonDesc": "Vi rekommenderar Gmail/Outlook med app-lösenord — säkrare, ingen återkommande inloggning, bättre leveransstatistik. Google OAuth finns i Testing-läge för avancerade användare."
+    "oauthSoonDesc": "Vi rekommenderar Gmail/Outlook med app-lösenord — säkrare, ingen återkommande inloggning, bättre leveransstatistik. Google OAuth finns i Testing-läge för avancerade användare.",
+    "appPassword": {
+      "title": "Anslut {{provider}} med app-lösenord",
+      "subtitle": "Säkrare än vanligt lösenord. Inga återkommande inloggningar. Tar ~3 minuter.",
+      "step1Title": "Aktivera tvåfaktorsinloggning",
+      "step1Desc": "Krävs för att kunna skapa app-lösenord.",
+      "openSettings": "Öppna inställningar",
+      "step2Title": "Skapa ett app-lösenord",
+      "step2Desc": "Namnge det \"MailLead\" så är det lätt att hitta senare.",
+      "openAppPasswords": "Öppna {{provider}} app-lösenord",
+      "step3Title": "Klistra in nedan",
+      "step3Desc": "Vi sparar lösenordet krypterat och använder det bara för att skicka mejl från denna inkorg.",
+      "workspaceNote": "Google Workspace-konton: 2-stegsverifiering måste vara aktiverat på ditt konto. Vissa organisationer har stängt av app-lösenord — fråga din IT-admin om det inte fungerar.",
+      "fieldLabel": "App-lösenord",
+      "fieldHint": "16 tecken från {{provider}}. Mellanslag tas bort automatiskt.",
+      "testFailedHint": "Anslutning misslyckades. Kontrollera mejlen och app-lösenordet."
+    }
   },
   "common": {
     "cancel": "Avbryt",

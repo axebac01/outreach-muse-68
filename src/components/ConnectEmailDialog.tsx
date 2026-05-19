@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import AppPasswordGuide, {
   GMAIL_PRESET,
-  OUTLOOK_PRESET,
 } from "./email/AppPasswordGuide";
 
 interface Props {
@@ -50,7 +49,7 @@ const SMTP_PRESETS = [
   },
 ];
 
-type View = "providers" | "gmail" | "outlook-app" | "smtp";
+type View = "providers" | "gmail" | "smtp";
 
 const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const { t } = useTranslation();
@@ -313,13 +312,8 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           />
         )}
 
-        {view === "outlook-app" && (
-          <AppPasswordGuide
-            preset={OUTLOOK_PRESET}
-            onBack={() => setView("providers")}
-            onConnected={() => handleOpenChange(false)}
-          />
-        )}
+
+
 
         {view === "smtp" && (
           <div className="space-y-5">

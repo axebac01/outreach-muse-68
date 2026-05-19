@@ -1,59 +1,44 @@
-## Mål
+## Verifiering: vad jag hittade
 
-Eftersom CASA-verifiering inte är ett alternativ just nu, ställer vi om anslutningsflödet så att **SMTP + App Password** blir det rekommenderade sättet att koppla på inkorgar. Microsoft OAuth fungerar utan CASA och behålls. Google OAuth flyttas bakom en "avancerat"-länk och varnas tydligt som "Testing mode" (max 100 användare, åter-auth ~7 dagar) tills CASA är råd.
+Jag gick igenom de nya filerna (`AppPasswordGuide.tsx`, `ConnectEmailDialog.tsx`) och kringliggande kod. Fyra konkreta saker:
 
-## Vad ändras (UI/UX)
+### 1. 🔴 `outlook-app`-vyn är död kod
+`ConnectEmailDialog` har en `view === "outlook-app"`-gren som renderar `<AppPasswordGuide preset={OUTLOOK_PRESET} …>`, men ingenstans i UI:t anropas `setView("outlook-app")`. Outlook-knappen går direkt till OAuth. Antingen ta bort grenen, eller (bättre) lägg till en fallback "Anslut Outlook med app-lösenord istället" som syns om OAuth misslyckas.
 
-**1. `ConnectEmailDialog` byggs om till tre tydliga steg:**
+### 2. 🔴 `OUTLOOK_PRESET` fungerar inte för outlook.com/hotmail
+Microsoft stängde av SMTP AUTH (basic auth) för **personliga** Outlook-konton i september 2024. `smtp.office365.com:587` med app-lösenord funkar fortfarande för **Microsoft 365 jobb/skola**, men endast om admin har aktiverat SMTP AUTH (vilket är avstängt by default). I praktiken kommer 90%+ av Outlook-användare få "535 5.7.139 Authentication unsuccessful" om de provar denna väg.
 
-```text
-┌─────────────────────────────────────────┐
-│  Anslut inkorg                          │
-│                                         │
-│  [📧 Gmail (App Password)] ← REKOMMENDERAT
-│      Säkert, ingen reauth, 3 min setup  │
-│                                         │
-│  [📨 Outlook / Microsoft 365]           │
-│      Logga in med Microsoft (OAuth)     │
-│                                         │
-│  [⚙️  Annat (IMAP/SMTP)]                 │
-│      Zoho, Fastmail, custom domäner     │
-│                                         │
-│  Visa avancerade alternativ ▾           │
-│   └─ Google OAuth (Testing mode)        │
-└─────────────────────────────────────────┘
-```
+**Fix:** Ta bort `OUTLOOK_PRESET` helt (och därmed dead-code-grenen från #1). Outlook-användare ska enbart se Microsoft OAuth. Behåll generisk SMTP/IMAP-vägen för dem som faktiskt har egen Exchange/Office med SMTP AUTH påslaget.
 
-- "Gmail (App Password)" öppnar en ny guidevy med direktlänk till `myaccount.google.com/apppasswords`, steg-för-steg-instruktioner och förifyllda SMTP/IMAP-fält (smtp.gmail.com:465 / imap.gmail.com:993). Användaren klistrar in mejl + app password och klickar "Testa & spara".
-- "Outlook / Microsoft 365" → triggar befintlig Microsoft OAuth (oförändrat flöde).
-- "Annat (IMAP/SMTP)" → dagens generiska SMTP-vy med Zoho-preset.
-- "Avancerat" → expanderar Google OAuth-knappen med en varningsbanner: "Detta använder Google OAuth i Testing-läge. Endast lämpligt för testanvändare; du måste återansluta var 7:e dag."
+### 3. 🟡 Gmail workspace-noten är missvisande
+Texten säger *"admin måste tillåta 'Mindre säkra appar / App-lösenord'"* — men "Less secure apps" är en separat (utfasad) inställning. App-lösenord styrs av en **annan** Workspace-policy: *Security → Less secure apps* är borttaget; det som faktiskt blockerar är **2-Step Verification enforcement** + att Workspace-admin inte stängt av app-lösenord helt.
 
-**2. Ny komponent `GmailAppPasswordGuide.tsx`** som visar:
-- Krav: 2FA måste vara aktiverat
-- Steg 1: Aktivera 2FA om det inte finns (länk)
-- Steg 2: Skapa app password (direktlänk, "MailLead" som namn)
-- Steg 3: Klistra in nedan
-- Förifyllda dolda SMTP/IMAP-värden — bara `email` + `app_password` syns för användaren
+**Fix:** Skriv om till: *"Google Workspace-konton: 2-stegsverifiering måste vara aktiverat på ditt konto. Vissa organisationer har stängt av app-lösenord — fråga din IT-admin om det inte fungerar."*
 
-**3. Liknande `OutlookAppPasswordGuide.tsx`** för Outlook.com / personliga konton som inte vill köra OAuth (workspace-konton kan ändå behöva admin-godkännande för app passwords — varnas).
+### 4. 🟡 Google "Testing mode → re-auth var 7:e dag" — verifierad och korrekt
+Bekräftat: `_shared/oauth.ts` begär `gmail.send`, `gmail.readonly`, `gmail.modify` — **restricted scopes**. I Testing-läge utgår refresh tokens efter 7 dagar. Varningen i UI:t stämmer. ✅
 
-**4. `EmailAccounts.tsx` info-rutan längst ner** (`oauthSoon` / `oauthSoonDesc`) skrivs om:
-> "Vi rekommenderar App Password-anslutning för bästa leverans och ingen återkommande inloggning. Google OAuth finns i Testing-läge för avancerade användare."
+### 5. 🟢 i18n-inkonsekvens (kosmetiskt)
+Nya `AppPasswordGuide.tsx` hårdkodar svenska strängar medan resten av appen kör `react-i18next`. Engelska användare ser då svenska i guiden. Inte kritiskt men borde åtgärdas.
 
-## Vad ändras (kod)
+**Fix:** Lägg till nycklar under `emailAccounts.appPassword.*` i `sv.json` + `en.json` och använd `t()` i guiden.
 
-- `src/components/ConnectEmailDialog.tsx` — byggs om till provider-val → guide eller SMTP-form. Google OAuth flyttas till "advanced"-sektion med varning.
-- `src/components/email/GmailAppPasswordGuide.tsx` — ny, wrap runt `connect-smtp-account` med Gmail-presets hårdkodade.
-- `src/components/email/OutlookAppPasswordGuide.tsx` — ny, samma men för Outlook.
-- `src/i18n/locales/sv.json` + `en.json` — nya strängar för guider, varningar, knappar.
-- `src/pages/EmailAccounts.tsx` — uppdatera infotext längst ner.
+---
 
-Inga backend-ändringar behövs — `connect-smtp-account` och `test-smtp` edge functions fungerar redan, och Microsoft/Google OAuth-flödena lämnas orörda.
+## Föreslagna ändringar
 
-## Inte med i denna iteration
+| Fil | Ändring |
+|---|---|
+| `src/components/ConnectEmailDialog.tsx` | Ta bort `view === "outlook-app"`-grenen + ta bort import av `OUTLOOK_PRESET` |
+| `src/components/email/AppPasswordGuide.tsx` | Ta bort `OUTLOOK_PRESET`-export; uppdatera Gmail-`workspaceNote`; ersätt hårdkodade strängar med `t()`-anrop |
+| `src/i18n/locales/sv.json` + `en.json` | Lägg till `emailAccounts.appPassword.*` (steg, knappar, fel-meddelanden, hjälptexter) |
 
-- Ingen ändring av `oauth-start` / `oauth-callback` edge functions.
-- Inget borttag av Google OAuth — bara nedprioriterat i UI.
-- Ingen transactional relay (Resend etc.) — kan göras separat senare.
-- Ingen ändring av sändlogik (`send-email`, `process-scheduled-sends`).
+## Verifiering efteråt
+1. Build körs automatiskt — fångar typfel från borttagen export.
+2. Manuell rök-test i preview: öppna "Anslut konto" → kolla att Gmail-guiden går igenom alla 3 steg + att Microsoft-knappen fortfarande startar OAuth.
+3. (Valfritt) Kör `supabase--linter` för att se om något nytt råkat smyga in i RLS — men inga DB-ändringar gjordes så väldigt osannolikt.
+
+## Inte med
+- Ingen ändring av `connect-smtp-account` eller `test-smtp` edge functions.
+- Ingen ändring av OAuth-scopes/flöde.
+- Ingen tredje variant (Resend-relay etc.).
