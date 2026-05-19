@@ -35,8 +35,8 @@
     "testFailed": "Anslutning misslyckades",
     "testFirst": "Testa anslutningen innan du sparar",
     "save": "Spara konto",
-    "oauthSoon": "Fler inloggningsalternativ kommer snart",
-    "oauthSoonDesc": "Microsoft och fler leverantörer är på väg."
+    "oauthSoon": "Bäst leverans med app-lösenord",
+    "oauthSoonDesc": "Vi rekommenderar Gmail/Outlook med app-lösenord — säkrare, ingen återkommande inloggning, bättre leveransstatistik. Google OAuth finns i Testing-läge för avancerade användare."
   },
   "common": {
     "cancel": "Avbryt",
