@@ -312,13 +312,8 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           />
         )}
 
-        {view === "outlook-app" && (
-          <AppPasswordGuide
-            preset={OUTLOOK_PRESET}
-            onBack={() => setView("providers")}
-            onConnected={() => handleOpenChange(false)}
-          />
-        )}
+
+
 
         {view === "smtp" && (
           <div className="space-y-5">
