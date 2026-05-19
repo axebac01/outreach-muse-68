@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import AppPasswordGuide, {
   GMAIL_PRESET,
-  OUTLOOK_PRESET,
 } from "./email/AppPasswordGuide";
 
 interface Props {
