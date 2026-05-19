@@ -35,8 +35,8 @@
     "testFailed": "Connection failed",
     "testFirst": "Test the connection before saving",
     "save": "Save account",
-    "oauthSoon": "More sign-in options coming soon",
-    "oauthSoonDesc": "Microsoft and more providers are on the way."
+    "oauthSoon": "Best deliverability with app passwords",
+    "oauthSoonDesc": "We recommend Gmail/Outlook with app passwords — safer, no recurring re-auth, better deliverability. Google OAuth is available in Testing mode for advanced users."
   },
   "common": {
     "cancel": "Cancel",
