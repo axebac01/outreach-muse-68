@@ -49,7 +49,7 @@ const SMTP_PRESETS = [
   },
 ];
 
-type View = "providers" | "gmail" | "outlook-app" | "smtp";
+type View = "providers" | "gmail" | "smtp";
 
 const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const { t } = useTranslation();
