@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
 export type AppPasswordPreset = {
-  provider: "gmail" | "outlook";
+  provider: "gmail";
   label: string;
   smtp_host: string;
   smtp_port: number;
@@ -16,7 +17,7 @@ export type AppPasswordPreset = {
   imap_port: number;
   appPasswordUrl: string;
   twoFactorUrl: string;
-  workspaceNote?: string;
+  providerOpenLabel: string;
 };
 
 export const GMAIL_PRESET: AppPasswordPreset = {
@@ -28,21 +29,7 @@ export const GMAIL_PRESET: AppPasswordPreset = {
   imap_port: 993,
   appPasswordUrl: "https://myaccount.google.com/apppasswords",
   twoFactorUrl: "https://myaccount.google.com/signinoptions/two-step-verification",
-  workspaceNote:
-    "Använder du Google Workspace? Din admin måste tillåta 'Mindre säkra appar / App-lösenord' i Workspace-konsolen.",
-};
-
-export const OUTLOOK_PRESET: AppPasswordPreset = {
-  provider: "outlook",
-  label: "Outlook",
-  smtp_host: "smtp.office365.com",
-  smtp_port: 587,
-  imap_host: "outlook.office365.com",
-  imap_port: 993,
-  appPasswordUrl: "https://account.microsoft.com/security",
-  twoFactorUrl: "https://account.microsoft.com/security",
-  workspaceNote:
-    "För Microsoft 365 (jobb/skola) rekommenderar vi 'Anslut med Microsoft' istället — app-lösenord kräver ofta admin-godkännande.",
+  providerOpenLabel: "Google",
 };
 
 type Props = {
@@ -52,6 +39,7 @@ type Props = {
 };
 
 const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -77,15 +65,12 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
         },
       });
       if (error || data?.error) {
-        throw new Error(error?.message || data?.error || "SMTP-test misslyckades");
+        throw new Error(error?.message || data?.error || t("emailAccounts.testFailed"));
       }
       setTested(true);
-      toast.success("Anslutning lyckades");
+      toast.success(t("emailAccounts.testOk"));
     } catch (e: any) {
-      toast.error(
-        e?.message ||
-          "Anslutning misslyckades. Kontrollera mejlen och app-lösenordet.",
-      );
+      toast.error(e?.message || t("emailAccounts.appPassword.testFailedHint"));
     } finally {
       setTesting(false);
     }
@@ -114,13 +99,13 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
         },
       );
       if (error || data?.error) {
-        throw new Error(error?.message || data?.error || "Kunde inte spara");
+        throw new Error(error?.message || data?.error || t("emailAccounts.connectFailed"));
       }
-      toast.success("Mejlkonto anslutet");
+      toast.success(t("emailAccounts.connected"));
       qc.invalidateQueries({ queryKey: ["email_accounts"] });
       onConnected();
     } catch (e: any) {
-      toast.error(e?.message || "Kunde inte ansluta kontot");
+      toast.error(e?.message || t("emailAccounts.connectFailed"));
     } finally {
       setSaving(false);
     }
@@ -129,13 +114,15 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
   return (
     <div className="space-y-5">
       <Button type="button" variant="ghost" size="sm" onClick={onBack} className="-ml-2">
-        <ArrowLeft className="h-4 w-4 mr-2" /> Tillbaka
+        <ArrowLeft className="h-4 w-4 mr-2" /> {t("common.back")}
       </Button>
 
       <div className="space-y-1">
-        <h3 className="font-semibold">Anslut {preset.label} med app-lösenord</h3>
+        <h3 className="font-semibold">
+          {t("emailAccounts.appPassword.title", { provider: preset.label })}
+        </h3>
         <p className="text-sm text-muted-foreground">
-          Säkrare än vanligt lösenord. Inga återkommande inloggningar. Tar ~3 minuter.
+          {t("emailAccounts.appPassword.subtitle")}
         </p>
       </div>
 
@@ -146,10 +133,11 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
           </span>
           <div className="flex-1">
             <div className="font-medium flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-success" /> Aktivera tvåfaktorsinloggning
+              <ShieldCheck className="h-4 w-4 text-success" />
+              {t("emailAccounts.appPassword.step1Title")}
             </div>
             <p className="text-muted-foreground text-xs mt-0.5">
-              Krävs för att kunna skapa app-lösenord.
+              {t("emailAccounts.appPassword.step1Desc")}
             </p>
             <a
               href={preset.twoFactorUrl}
@@ -157,7 +145,7 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
               rel="noreferrer"
               className="text-primary text-xs inline-flex items-center gap-1 mt-1 hover:underline"
             >
-              Öppna inställningar <ExternalLink className="h-3 w-3" />
+              {t("emailAccounts.appPassword.openSettings")} <ExternalLink className="h-3 w-3" />
             </a>
           </div>
         </li>
@@ -166,9 +154,9 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
             2
           </span>
           <div className="flex-1">
-            <div className="font-medium">Skapa ett app-lösenord</div>
+            <div className="font-medium">{t("emailAccounts.appPassword.step2Title")}</div>
             <p className="text-muted-foreground text-xs mt-0.5">
-              Namnge det "MailLead" så är det lätt att hitta senare.
+              {t("emailAccounts.appPassword.step2Desc")}
             </p>
             <a
               href={preset.appPasswordUrl}
@@ -176,8 +164,8 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
               rel="noreferrer"
               className="text-primary text-xs inline-flex items-center gap-1 mt-1 hover:underline"
             >
-              Öppna {preset.label === "Gmail" ? "Google" : "Microsoft"}{" "}
-              app-lösenord <ExternalLink className="h-3 w-3" />
+              {t("emailAccounts.appPassword.openAppPasswords", { provider: preset.providerOpenLabel })}
+              <ExternalLink className="h-3 w-3" />
             </a>
           </div>
         </li>
@@ -186,26 +174,25 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
             3
           </span>
           <div className="flex-1">
-            <div className="font-medium">Klistra in nedan</div>
+            <div className="font-medium">{t("emailAccounts.appPassword.step3Title")}</div>
             <p className="text-muted-foreground text-xs mt-0.5">
-              Vi sparar lösenordet krypterat och använder det bara för att skicka mejl
-              från denna inkorg.
+              {t("emailAccounts.appPassword.step3Desc")}
             </p>
           </div>
         </li>
       </ol>
 
-      {preset.workspaceNote && (
-        <div className="flex items-start gap-2 rounded-md bg-muted/60 p-3 text-xs">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-orange-500" />
-          <span className="text-muted-foreground">{preset.workspaceNote}</span>
-        </div>
-      )}
+      <div className="flex items-start gap-2 rounded-md bg-muted/60 p-3 text-xs">
+        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-orange-500" />
+        <span className="text-muted-foreground">
+          {t("emailAccounts.appPassword.workspaceNote")}
+        </span>
+      </div>
 
       <div className="space-y-3 rounded-lg border p-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Mejladress</Label>
+            <Label>{t("emailAccounts.email")}</Label>
             <Input
               type="email"
               value={email}
@@ -213,13 +200,11 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
                 setEmail(e.target.value);
                 setTested(false);
               }}
-              placeholder={
-                preset.provider === "gmail" ? "you@gmail.com" : "you@outlook.com"
-              }
+              placeholder="you@gmail.com"
             />
           </div>
           <div>
-            <Label>Visningsnamn</Label>
+            <Label>{t("emailAccounts.displayName")}</Label>
             <Input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
@@ -228,7 +213,7 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
           </div>
         </div>
         <div>
-          <Label>App-lösenord</Label>
+          <Label>{t("emailAccounts.appPassword.fieldLabel")}</Label>
           <Input
             type="password"
             value={appPassword}
@@ -240,7 +225,7 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
             autoComplete="off"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            16 tecken från {preset.label}. Mellanslag tas bort automatiskt.
+            {t("emailAccounts.appPassword.fieldHint", { provider: preset.label })}
           </p>
         </div>
       </div>
@@ -252,15 +237,15 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
           onClick={handleTest}
           disabled={testing || !canSubmit}
         >
-          {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Testa anslutning"}
+          {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : t("emailAccounts.testConnection")}
         </Button>
         <Button onClick={handleSave} disabled={saving || !tested}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Spara konto"}
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("emailAccounts.save")}
         </Button>
       </div>
       {!tested && canSubmit && (
         <p className="text-xs text-muted-foreground text-right">
-          Testa anslutningen innan du sparar
+          {t("emailAccounts.testFirst")}
         </p>
       )}
     </div>
