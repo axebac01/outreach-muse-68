@@ -318,16 +318,13 @@ export function getProvider(id: string): EmailProvider | undefined {
 }
 
 /**
- * Filtered provider list for the UI. Gmail is hidden by default in
- * production because Google requires the paid CASA security review for
- * `gmail.send`/`gmail.readonly` scopes. Set
- * `VITE_ENABLE_GOOGLE_OAUTH=true` to surface the Gmail app-password guide.
+ * Provider list for the UI. Gmail via app-password (SMTP/IMAP) does not
+ * require Google's CASA review — that only applies to the OAuth
+ * `gmail.send`/`gmail.readonly` scopes, which are handled separately via
+ * the OAuth tile in the picker.
  */
 export function getVisibleProviders(): EmailProvider[] {
-  const googleEnabled =
-    String(import.meta.env.VITE_ENABLE_GOOGLE_OAUTH ?? "")
-      .toLowerCase() === "true";
-  return EMAIL_PROVIDERS.filter((p) => p.id !== "gmail" || googleEnabled);
+  return EMAIL_PROVIDERS;
 }
 
 /** Pick the right language variant for a LocalizedText. */
