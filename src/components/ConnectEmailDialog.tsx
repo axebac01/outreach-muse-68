@@ -26,6 +26,7 @@ import {
 import AppPasswordGuide, {
   GMAIL_PRESET,
 } from "./email/AppPasswordGuide";
+import { toUserMessage } from "@/lib/errorMessages";
 
 interface Props {
   open: boolean;
@@ -77,11 +78,11 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
         body: { provider, redirect_uri },
       });
       if (error || data?.error || !data?.url) {
-        throw new Error(error?.message || data?.error || "Failed to start");
+        throw data?.error ?? error ?? new Error("oauth_start_failed");
       }
       window.location.href = data.url;
     } catch (e: any) {
-      toast.error(e?.message || "Kunde inte starta inloggningen");
+      toast.error(toUserMessage(e, t, "errors.auth.oauthFailed"));
       setOauthLoading(null);
     }
   };
@@ -131,12 +132,12 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
         },
       });
       if (error || data?.error) {
-        throw new Error(error?.message || data?.error || "SMTP-test misslyckades");
+        throw data?.error ?? error;
       }
       setTested(true);
-      toast.success("Anslutning lyckades");
+      toast.success(t("emailAccounts.testOk"));
     } catch (e: any) {
-      toast.error(e?.message || "Anslutning misslyckades");
+      toast.error(toUserMessage(e, t, "errors.smtp.generic"));
     } finally {
       setTesting(false);
     }
@@ -165,13 +166,13 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
         },
       );
       if (error || data?.error) {
-        throw new Error(error?.message || data?.error || "Kunde inte spara");
+        throw data?.error ?? error;
       }
-      toast.success("Mejlkonto anslutet");
+      toast.success(t("emailAccounts.connected"));
       qc.invalidateQueries({ queryKey: ["email_accounts"] });
       handleOpenChange(false);
     } catch (e: any) {
-      toast.error(e?.message || "Kunde inte ansluta kontot");
+      toast.error(toUserMessage(e, t, "emailAccounts.connectFailed"));
     } finally {
       setSaving(false);
     }
