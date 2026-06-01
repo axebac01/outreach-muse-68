@@ -515,6 +515,13 @@
       "recipientRefused": "Mottagaradressen avvisades av servern. Kolla att den är korrekt.",
       "generic": "Mejlet kunde inte skickas: {{detail}}"
     },
+    "oauth": {
+      "userDeclined": "Du avbröt eller nekade åtkomsten. Försök igen och godkänn behörigheterna för att kunna ansluta kontot.",
+      "adminConsentRequired": "Din IT-administratör måste först godkänna appen för din organisation. Be admin att logga in en gång och godkänna behörigheterna, sen kan alla användare ansluta.",
+      "microsoftAccountUnsupported": "Det här Microsoft-kontot kan inte användas. Använd ditt jobb-/skolkonto eller ett privat Outlook/Hotmail-konto.",
+      "microsoftMisconfigured": "Microsoft-anslutningen är inte korrekt konfigurerad. Kontakta support — det är ett problem på vår sida.",
+      "googleDisabled": "Gmail via OAuth är tillfälligt inaktiverat. Använd Outlook eller anslut via app-lösenord under \"Annan leverantör\"."
+    },
     "ai": {
       "noCredits": "Slut på AI-credits. Fyll på i Inställningar → Användning.",
       "rateLimited": "AI är upptagen just nu. Försök igen om en stund.",
