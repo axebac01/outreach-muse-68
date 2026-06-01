@@ -454,5 +454,70 @@
     "title": "404",
     "message": "Hoppsan! Sidan hittades inte",
     "home": "Tillbaka till start"
+  },
+  "errors": {
+    "generic": {
+      "unknown": "Något oväntat hände. Försök igen om en stund.",
+      "withDetail": "Något gick fel: {{detail}}",
+      "network": "Kunde inte nå servern. Kolla din internetanslutning och försök igen.",
+      "timeout": "Förfrågan tog för lång tid. Försök igen.",
+      "unauthorized": "Du är inte inloggad längre. Logga in på nytt."
+    },
+    "auth": {
+      "invalidCredentials": "Fel mejladress eller lösenord.",
+      "emailNotConfirmed": "Du måste bekräfta din mejladress innan du kan logga in. Kolla din inkorg.",
+      "userAlreadyExists": "Ett konto med den mejladressen finns redan. Logga in istället.",
+      "weakPassword": "Lösenordet är för svagt. Använd minst 8 tecken med blandade typer.",
+      "rateLimited": "För många försök. Vänta ett par minuter innan du provar igen.",
+      "signupDisabled": "Nyregistrering är tillfälligt avstängt.",
+      "oauthCancelled": "Du avbröt inloggningen.",
+      "oauthFailed": "Inloggningen misslyckades. Försök igen eller använd en annan metod."
+    },
+    "smtp": {
+      "missingFields": "Fyll i alla SMTP-fält (server, port, användarnamn, lösenord).",
+      "authFailed": "Fel användarnamn eller app-lösenord. Kontrollera att 2-stegsverifiering är på och att app-lösenordet är inklistrat utan mellanslag.",
+      "connectionRefused": "Kunde inte nå mejlservern. Kontrollera server/port — eller om en brandvägg blockerar anslutningen.",
+      "hostNotFound": "Hittar inte servern ({{host}}). Kolla stavningen.",
+      "tlsFailed": "TLS/SSL-handskakning misslyckades. Prova port 465 (SSL) eller 587 (STARTTLS).",
+      "timeout": "Mejlservern svarade inte i tid. Försök igen om en stund.",
+      "personalOutlookBlocked": "Microsoft stängde av SMTP för personliga Outlook/Hotmail-konton 2024. Använd 'Anslut med Microsoft' (OAuth) istället.",
+      "appPasswordRequired": "Gmail kräver ett app-lösenord (inte ditt vanliga lösenord). Generera ett på myaccount.google.com/apppasswords.",
+      "generic": "SMTP-test misslyckades: {{detail}}"
+    },
+    "send": {
+      "gmailAuthExpired": "Gmail-token har gått ut. Återanslut kontot under E-postkonton.",
+      "outlookAuthExpired": "Microsoft-token har gått ut. Återanslut kontot under E-postkonton.",
+      "rateLimited": "Mejlleverantören har strypt utskick tillfälligt. Vi pausar och försöker igen automatiskt.",
+      "quotaExceeded": "Dagligt sändtak nått. Försök igen i morgon eller anslut fler avsändarkonton.",
+      "recipientRefused": "Mottagaradressen avvisades av servern. Kolla att den är korrekt.",
+      "generic": "Mejlet kunde inte skickas: {{detail}}"
+    },
+    "ai": {
+      "noCredits": "Slut på AI-credits. Fyll på i Inställningar → Användning.",
+      "rateLimited": "AI är upptagen just nu. Försök igen om en stund.",
+      "missingCompany": "Slutför onboardingen först så AI:n vet vad du säljer.",
+      "generationFailed": "AI kunde inte generera innehåll. Försök igen eller skriv om instruktionen.",
+      "generic": "AI-anropet misslyckades: {{detail}}"
+    },
+    "upload": {
+      "tooLarge": "Filen är för stor (max {{max}}).",
+      "unsupportedType": "Filtypen stöds inte. Använd {{types}}.",
+      "noRows": "Inga rader hittades i filen.",
+      "parseFailed": "Kunde inte läsa filen. Kontrollera att den inte är skadad.",
+      "uploadFailed": "Uppladdningen misslyckades. Försök igen."
+    },
+    "import": {
+      "gdprRequired": "Bekräfta laglig grund (GDPR) först.",
+      "invalidEmail": "En giltig mejladress krävs.",
+      "duplicate": "Den här leaden finns redan i kampanjen.",
+      "generic": "Importen misslyckades: {{detail}}"
+    },
+    "validation": {
+      "required": "Det här fältet är obligatoriskt.",
+      "invalidEmail": "Ange en giltig mejladress.",
+      "invalidUrl": "Ange en giltig URL (börja med https://).",
+      "tooShort": "Måste vara minst {{min}} tecken.",
+      "tooLong": "Får vara max {{max}} tecken."
+    }
   }
 }
