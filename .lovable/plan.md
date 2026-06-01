@@ -1,104 +1,145 @@
 
 ## Kartläggning
 
-### Nuläge
-- **53 `toast.error`-anrop** i frontend, blandning av:
-  - Hårdkodad svenska: `"Kunde inte spara"`, `"Slut på AI-credits"`, `"Något gick fel"` (de flesta)
-  - Hårdkodad engelska: `"File too large (max 5MB)"`, `"Unsupported file"`, `"Failed to save"` (LeadsTab, EditSignatureDialog)
-  - i18n via `t()`: bara ett fåtal ställen (EmailAccounts, Settings, CreateCampaign, AppPasswordGuide)
-  - Råa server-meddelanden via `e?.message`: ofta engelska, kryptiska (t.ex. `"535 5.7.139 Authentication unsuccessful"`, `"Missing SMTP credentials"`, `"FIRECRAWL_API_KEY missing"`)
-- **Edge functions** returnerar engelska tekniska strängar: `"Unauthorized"`, `"Missing fields"`, `"Account not found"`, `"Gmail send failed: 401 ..."` — dessa visas direkt för användaren.
-- **i18n-namespace `errors`** finns inte i `sv.json`/`en.json` idag. Inget centralt sätt att översätta error-koder.
-- Inga felkoder från servern — frontend kan inte mappa till lokaliserad text utan att parsa fritext.
+### Nuläge — vad användaren ser idag
+- **`ConnectEmailDialog`** har 3 vägar: Gmail app-lösenord (steg-för-steg-guide), Microsoft OAuth, "Annat (IMAP/SMTP)" (rått formulär med 2 presets: Zoho, Fastmail).
+- **`AppPasswordGuide`** är välpolerad för Gmail (3 numrerade steg, deeplinks till `myaccount.google.com/apppasswords` + 2-stegsverifiering, fält med hint, test innan save).
+- **SMTP-vyn** är däremot ett "rått formulär": användaren måste själv veta host, port, TLS, IMAP-detaljer. Inga leverantörsspecifika instruktioner, ingen länk till var man hittar lösenord/inställningar, ingen förklaring av vad TLS/port betyder.
+- **Felmeddelanden** är nu (efter förra paketet) tydliga och lokaliserade via `toUserMessage` + `errors.smtp.*` — det är en bra grund att bygga vidare på.
 
-### Problemområden (prioriterat)
-1. **SMTP/anslutning** (`test-smtp`, `connect-smtp-account`, `AppPasswordGuide`, `ConnectEmailDialog`) — vanligaste stället där användaren ser fel. Idag: råa SMTP-koder på engelska.
-2. **AI-flöden** (`generate-sequence`, `improve-step`, `AiWriteSequenceDialog`, `SequenceStepCard`) — har redan vissa kodade fel (`rate_limited`, `no_credits`) men inkonsekvent översättning.
-3. **Lead-import** (`LeadsTab`, `import-leads`) — engelska meddelanden mitt i svenskt flöde.
-4. **Skicka mejl** (`send-email`) — visar `Gmail send failed: 401 <stora JSON-blobbar>` rått.
-5. **Auth/OAuth** (`Login`, `Signup`, `ConnectEmailDialog`) — visar `error.message` från Supabase rått (engelska).
-6. **Generiska "Något gick fel"** — saknar kontext, gör support svårt.
+### Verklighetscheck inför launch (utan CASA)
+- **Bortfaller helt vid launch:** Google OAuth (kräver CASA för restricted scopes). Endast app-lösenord finns kvar för Gmail.
+- **Förblir:** Microsoft OAuth (Microsoft kräver inte CASA — bara consumer/MSA-konsent). Behåll som "ett-klick"-väg för Outlook/M365.
+- **SMTP/IMAP blir huvudvägen** för: Gmail (app-lösenord), Yahoo, iCloud, Zoho, Fastmail, ProtonMail Bridge, Posteo, GMX, Mailbox.org, Office 365 med SMTP AUTH, egen Postfix/Exchange.
+- **Personliga Outlook/Hotmail:** Microsoft stängde SMTP AUTH 2024 — vi blockerar redan i `test-smtp` och visar `errors.smtp.personalOutlookBlocked`. Behåll som väggvis (gå via Microsoft OAuth-knappen).
+
+### Vad som gör SMTP "smärtsamt" idag
+1. **Användaren vet sällan sin SMTP-server eller port** — vi listar bara 2 presets, resten får googla.
+2. **App-lösenord är leverantörsspecifikt** — Yahoo/iCloud/Zoho/Fastmail har alla olika sätt att generera dem, ingen guide finns.
+3. **Inga visuella ledtrådar** — användaren ser "Server"/"Port" som tomma fält utan att förstå att vi kan fylla i åt dem.
+4. **IMAP-vyn säger "valfritt"** men appen behöver IMAP för inbox-sync — användaren förstår inte konsekvensen.
+5. **Felmeddelanden är nu bra**, men proaktiva hint saknas (t.ex. "Yahoo kräver app-lösenord, inte ditt vanliga lösenord" innan användaren testar).
+6. **Ingen autodetektering** — om användaren skriver `user@fastmail.com` borde host/port fyllas i automatiskt.
 
 ---
 
 ## Plan
 
-### 1. Inför ett `errors`-namespace i i18n
-Lägg till `errors.*` i `sv.json` och `en.json` med:
-- Kategorier: `auth`, `smtp`, `oauth`, `ai`, `upload`, `import`, `send`, `network`, `validation`, `generic`
-- Specifika nycklar för varje kända felkod, t.ex.:
-  - `errors.smtp.authFailed` – "Fel användarnamn eller app-lösenord. Kontrollera att 2FA är på och att du klistrade in app-lösenordet utan mellanslag."
-  - `errors.smtp.connectionRefused` – "Kunde inte nå mejlservern (host/port stämmer inte, eller brandvägg blockerar)."
-  - `errors.smtp.tlsFailed` – "TLS-handskakning misslyckades. Prova port 465 (SSL) eller 587 (STARTTLS)."
-  - `errors.ai.noCredits` – "Slut på AI-credits. Fyll på i Inställningar → Användning."
-  - `errors.ai.rateLimited` – "AI är upptagen, försök igen om en stund."
-  - `errors.upload.tooLarge` – "Filen är för stor (max {{max}})."
-  - `errors.send.gmailAuth` – "Gmail-token har gått ut. Återanslut kontot under E-postkonton."
-  - `errors.generic.withDetail` – "Något gick fel: {{detail}}"
-  - `errors.generic.unknown` – "Något oväntat hände. Försök igen, eller kontakta support om problemet kvarstår."
+### Steg 1 — Bygg ut leverantörskatalogen (kärnan)
+Skapa `src/lib/emailProviders.ts` med ~12 leverantörer. Per leverantör:
+- `id`, `label`, `logo` (svg/inline)
+- `emailDomains: string[]` (för autodetektering: `["gmail.com", "googlemail.com"]`)
+- `smtp_host`, `smtp_port`, `smtp_secure`
+- `imap_host`, `imap_port`, `imap_secure`
+- `requiresAppPassword: boolean` + `appPasswordUrl`, `twoFactorUrl`
+- `appPasswordSteps: string[]` (3–5 korta numrerade steg på svenska)
+- `helpDocUrl`
+- `notes?: string` (varningar/särdrag, t.ex. iCloud kräver `@icloud.com`-adressen som användarnamn)
 
-### 2. Centralt felmappnings-hjälpverktyg
-Skapa `src/lib/errorMessages.ts`:
-```ts
-export function toUserMessage(err: unknown, t: TFunction, fallbackKey?: string): string
-```
-- Tar in error-objekt (från `supabase.functions.invoke`, fetch, etc.)
-- Plockar ut `error.code`, `error.message`, HTTP-status
-- Matchar mot kända mönster (regex på SMTP-koder `535`, `421`, `connection refused`, Gmail JSON-felkoder, Supabase auth-felkoder)
-- Returnerar lokaliserad sträng från `errors`-namespace
-- Faller tillbaka på `errors.generic.withDetail` med rå message, annars `errors.generic.unknown`
+**Leverantörer som ingår:**
 
-### 3. Edge functions: returnera strukturerade fel
-Uppdatera de viktigaste functions (`test-smtp`, `connect-smtp-account`, `send-email`, `generate-sequence`, `improve-step`, `analyze-company`, `sync-inbox`, `launch-sequence`) att returnera:
-```json
-{ "error": { "code": "smtp_auth_failed", "message": "...", "detail": "535 5.7.139..." } }
-```
-Frontend mappar `code` till i18n-nyckel; `detail` visas bara i dev/expanderbar accordion.
+| Leverantör | App-lösenord | Notering |
+|---|---|---|
+| Gmail | Ja | Behåll befintlig guide; lägg in i katalogen |
+| Google Workspace | Ja | Egen instruktion: admin måste tillåta app-lösenord |
+| Yahoo Mail | Ja | Måste generera under "App passwords" |
+| iCloud Mail | Ja | Generera på appleid.apple.com; använd `@icloud.com`-adressen |
+| Fastmail | Ja | "App passwords" → "Mail (IMAP/SMTP)" |
+| Zoho Mail | Ja | "Account → Security → App passwords" |
+| ProtonMail | Bridge | Kräver Proton Bridge-app installerad lokalt — varnar |
+| Posteo | Nej | Normalt lösenord funkar |
+| Mailbox.org | Nej | Normalt lösenord funkar |
+| GMX / Web.de | Ja | Aktivera "POP3/IMAP" först i webbinställningar |
+| Office 365 (jobb/skola) | App-lösenord *eller* OAuth | Hänvisa till Microsoft-knappen som primärt |
+| Egen domän (cPanel/Plesk/Postfix) | N/A | Generisk SMTP-formulär, hänvisa till webhotellets dokumentation |
 
-### 4. Migrera frontend-anropare
-Ersätt alla `toast.error("hårdkodad text")` och `toast.error(e?.message)` med:
-```ts
-toast.error(toUserMessage(e, t, "errors.smtp.connectFailed"));
-```
-- Prioritetsordning: filer från Problemområden 1–5 ovan först.
-- Behåll redan i18n-aware ställen (EmailAccounts, Settings, CreateCampaign) men låt dem använda nya `errors.*`-nycklar där relevant.
+### Steg 2 — Designa om provider-val (entry-vyn)
+Ersätt nuvarande 3 knappar med en **leverantörsväljare** (sökbar grid):
+- Stora ikoner i grid (4 per rad), klickbara → öppnar guide
+- Sökfält på toppen ("Sök leverantör...")
+- "Microsoft (OAuth)"-knapp ligger kvar som special, märkt "Ett klick — ingen konfig"
+- "Annat / Egen domän" är sista valet — leder till generiskt formulär
+- Tagg "Rekommenderas" på Gmail + Microsoft, "App-lösenord krävs" på Yahoo/iCloud osv.
 
-### 5. Auth-fel (Supabase)
-I `Login`/`Signup`: mappa Supabase auth-felkoder (`invalid_credentials`, `email_not_confirmed`, `over_email_send_rate_limit`, `user_already_exists`) till `errors.auth.*` istället för att visa rå `error.message`.
+### Steg 3 — Generisk `ProviderConnectGuide`
+Refaktorera `AppPasswordGuide` → `ProviderConnectGuide` som tar emot vilken som helst leverantör från katalogen och renderar:
 
-### 6. Verifiering
-- Manuell rök-test i preview med `lng=sv` och `lng=en`: trigga några välkända fel (fel app-lösenord, för stor fil, fel inloggning) och bekräfta svensk text.
-- Build körs automatiskt (fångar typfel).
+1. **Header** med logo + leverantörsnamn
+2. **Innan du börjar** — sammanfattning: "Detta tar ~3 minuter. Du behöver: 2FA aktiverat + ett app-lösenord."
+3. **Steg 1–N** numrerade, med deeplinks. Texter kommer från katalogen.
+4. **Formulär** med endast 3 fält: mejladress, visningsnamn, app-lösenord. Host/port/TLS/IMAP fylls i automatiskt från katalogen, dolt bakom "Visa avancerat".
+5. **Test + Spara** (samma flöde som idag, med våra nya `errors.smtp.*`-mappningar).
+6. **Hjälp-länk** längst ner ("Det fungerar inte — visa felsökningstips" → expanderbar accordion med top-3 fel: fel app-lösenord, 2FA inte på, organisationen blockerar).
+
+### Steg 4 — Autodetektering vid mejlinmatning
+I generiska "Egen domän"-formuläret: när användaren skriver mejladress, slå upp domänen mot katalogen:
+- Om träff → "Det här ser ut som ett Fastmail-konto. Vill du använda Fastmail-guiden istället?" + knapp
+- Om ingen träff → fortsätt med generiskt formulär, men förifyll host som `mail.{domän}` + port 587 (vanligaste defaulten) som startgissning
+- Bonus (out-of-scope för denna omgång): MX-lookup via edge function för att gissa host
+
+### Steg 5 — Förbättra generiskt SMTP-formulär (för "egen domän"-användare)
+- Inline-hjälp under varje fält: "Server: vanligtvis `mail.dindomän.se` eller `smtp.dindomän.se`. Hör med ditt webbhotell."
+- Port-väljare som dropdown: `465 (SSL — rekommenderas)`, `587 (STARTTLS)`, `25 (osäkert)`
+- "Använd samma värden för IMAP" som default-checkbox (förifyller imap_host = smtp_host med `imap.` istället för `smtp.`)
+- Varnar visuellt om IMAP lämnas tom: "Utan IMAP kan vi inte synka inkommande svar — bara skicka."
+
+### Steg 6 — Ta bort Google OAuth-knappen vid launch
+- Idag ligger den bakom "Visa avancerade alternativ" med Testing-mode-varning.
+- Lägg till en feature-flag `VITE_ENABLE_GOOGLE_OAUTH` (default `false` i prod). I .env för dev kan den vara `true` så vi kan testa OAuth-flödet.
+- Backend (`oauth-start` för Google): returnera `{ error: { code: "google_oauth_disabled" } }` om flaggan är av (försvarsdjup).
+
+### Steg 7 — i18n
+Alla nya texter (leverantörsnamn, steg, hjälptexter, felsöknings-accordion) läggs i `emailAccounts.providers.*` i `sv.json` + `en.json`.
+
+### Steg 8 — Lättgenomförda kvalitetslyft
+- **Klistra-in-friendly:** Strippa mellanslag/radbrytningar från app-lösenordet automatiskt (görs redan för Gmail — generalisera).
+- **"Visa lösenord"-knapp** med ögon-ikon på lösenordsfält.
+- **Auto-test efter "Spara"** istället för två-stegs (testa+spara) — om test går igenom, spara direkt. Mindre friktion.
+- **Success-state med nästa steg:** "Klart! Vill du testskicka ett mejl till dig själv?" → öppnar `SendTestEmailDialog`.
 
 ---
 
-## Tekniska detaljer
+## Teknisk översikt
 
 **Filer som skapas:**
-- `src/lib/errorMessages.ts` — central mapping
-- (ev.) `src/lib/errorCodes.ts` — delade konstanter för error-koder mellan frontend/edge
+- `src/lib/emailProviders.ts` — katalog (data + typer)
+- `src/components/email/ProviderConnectGuide.tsx` — generisk guide (ersätter `AppPasswordGuide`)
+- `src/components/email/ProviderPicker.tsx` — grid + sökruta
+- `src/components/email/SmtpAdvancedForm.tsx` — utdragen från `ConnectEmailDialog` för "egen domän"
 
-**Filer som ändras (frontend):**
-- `src/i18n/locales/sv.json` + `en.json` — nytt `errors`-namespace (~40-50 nycklar)
-- ~20 komponenter/sidor från listan ovan — ersätt `toast.error`-strängar
+**Filer som ändras:**
+- `src/components/ConnectEmailDialog.tsx` — slimmas ner till en wrapper kring `ProviderPicker` + `ProviderConnectGuide`/`SmtpAdvancedForm`
+- `src/components/email/AppPasswordGuide.tsx` — tas bort (ersätts av `ProviderConnectGuide`)
+- `src/i18n/locales/sv.json` + `en.json` — nya `emailAccounts.providers.*`
+- `.env` + `src/components/ConnectEmailDialog.tsx` — `VITE_ENABLE_GOOGLE_OAUTH`-flagga
+- `supabase/functions/oauth-start/index.ts` — feature-flag-check för Google
 
-**Filer som ändras (edge):**
-- `test-smtp`, `connect-smtp-account`, `send-email`, `generate-sequence`, `improve-step`, `analyze-company`, `sync-inbox`, `launch-sequence`, `oauth-callback` — strukturerade fel-payloads med `code`
-
-**Inte med:**
-- Ingen DB-ändring, ingen RLS-ändring
-- Inga ändringar i OAuth-scope eller affärslogik
-- Email-mall-texter (separat scope)
-- Felmeddelanden i edge function-loggar (server-only, påverkar inte användaren)
-
-**Riskområde:** Edge function-svars-shape ändras (`error: string` → `error: { code, message, detail }`). `toUserMessage` måste hantera båda formaten under övergången så vi inte bryter andra konsumenter.
+**Filer som INTE rörs:**
+- `supabase/functions/test-smtp/index.ts` — redan bra (strukturerade felkoder från förra paketet)
+- `supabase/functions/connect-smtp-account/index.ts` — fungerar generiskt redan
+- `src/lib/errorMessages.ts` — redan på plats
 
 ---
 
-## Föreslagen ordning (om du vill dela upp)
-1. i18n-nycklar + `errorMessages.ts` (grunden)
-2. SMTP/anslutning + Auth (störst impact)
-3. AI-flöden + Send-email
-4. Lead-import + resten
+## Rekommenderad sekvens (om vi delar upp)
 
-Säg till om du vill köra allt i ett svep, eller bara steg 1–2 nu.
+**Iteration 1 (störst impact, ~30 min):**
+- Steg 1: leverantörskatalogen (data)
+- Steg 3: refaktorera `AppPasswordGuide` → `ProviderConnectGuide`, peka Gmail på katalogen
+- Steg 2 (light): byt entry-vyn till en enkel lista med 4–5 leverantörer
+
+**Iteration 2:**
+- Steg 5: förbättra generiska SMTP-formuläret (port-dropdown, IMAP-hjälp)
+- Steg 8: success-state + auto-test-on-save
+
+**Iteration 3 (innan launch):**
+- Steg 6: feature-flagga Google OAuth bort
+- Steg 4: autodetektering från mejldomän
+- Steg 2 (full): grid med ikoner + sökruta
+
+**Inte med:**
+- MX-lookup edge function (kan läggas till senare)
+- Resend/Postmark-relay som tredje väg (eget paket)
+- Sätta upp Lovable's egna `notify.<domän>`-emails — irrelevant här (det är för transaktionella mejl, inte för avsändarkonton).
+
+Säg vilken iteration du vill att jag börjar med, eller om du vill att jag justerar leverantörslistan/ordningen först.

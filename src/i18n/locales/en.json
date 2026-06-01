@@ -37,21 +37,24 @@
     "save": "Save account",
     "oauthSoon": "Best deliverability with app passwords",
     "oauthSoonDesc": "We recommend Gmail/Outlook with app passwords — safer, no recurring re-auth, better deliverability. Google OAuth is available in Testing mode for advanced users.",
-    "appPassword": {
-      "title": "Connect {{provider}} with an app password",
-      "subtitle": "Safer than a regular password. No recurring re-auth. Takes ~3 minutes.",
-      "step1Title": "Enable two-step verification",
-      "step1Desc": "Required before you can create app passwords.",
-      "openSettings": "Open settings",
-      "step2Title": "Create an app password",
-      "step2Desc": "Name it \"MailLead\" so it's easy to find later.",
-      "openAppPasswords": "Open {{provider}} app passwords",
-      "step3Title": "Paste it below",
-      "step3Desc": "We store the password encrypted and use it only to send mail from this inbox.",
-      "workspaceNote": "Google Workspace accounts: 2-step verification must be enabled on your account. Some organizations have disabled app passwords — ask your IT admin if it doesn't work.",
-      "fieldLabel": "App password",
-      "fieldHint": "16 characters from {{provider}}. Spaces are stripped automatically.",
-      "testFailedHint": "Connection failed. Double-check the email and app password."
+    "providerPicker": {
+      "title": "Connect email account",
+      "subtitle": "Pick your email provider below. We'll walk you through connecting it securely.",
+      "recommended": "Recommended",
+      "oneClick": "One click",
+      "appPasswordTag": "App password required",
+      "microsoftLabel": "Outlook / Microsoft 365 (OAuth)",
+      "microsoftDesc": "Sign in with Microsoft — no configuration.",
+      "customLabel": "Other provider / custom domain",
+      "customDesc": "Manual SMTP & IMAP — for cPanel, Postfix, Exchange and more."
+    },
+    "providerGuide": {
+      "title": "Connect {{provider}}",
+      "subtitle": "Secure app-password method. No recurring re-auth. {{time}}.",
+      "appPasswordField": "App password",
+      "appPasswordHint": "Paste the app password from {{provider}}. Spaces are stripped automatically.",
+      "showAdvanced": "Show advanced (server settings)",
+      "hideAdvanced": "Hide advanced"
     }
   },
   "common": {
@@ -65,7 +68,9 @@
     "copy": "Copy",
     "copied": "Copied",
     "optional": "optional",
-    "continue": "Continue"
+    "continue": "Continue",
+    "show": "Show",
+    "hide": "Hide"
   },
   "nav": {
     "features": "Features",
