@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import {
   type LeadSendStat,
 } from "@/hooks/useSequence";
 import { CsvColumnMapper } from "@/components/CsvColumnMapper";
+import { toUserMessage } from "@/lib/errorMessages";
 
 type LeadStatusFilter = "all" | "sent" | "scheduled" | "failed" | "none" | "replied";
 
