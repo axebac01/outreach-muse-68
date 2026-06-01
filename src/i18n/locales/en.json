@@ -35,8 +35,10 @@
     "testFailed": "Connection failed",
     "testFirst": "Test the connection before saving",
     "save": "Save account",
-    "oauthSoon": "Best deliverability with app passwords",
-    "oauthSoonDesc": "We recommend Gmail/Outlook with app passwords — safer, no recurring re-auth, better deliverability. Google OAuth is available in Testing mode for advanced users.",
+    "oauthSoon": "Recommended: Outlook or your own domain",
+    "oauthSoonDesc": "Outlook/Microsoft 365 connects in one click (OAuth) — safest and easiest. Have Gmail or your own domain? Connect with an app password or SMTP/IMAP.",
+    "reconnect": "Reconnect",
+    "reconnectHint": "Your connection has expired or been revoked. Click to sign in again.",
     "providerPicker": {
       "title": "Connect email account",
       "subtitle": "Pick your email provider below. We'll walk you through connecting it securely.",
@@ -45,6 +47,7 @@
       "appPasswordTag": "App password required",
       "microsoftLabel": "Outlook / Microsoft 365 (OAuth)",
       "microsoftDesc": "Sign in with Microsoft — no configuration.",
+      "microsoftNote": "The first time you connect, Microsoft shows a consent screen asking you to allow sending and reading email on your behalf. Tokens are stored encrypted and can be revoked at any time.",
       "customLabel": "Other provider / custom domain",
       "customDesc": "Manual SMTP & IMAP — for cPanel, Postfix, Exchange and more."
     },
@@ -513,6 +516,13 @@
       "quotaExceeded": "Daily send cap reached. Try again tomorrow or connect more sender accounts.",
       "recipientRefused": "The recipient address was rejected by the server. Check that it's correct.",
       "generic": "Email could not be sent: {{detail}}"
+    },
+    "oauth": {
+      "userDeclined": "You cancelled or denied access. Try again and approve the permissions to connect the account.",
+      "adminConsentRequired": "Your IT administrator must approve the app for your organization first. Ask an admin to sign in once and grant the permissions — after that anyone can connect.",
+      "microsoftAccountUnsupported": "This Microsoft account can't be used. Use your work/school account or a personal Outlook/Hotmail account.",
+      "microsoftMisconfigured": "The Microsoft connection isn't configured correctly. Contact support — this is a problem on our side.",
+      "googleDisabled": "Gmail via OAuth is temporarily disabled. Use Outlook or connect via app password under \"Other provider\"."
     },
     "ai": {
       "noCredits": "Out of AI credits. Top up in Settings → Usage.",

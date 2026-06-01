@@ -1,7 +1,7 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine, Flame, Info } from "lucide-react";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine, Flame, Info, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,6 +14,8 @@ import ConnectEmailDialog from "@/components/ConnectEmailDialog";
 import EditSignatureDialog from "@/components/EditSignatureDialog";
 import DeliverabilityCheck from "@/components/DeliverabilityCheck";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { toUserMessage } from "@/lib/errorMessages";
 
 const EmailAccounts = () => {
   const { t } = useTranslation();
@@ -35,6 +37,23 @@ const EmailAccounts = () => {
       toast.error(t("emailAccounts.disconnectFailed"));
     }
   };
+
+  const handleReconnect = async (acc: EmailAccount) => {
+    try {
+      const provider = acc.provider === "outlook" ? "microsoft" : "google";
+      const redirect_uri = `${window.location.origin}/oauth/callback`;
+      const { data, error } = await supabase.functions.invoke("oauth-start", {
+        body: { provider, redirect_uri },
+      });
+      if (error || data?.error || !data?.url) {
+        throw data?.error ?? error ?? new Error("oauth_start_failed");
+      }
+      window.location.href = data.url;
+    } catch (e: any) {
+      toast.error(toUserMessage(e, t, "errors.auth.oauthFailed"));
+    }
+  };
+
 
   return (
     <Layout>
@@ -109,6 +128,18 @@ const EmailAccounts = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      {acc.auth_type === "oauth" && acc.status !== "active" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => handleReconnect(acc)}
+                          title={t("emailAccounts.reconnectHint")}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          {t("emailAccounts.reconnect")}
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" onClick={() => setEditing(acc)} title="Edit signature">
                         <PenLine className="h-4 w-4 text-muted-foreground" />
                       </Button>
@@ -116,6 +147,7 @@ const EmailAccounts = () => {
                         <Trash2 className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </div>
+
                   </div>
 
                   <div className="rounded-lg bg-muted/40 p-3 flex items-center justify-between gap-3 text-xs">

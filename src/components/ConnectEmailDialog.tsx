@@ -35,9 +35,9 @@ import {
 } from "lucide-react";
 import ProviderConnectGuide from "./email/ProviderConnectGuide";
 import {
-  EMAIL_PROVIDERS,
   EmailProvider,
   detectProviderByEmail,
+  getVisibleProviders,
 } from "@/lib/emailProviders";
 import { toUserMessage } from "@/lib/errorMessages";
 
@@ -243,9 +243,13 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               </span>
               <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
             </button>
+            <p className="px-1 text-[11px] leading-snug text-muted-foreground">
+              {t("emailAccounts.providerPicker.microsoftNote")}
+            </p>
+
 
             {/* Catalog providers */}
-            {EMAIL_PROVIDERS.map((p) => (
+            {getVisibleProviders().map((p) => (
               <button
                 key={p.id}
                 type="button"

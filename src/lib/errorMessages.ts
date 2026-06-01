@@ -55,6 +55,14 @@ const KNOWN_CODES: Record<string, string> = {
   user_already_exists: "errors.auth.userAlreadyExists",
   weak_password: "errors.auth.weakPassword",
   auth_rate_limited: "errors.auth.rateLimited",
+  // Microsoft OAuth (consent / token errors)
+  google_oauth_disabled: "errors.oauth.googleDisabled",
+  access_denied: "errors.oauth.userDeclined",
+  consent_required: "errors.oauth.userDeclined",
+  admin_consent_required: "errors.oauth.adminConsentRequired",
+  microsoft_admin_consent_required: "errors.oauth.adminConsentRequired",
+  microsoft_account_unsupported: "errors.oauth.microsoftAccountUnsupported",
+  microsoft_misconfigured: "errors.oauth.microsoftMisconfigured",
 };
 
 const SUPABASE_AUTH_MAP: Record<string, string> = {
@@ -108,6 +116,21 @@ function matchFreeText(
   if (m.includes("outlook send failed") && (m.includes("401") || m.includes("invalid_grant"))) {
     return { key: "errors.send.outlookAuthExpired" };
   }
+
+  // Microsoft Entra (AADSTS) error codes
+  if (m.includes("aadsts65001") || m.includes("admin_consent")) {
+    return { key: "errors.oauth.adminConsentRequired" };
+  }
+  if (m.includes("aadsts50020") || m.includes("aadsts50194")) {
+    return { key: "errors.oauth.microsoftAccountUnsupported" };
+  }
+  if (m.includes("aadsts7000218") || m.includes("aadsts700016") || m.includes("aadsts50011")) {
+    return { key: "errors.oauth.microsoftMisconfigured" };
+  }
+  if (m.includes("aadsts65004") || m === "access_denied" || m.includes("user_cancelled") || m.includes("user canceled")) {
+    return { key: "errors.oauth.userDeclined" };
+  }
+
 
   for (const [needle, key] of Object.entries(SUPABASE_AUTH_MAP)) {
     if (m.includes(needle)) return { key };
