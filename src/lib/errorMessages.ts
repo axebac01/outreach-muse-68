@@ -117,6 +117,21 @@ function matchFreeText(
     return { key: "errors.send.outlookAuthExpired" };
   }
 
+  // Microsoft Entra (AADSTS) error codes
+  if (m.includes("aadsts65001") || m.includes("admin_consent")) {
+    return { key: "errors.oauth.adminConsentRequired" };
+  }
+  if (m.includes("aadsts50020") || m.includes("aadsts50194")) {
+    return { key: "errors.oauth.microsoftAccountUnsupported" };
+  }
+  if (m.includes("aadsts7000218") || m.includes("aadsts700016") || m.includes("aadsts50011")) {
+    return { key: "errors.oauth.microsoftMisconfigured" };
+  }
+  if (m.includes("aadsts65004") || m === "access_denied" || m.includes("user_cancelled") || m.includes("user canceled")) {
+    return { key: "errors.oauth.userDeclined" };
+  }
+
+
   for (const [needle, key] of Object.entries(SUPABASE_AUTH_MAP)) {
     if (m.includes(needle)) return { key };
   }
