@@ -243,6 +243,10 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               </span>
               <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
             </button>
+            <p className="px-1 text-[11px] leading-snug text-muted-foreground">
+              {t("emailAccounts.providerPicker.microsoftNote")}
+            </p>
+
 
             {/* Catalog providers */}
             {getVisibleProviders().map((p) => (
