@@ -7,7 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Map raw SMTP / network errors → stable error codes the frontend translates.
 function classifySmtpError(err: unknown, host: string): {
   code: string;
   message: string;
@@ -16,15 +15,15 @@ function classifySmtpError(err: unknown, host: string): {
   const raw = err instanceof Error ? err.message : String(err ?? "");
   const m = raw.toLowerCase();
   const detail = raw.slice(0, 400);
+  const hostLc = host.toLowerCase();
 
-  if (host.includes("outlook.com") || host.includes("hotmail")) {
-    if (m.includes("535") || m.includes("5.7.139") || m.includes("authentication")) {
-      return {
-        code: "smtp_personal_outlook_blocked",
-        message: "Personal Outlook/Hotmail SMTP is disabled by Microsoft.",
-        detail,
-      };
-    }
+  if ((hostLc.includes("outlook.com") || hostLc.includes("hotmail")) &&
+      (m.includes("535") || m.includes("5.7.139") || m.includes("authentication"))) {
+    return {
+      code: "smtp_personal_outlook_blocked",
+      message: "Personal Outlook/Hotmail SMTP is disabled by Microsoft.",
+      detail,
+    };
   }
   if (m.includes("535") || m.includes("authentication unsuccessful") ||
       m.includes("authentication failed") || m.includes("invalid login") ||
@@ -63,6 +62,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let smtpHost = "";
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
       smtp_password,
       from_email,
     } = body ?? {};
+    smtpHost = String(smtp_host ?? "");
 
     if (!smtp_host || !smtp_port || !smtp_username || !smtp_password) {
       return jsonError(400, {
@@ -97,8 +98,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Quick heuristic: warn before even trying for personal Outlook/Hotmail.
-    const hostLc = String(smtp_host).toLowerCase();
+    // Guardrail: personal Outlook/Hotmail SMTP was disabled by Microsoft in 2024.
+    const hostLc = smtpHost.toLowerCase();
     const userLc = String(smtp_username).toLowerCase();
     if (
       (hostLc.includes("outlook.com") || hostLc.includes("hotmail") ||
@@ -137,9 +138,6 @@ Deno.serve(async (req) => {
     });
   } catch (err: unknown) {
     console.error("test-smtp error", err);
-    const body = await (async () => { try { return null; } catch { return null; } })();
-    const host = (body as any)?.smtp_host ?? "";
-    const classified = classifySmtpError(err, String(host));
-    return jsonError(400, classified);
+    return jsonError(400, classifySmtpError(err, smtpHost));
   }
 });
