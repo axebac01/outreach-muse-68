@@ -245,7 +245,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
             </button>
 
             {/* Catalog providers */}
-            {EMAIL_PROVIDERS.map((p) => (
+            {getVisibleProviders().map((p) => (
               <button
                 key={p.id}
                 type="button"
