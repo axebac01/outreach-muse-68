@@ -1,7 +1,7 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock, Star, Upload, Sparkles, Send } from "lucide-react";
+import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock, Upload, Sparkles, Send } from "lucide-react";
 import logo from "@/assets/logo.svg";
 import { useTranslation } from "react-i18next";
 import { PipelineMockup } from "@/components/ui/pipeline-mockup";
@@ -18,11 +18,8 @@ const Landing = () => {
     { icon: Mail, title: t("landing.f6Title"), description: t("landing.f6Desc") },
   ];
 
-  const socialProof = [
-    { metric: "500+", label: t("landing.socialActive") },
-    { metric: "50K+", label: t("landing.socialSent") },
-    { metric: "3.2x", label: t("landing.socialLift") },
-  ];
+
+
 
   const howItWorks = [
     { step: "1", icon: Upload, title: t("landing.step1Title"), description: t("landing.step1Desc") },
