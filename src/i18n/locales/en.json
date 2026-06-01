@@ -454,5 +454,70 @@
     "title": "404",
     "message": "Oops! Page not found",
     "home": "Return to Home"
+  },
+  "errors": {
+    "generic": {
+      "unknown": "Something unexpected happened. Please try again in a moment.",
+      "withDetail": "Something went wrong: {{detail}}",
+      "network": "Couldn't reach the server. Check your internet connection and try again.",
+      "timeout": "The request took too long. Please try again.",
+      "unauthorized": "You're not signed in anymore. Please sign in again."
+    },
+    "auth": {
+      "invalidCredentials": "Wrong email or password.",
+      "emailNotConfirmed": "You need to confirm your email before signing in. Check your inbox.",
+      "userAlreadyExists": "An account with that email already exists. Sign in instead.",
+      "weakPassword": "Password is too weak. Use at least 8 characters with a mix of types.",
+      "rateLimited": "Too many attempts. Please wait a few minutes before trying again.",
+      "signupDisabled": "New signups are temporarily disabled.",
+      "oauthCancelled": "You cancelled the sign-in.",
+      "oauthFailed": "Sign-in failed. Try again or use a different method."
+    },
+    "smtp": {
+      "missingFields": "Fill in all SMTP fields (host, port, username, password).",
+      "authFailed": "Wrong username or app password. Make sure 2-step verification is on and the app password was pasted without spaces.",
+      "connectionRefused": "Couldn't reach the mail server. Check host/port — or whether a firewall is blocking the connection.",
+      "hostNotFound": "Can't find the server ({{host}}). Check the spelling.",
+      "tlsFailed": "TLS/SSL handshake failed. Try port 465 (SSL) or 587 (STARTTLS).",
+      "timeout": "The mail server didn't respond in time. Please try again.",
+      "personalOutlookBlocked": "Microsoft disabled SMTP for personal Outlook/Hotmail accounts in 2024. Use 'Connect with Microsoft' (OAuth) instead.",
+      "appPasswordRequired": "Gmail requires an app password (not your normal password). Generate one at myaccount.google.com/apppasswords.",
+      "generic": "SMTP test failed: {{detail}}"
+    },
+    "send": {
+      "gmailAuthExpired": "Gmail token expired. Reconnect the account under Email accounts.",
+      "outlookAuthExpired": "Microsoft token expired. Reconnect the account under Email accounts.",
+      "rateLimited": "The mail provider throttled sending temporarily. We'll pause and retry automatically.",
+      "quotaExceeded": "Daily send cap reached. Try again tomorrow or connect more sender accounts.",
+      "recipientRefused": "The recipient address was rejected by the server. Check that it's correct.",
+      "generic": "Email could not be sent: {{detail}}"
+    },
+    "ai": {
+      "noCredits": "Out of AI credits. Top up in Settings → Usage.",
+      "rateLimited": "AI is busy right now. Try again in a moment.",
+      "missingCompany": "Finish onboarding first so the AI knows what you sell.",
+      "generationFailed": "AI couldn't generate content. Try again or rewrite the instruction.",
+      "generic": "AI request failed: {{detail}}"
+    },
+    "upload": {
+      "tooLarge": "File is too large (max {{max}}).",
+      "unsupportedType": "File type not supported. Use {{types}}.",
+      "noRows": "No rows found in the file.",
+      "parseFailed": "Couldn't read the file. Make sure it isn't corrupted.",
+      "uploadFailed": "Upload failed. Please try again."
+    },
+    "import": {
+      "gdprRequired": "Confirm legal basis (GDPR) first.",
+      "invalidEmail": "A valid email address is required.",
+      "duplicate": "This lead is already in the campaign.",
+      "generic": "Import failed: {{detail}}"
+    },
+    "validation": {
+      "required": "This field is required.",
+      "invalidEmail": "Enter a valid email address.",
+      "invalidUrl": "Enter a valid URL (starting with https://).",
+      "tooShort": "Must be at least {{min}} characters.",
+      "tooLong": "Must be at most {{max}} characters."
+    }
   }
 }

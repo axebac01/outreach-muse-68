@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useUpdateEmailAccount, type EmailAccount } from "@/hooks/useEmailAccounts";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { toUserMessage } from "@/lib/errorMessages";
 
 interface Props {
   account: EmailAccount | null;
@@ -15,6 +17,7 @@ interface Props {
 
 export default function EditSignatureDialog({ account, open, onOpenChange }: Props) {
   const update = useUpdateEmailAccount();
+  const { t } = useTranslation();
   const [senderName, setSenderName] = useState("");
   const [signature, setSignature] = useState("");
 
@@ -36,7 +39,7 @@ export default function EditSignatureDialog({ account, open, onOpenChange }: Pro
       toast.success("Saved");
       onOpenChange(false);
     } catch (e: any) {
-      toast.error(e?.message || "Failed to save");
+      toast.error(toUserMessage(e, t, "errors.generic.unknown"));
     }
   };
 

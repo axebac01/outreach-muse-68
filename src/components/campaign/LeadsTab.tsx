@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import {
   type LeadSendStat,
 } from "@/hooks/useSequence";
 import { CsvColumnMapper } from "@/components/CsvColumnMapper";
+import { toUserMessage } from "@/lib/errorMessages";
 
 type LeadStatusFilter = "all" | "sent" | "scheduled" | "failed" | "none" | "replied";
 
@@ -40,6 +42,7 @@ const deriveStatus = (leadStatus: string, stat?: LeadSendStat): keyof typeof STA
 };
 
 export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
+  const { t } = useTranslation();
   const { data: leads = [] } = useSequenceLeads(sequenceId);
   const { data: stats } = useSequenceSendStats(sequenceId);
   const addLeads = useAddSequenceLeads(sequenceId);
@@ -75,11 +78,11 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
 
   const onFile = async (file: File) => {
     if (!lawfulBasisConfirmed) {
-      toast.error("Bekräfta laglig grund (GDPR) först");
+      toast.error(t("errors.import.gdprRequired"));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("File too large (max 5MB)");
+      toast.error(t("errors.upload.tooLarge", { max: "5 MB" }));
       return;
     }
     const ext = file.name.split(".").pop()?.toLowerCase();
@@ -102,18 +105,18 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
         const wb = XLSX.read(buf, { type: "array" });
         rows = XLSX.utils.sheet_to_json<Record<string, any>>(wb.Sheets[wb.SheetNames[0]], { defval: "" });
       } else {
-        toast.error("Unsupported file. Use CSV or Excel.");
+        toast.error(t("errors.upload.unsupportedType", { types: "CSV, XLSX" }));
         return;
       }
       if (rows.length === 0) {
-        toast.error("No rows found in file");
+        toast.error(t("errors.upload.noRows"));
         return;
       }
       setParsedHeaders(Object.keys(rows[0]));
       setParsedRows(rows);
       setShowMapper(true);
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed to parse file");
+      toast.error(toUserMessage(e, t, "errors.upload.parseFailed"));
     }
   };
 
@@ -125,17 +128,17 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
       setParsedRows([]);
       setParsedHeaders([]);
     } catch (e: any) {
-      toast.error(e?.message ?? "Import misslyckades");
+      toast.error(toUserMessage(e, t, "errors.import.generic"));
     }
   };
 
   const addManual = async () => {
     if (!lawfulBasisConfirmed) {
-      toast.error("Bekräfta laglig grund (GDPR) först");
+      toast.error(t("errors.import.gdprRequired"));
       return;
     }
     if (!manual.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(manual.email)) {
-      toast.error("Giltig e-post krävs");
+      toast.error(t("errors.import.invalidEmail"));
       return;
     }
     try {
@@ -153,7 +156,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
       setManual({ email: "", full_name: "", first_name: "", last_name: "", role: "", phone: "", company: "" });
       toast.success("Lead tillagd");
     } catch (e: any) {
-      toast.error(e?.message ?? "Misslyckades");
+      toast.error(toUserMessage(e, t, "errors.import.generic"));
     }
   };
 

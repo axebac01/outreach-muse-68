@@ -7,6 +7,7 @@ import { ArrowLeft, ExternalLink, Loader2, ShieldCheck, AlertTriangle } from "lu
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { toUserMessage } from "@/lib/errorMessages";
 
 export type AppPasswordPreset = {
   provider: "gmail";
@@ -65,12 +66,12 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
         },
       });
       if (error || data?.error) {
-        throw new Error(error?.message || data?.error || t("emailAccounts.testFailed"));
+        throw data?.error ?? error;
       }
       setTested(true);
       toast.success(t("emailAccounts.testOk"));
     } catch (e: any) {
-      toast.error(e?.message || t("emailAccounts.appPassword.testFailedHint"));
+      toast.error(toUserMessage(e, t, "errors.smtp.generic"));
     } finally {
       setTesting(false);
     }
@@ -99,13 +100,13 @@ const AppPasswordGuide = ({ preset, onBack, onConnected }: Props) => {
         },
       );
       if (error || data?.error) {
-        throw new Error(error?.message || data?.error || t("emailAccounts.connectFailed"));
+        throw data?.error ?? error;
       }
       toast.success(t("emailAccounts.connected"));
       qc.invalidateQueries({ queryKey: ["email_accounts"] });
       onConnected();
     } catch (e: any) {
-      toast.error(e?.message || t("emailAccounts.connectFailed"));
+      toast.error(toUserMessage(e, t, "emailAccounts.connectFailed"));
     } finally {
       setSaving(false);
     }

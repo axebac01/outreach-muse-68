@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Mail, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
+import { toUserMessage } from "@/lib/errorMessages";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const Signup = () => {
     });
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(toUserMessage(error, t, "errors.generic.unknown"));
       return;
     }
     toast.success(t("auth.signupSuccess"));

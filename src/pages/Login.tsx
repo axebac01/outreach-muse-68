@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
+import { toUserMessage } from "@/lib/errorMessages";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ const Login = () => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(toUserMessage(error, t, "errors.auth.invalidCredentials"));
       return;
     }
     toast.success(t("auth.loginSuccess"));
