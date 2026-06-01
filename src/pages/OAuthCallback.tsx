@@ -4,6 +4,7 @@ import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { toUserMessage } from "@/lib/errorMessages";
 
 const OAuthCallback = () => {
   const { t } = useTranslation();
@@ -20,15 +21,24 @@ const OAuthCallback = () => {
     const code = params.get("code");
     const state = params.get("state");
     const errParam = params.get("error");
+    const errDesc = params.get("error_description") || "";
 
     if (errParam) {
       setStatus("error");
-      setMessage(params.get("error_description") || errParam);
+      // Microsoft sends AADSTS codes inside error_description; surface both
+      // to toUserMessage so it can map AADSTS65001 → admin consent etc.
+      setMessage(
+        toUserMessage(
+          { code: errParam, message: errDesc || errParam, detail: errDesc },
+          t,
+          "errors.auth.oauthFailed",
+        ),
+      );
       return;
     }
     if (!code || !state) {
       setStatus("error");
-      setMessage("Missing code or state");
+      setMessage(t("errors.auth.oauthFailed"));
       return;
     }
 
@@ -39,17 +49,18 @@ const OAuthCallback = () => {
           { body: { code, state } },
         );
         if (error || data?.error) {
-          throw new Error(error?.message || data?.error || "Failed");
+          throw data?.error ?? error ?? new Error("Failed");
         }
         setStatus("ok");
         setMessage(data.email);
         setTimeout(() => navigate("/email-accounts"), 1500);
       } catch (e: any) {
         setStatus("error");
-        setMessage(e?.message || "Failed to connect account");
+        setMessage(toUserMessage(e, t, "errors.auth.oauthFailed"));
       }
     })();
-  }, [params, navigate]);
+  }, [params, navigate, t]);
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
