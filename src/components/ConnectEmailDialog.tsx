@@ -230,8 +230,11 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                 </svg>
               )}
               <span className="flex-1">
-                <span className="flex items-center gap-2 font-medium">
+                <span className="flex items-center gap-2 font-medium flex-wrap">
                   {t("emailAccounts.providerPicker.microsoftLabel")}
+                  <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/15 px-1.5 py-0.5 rounded">
+                    {t("emailAccounts.providerPicker.recommended")}
+                  </span>
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/15 px-1.5 py-0.5 rounded">
                     <Sparkles className="h-3 w-3" />
                     {t("emailAccounts.providerPicker.oneClick")}
@@ -246,6 +249,33 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
             <p className="px-1 text-[11px] leading-snug text-muted-foreground">
               {t("emailAccounts.providerPicker.microsoftNote")}
             </p>
+
+            {/* Google OAuth — coming soon (disabled) */}
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              className="w-full flex items-center gap-4 rounded-xl border bg-background px-5 py-4 text-left opacity-60 cursor-not-allowed"
+            >
+              <svg className="h-6 w-6 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#4285F4" d="M21.6 12.227c0-.709-.064-1.39-.182-2.045H12v3.868h5.382a4.6 4.6 0 0 1-1.995 3.018v2.51h3.227c1.886-1.736 2.986-4.295 2.986-7.35z"/>
+                <path fill="#34A853" d="M12 22c2.7 0 4.964-.895 6.618-2.422l-3.227-2.51c-.895.6-2.04.955-3.391.955-2.605 0-4.81-1.76-5.595-4.122H3.07v2.59A9.996 9.996 0 0 0 12 22z"/>
+                <path fill="#FBBC05" d="M6.405 13.9A6.005 6.005 0 0 1 6.09 12c0-.658.114-1.298.314-1.9V7.51H3.07A9.996 9.996 0 0 0 2 12c0 1.614.386 3.14 1.07 4.49l3.335-2.59z"/>
+                <path fill="#EA4335" d="M12 5.977c1.468 0 2.786.504 3.823 1.495l2.868-2.868C16.96 2.99 14.695 2 12 2A9.996 9.996 0 0 0 3.07 7.51l3.335 2.59C7.19 7.737 9.395 5.977 12 5.977z"/>
+              </svg>
+              <span className="flex-1">
+                <span className="flex items-center gap-2 font-medium flex-wrap">
+                  {t("emailAccounts.providerPicker.googleLabel")}
+                  <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                    {t("emailAccounts.providerPicker.comingSoon")}
+                  </span>
+                </span>
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                  {t("emailAccounts.providerPicker.googleDesc")}
+                </span>
+              </span>
+            </button>
+
 
 
             {/* Catalog providers */}
