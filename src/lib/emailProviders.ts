@@ -53,7 +53,6 @@ export const EMAIL_PROVIDERS: EmailProvider[] = [
     imap_port: 993,
     imap_secure: true,
     requiresAppPassword: true,
-    recommended: true,
     estimatedTime: { sv: "~3 min", en: "~3 min" },
     passwordPlaceholder: "xxxx xxxx xxxx xxxx",
     steps: [

@@ -48,6 +48,9 @@
       "microsoftLabel": "Outlook / Microsoft 365 (OAuth)",
       "microsoftDesc": "Sign in with Microsoft — no configuration.",
       "microsoftNote": "The first time you connect, Microsoft shows a consent screen asking you to allow sending and reading email on your behalf. Tokens are stored encrypted and can be revoked at any time.",
+      "googleLabel": "Google (Gmail)",
+      "googleDesc": "One-click sign-in with Google coming soon.",
+      "comingSoon": "In development",
       "customLabel": "Other provider / custom domain",
       "customDesc": "Manual SMTP & IMAP — for cPanel, Postfix, Exchange and more."
     },

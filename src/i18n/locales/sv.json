@@ -48,6 +48,9 @@
       "microsoftLabel": "Outlook / Microsoft 365 (OAuth)",
       "microsoftDesc": "Logga in med Microsoft — ingen konfiguration.",
       "microsoftNote": "Första gången du ansluter visar Microsoft en samtyckesruta där du godkänner att vi får skicka och läsa e-post i ditt namn. Tokens lagras krypterat och kan återkallas när som helst.",
+      "googleLabel": "Google (Gmail)",
+      "googleDesc": "Ett-klicks-inloggning med Google kommer snart.",
+      "comingSoon": "Under utveckling",
       "customLabel": "Annan leverantör / egen domän",
       "customDesc": "Manuell SMTP & IMAP — för cPanel, Postfix, Exchange m.m."
     },
