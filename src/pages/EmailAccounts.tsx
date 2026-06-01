@@ -1,7 +1,7 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine, Flame, Info } from "lucide-react";
+import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine, Flame, Info, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,6 +14,8 @@ import ConnectEmailDialog from "@/components/ConnectEmailDialog";
 import EditSignatureDialog from "@/components/EditSignatureDialog";
 import DeliverabilityCheck from "@/components/DeliverabilityCheck";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { toUserMessage } from "@/lib/errorMessages";
 
 const EmailAccounts = () => {
   const { t } = useTranslation();
