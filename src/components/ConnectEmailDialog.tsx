@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,21 +9,36 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   ChevronRight,
+  Eye,
+  EyeOff,
   Loader2,
   Mail,
   Sparkles,
   Settings2,
 } from "lucide-react";
 import ProviderConnectGuide from "./email/ProviderConnectGuide";
-import { EMAIL_PROVIDERS, EmailProvider } from "@/lib/emailProviders";
+import {
+  EMAIL_PROVIDERS,
+  EmailProvider,
+  detectProviderByEmail,
+} from "@/lib/emailProviders";
 import { toUserMessage } from "@/lib/errorMessages";
 
 interface Props {
