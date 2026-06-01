@@ -303,7 +303,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           </div>
         )}
 
-        {view.kind === "guide" && (
+        {view.kind === "guide" && !savedEmail && (
           <ProviderConnectGuide
             provider={view.provider}
             onBack={() => setView({ kind: "providers" })}
@@ -311,7 +311,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           />
         )}
 
-        {view.kind === "custom" && (
+        {view.kind === "custom" && !savedEmail && (
           <div className="space-y-5">
             <Button
               type="button"
@@ -343,6 +343,21 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               </div>
             </div>
 
+            {detected && (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+                <span>
+                  {t("emailAccounts.custom.detectedProvider", { provider: detected.label })}
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setView({ kind: "guide", provider: detected })}
+                >
+                  {t("emailAccounts.custom.useGuide", { provider: detected.label })}
+                </Button>
+              </div>
+            )}
+
             <div className="rounded-lg border p-4 space-y-3">
               <p className="font-medium text-sm">SMTP ({t("emailAccounts.outgoing")})</p>
               <div className="grid grid-cols-3 gap-3">
@@ -353,14 +368,25 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                     onChange={(e) => update("smtp_host", e.target.value)}
                     placeholder="smtp.dindomän.se"
                   />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {t("emailAccounts.custom.hostHint")}
+                  </p>
                 </div>
                 <div>
                   <Label>{t("emailAccounts.port")}</Label>
-                  <Input
-                    type="number"
-                    value={form.smtp_port}
-                    onChange={(e) => update("smtp_port", Number(e.target.value))}
-                  />
+                  <Select
+                    value={String(form.smtp_port)}
+                    onValueChange={(v) => onPortChange(Number(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="465">{t("emailAccounts.custom.portSsl")}</SelectItem>
+                      <SelectItem value="587">{t("emailAccounts.custom.portStartTls")}</SelectItem>
+                      <SelectItem value="25">{t("emailAccounts.custom.portPlain")}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -374,53 +400,89 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                 </div>
                 <div>
                   <Label>{t("emailAccounts.password")}</Label>
-                  <Input
-                    type="password"
-                    value={form.smtp_password}
-                    onChange={(e) => update("smtp_password", e.target.value)}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPwd ? "text" : "password"}
+                      value={form.smtp_password}
+                      onChange={(e) => update("smtp_password", e.target.value)}
+                      className="pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPwd((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showPwd ? t("common.hide") : t("common.show")}
+                    >
+                      {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-normal">{t("emailAccounts.useTls")}</Label>
-                <Switch
-                  checked={form.smtp_secure}
-                  onCheckedChange={(v) => update("smtp_secure", v)}
-                />
               </div>
             </div>
 
             <div className="rounded-lg border p-4 space-y-3">
-              <p className="font-medium text-sm">
-                IMAP ({t("emailAccounts.incoming")}) — {t("common.optional")}
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <Label>{t("emailAccounts.host")}</Label>
-                  <Input
-                    value={form.imap_host}
-                    onChange={(e) => update("imap_host", e.target.value)}
-                    placeholder="imap.dindomän.se"
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-sm">
+                  IMAP ({t("emailAccounts.incoming")})
+                </p>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <Switch
+                    checked={sameAsSmtp}
+                    onCheckedChange={(v) => {
+                      setSameAsSmtp(v);
+                      setTested(false);
+                    }}
                   />
-                </div>
-                <div>
-                  <Label>{t("emailAccounts.port")}</Label>
-                  <Input
-                    type="number"
-                    value={form.imap_port}
-                    onChange={(e) => update("imap_port", Number(e.target.value))}
-                  />
-                </div>
+                  {t("emailAccounts.custom.sameAsSmtpToggle")}
+                </label>
               </div>
-              <div>
-                <Label>{t("emailAccounts.password")}</Label>
-                <Input
-                  type="password"
-                  value={form.imap_password}
-                  onChange={(e) => update("imap_password", e.target.value)}
-                  placeholder={t("emailAccounts.sameAsSmtp")}
-                />
-              </div>
+              {!sameAsSmtp && (
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2">
+                      <Label>{t("emailAccounts.host")}</Label>
+                      <Input
+                        value={form.imap_host}
+                        onChange={(e) => update("imap_host", e.target.value)}
+                        placeholder="imap.dindomän.se"
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        {t("emailAccounts.custom.imapHostHint")}
+                      </p>
+                    </div>
+                    <div>
+                      <Label>{t("emailAccounts.port")}</Label>
+                      <Input
+                        type="number"
+                        value={form.imap_port}
+                        onChange={(e) => update("imap_port", Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>{t("emailAccounts.password")}</Label>
+                    <Input
+                      type="password"
+                      value={form.imap_password}
+                      onChange={(e) => update("imap_password", e.target.value)}
+                      placeholder={t("emailAccounts.sameAsSmtp")}
+                    />
+                  </div>
+                  {!form.imap_host && (
+                    <div className="flex items-start gap-2 text-xs text-orange-600 dark:text-orange-400">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                      <span>{t("emailAccounts.custom.noImapWarning")}</span>
+                    </div>
+                  )}
+                </>
+              )}
+              {sameAsSmtp && (
+                <p className="text-xs text-muted-foreground">
+                  {resolvedImap.host
+                    ? `${resolvedImap.host}:${resolvedImap.port}`
+                    : t("emailAccounts.custom.imapHostHint")}
+                </p>
+              )}
             </div>
 
             <div className="flex justify-between gap-2 pt-2">
@@ -428,19 +490,68 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                 type="button"
                 variant="outline"
                 onClick={handleTest}
-                disabled={testing || !form.smtp_host || !form.smtp_password || !form.email}
+                disabled={testing || saving || !form.smtp_host || !form.smtp_password || !form.email}
               >
                 {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : t("emailAccounts.testConnection")}
               </Button>
-              <Button onClick={handleSave} disabled={saving || !tested}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("emailAccounts.save")}
+              <Button
+                onClick={handleSave}
+                disabled={saving || testing || !form.smtp_host || !form.smtp_password || !form.email}
+              >
+                {saving || (testing && !tested) ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t("emailAccounts.save")
+                )}
               </Button>
             </div>
-            {!tested && (
-              <p className="text-xs text-muted-foreground text-right">
-                {t("emailAccounts.testFirst")}
-              </p>
-            )}
+          </div>
+        )}
+
+        {savedEmail && (
+          <div className="space-y-5 py-4">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="h-14 w-14 rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle2 className="h-8 w-8 text-success" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">
+                  {t("emailAccounts.success.title")}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {t("emailAccounts.success.subtitle", { email: savedEmail })}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSavedEmail(null);
+                  setForm({
+                    email: "",
+                    display_name: "",
+                    smtp_host: "",
+                    smtp_port: 465,
+                    smtp_secure: true,
+                    smtp_username: "",
+                    smtp_password: "",
+                    imap_host: "",
+                    imap_port: 993,
+                    imap_secure: true,
+                    imap_username: "",
+                    imap_password: "",
+                  });
+                  setTested(false);
+                  setView({ kind: "providers" });
+                }}
+              >
+                {t("emailAccounts.success.addAnother")}
+              </Button>
+              <Button onClick={() => handleOpenChange(false)}>
+                {t("emailAccounts.success.done")}
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
