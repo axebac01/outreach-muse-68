@@ -59,9 +59,15 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const [tested, setTested] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<null | "microsoft">(null);
   const [view, setView] = useState<View>({ kind: "providers" });
+  const [savedEmail, setSavedEmail] = useState<string | null>(null);
+  const [showPwd, setShowPwd] = useState(false);
+  const [sameAsSmtp, setSameAsSmtp] = useState(true);
 
   const handleOpenChange = (v: boolean) => {
-    if (!v) setView({ kind: "providers" });
+    if (!v) {
+      setView({ kind: "providers" });
+      setSavedEmail(null);
+    }
     onOpenChange(v);
   };
 
@@ -103,7 +109,27 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
     setForm((f) => ({ ...f, [k]: v }));
   };
 
-  const handleTest = async () => {
+  // Resolved IMAP values (mirroring SMTP when toggle is on).
+  const resolvedImap = useMemo(() => {
+    if (!sameAsSmtp) {
+      return {
+        host: form.imap_host,
+        port: form.imap_port,
+        password: form.imap_password || form.smtp_password,
+        secure: form.imap_secure,
+      };
+    }
+    const host = form.smtp_host.replace(/^smtp\./i, "imap.");
+    return { host, port: 993, password: form.smtp_password, secure: true };
+  }, [sameAsSmtp, form]);
+
+  // Detect provider from email domain (for "use guide instead" prompt).
+  const detected = useMemo(
+    () => (form.email.includes("@") ? detectProviderByEmail(form.email) : undefined),
+    [form.email],
+  );
+
+  const runTest = async (): Promise<boolean> => {
     setTesting(true);
     try {
       const { data, error } = await supabase.functions.invoke("test-smtp", {
@@ -118,15 +144,25 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
       });
       if (error || data?.error) throw data?.error ?? error;
       setTested(true);
-      toast.success(t("emailAccounts.testOk"));
+      return true;
     } catch (e: any) {
       toast.error(toUserMessage(e, t, "errors.smtp.generic"));
+      return false;
     } finally {
       setTesting(false);
     }
   };
 
+  const handleTest = async () => {
+    const ok = await runTest();
+    if (ok) toast.success(t("emailAccounts.testOk"));
+  };
+
   const handleSave = async () => {
+    if (!tested) {
+      const ok = await runTest();
+      if (!ok) return;
+    }
     setSaving(true);
     try {
       const { data, error } = await supabase.functions.invoke(
@@ -140,23 +176,28 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
             smtp_secure: form.smtp_secure,
             smtp_username: form.smtp_username || form.email,
             smtp_password: form.smtp_password,
-            imap_host: form.imap_host || null,
-            imap_port: form.imap_port || null,
-            imap_secure: form.imap_secure,
+            imap_host: resolvedImap.host || null,
+            imap_port: resolvedImap.port || null,
+            imap_secure: resolvedImap.secure,
             imap_username: form.imap_username || form.email,
-            imap_password: form.imap_password || form.smtp_password,
+            imap_password: resolvedImap.password || null,
           },
         },
       );
       if (error || data?.error) throw data?.error ?? error;
       toast.success(t("emailAccounts.connected"));
       qc.invalidateQueries({ queryKey: ["email_accounts"] });
-      handleOpenChange(false);
+      setSavedEmail(form.email);
     } catch (e: any) {
       toast.error(toUserMessage(e, t, "emailAccounts.connectFailed"));
     } finally {
       setSaving(false);
     }
+  };
+
+  const onPortChange = (port: number) => {
+    setForm((f) => ({ ...f, smtp_port: port, smtp_secure: port === 465 }));
+    setTested(false);
   };
 
   return (
