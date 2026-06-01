@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
+  CheckCircle2,
   ExternalLink,
   Eye,
   EyeOff,
@@ -37,6 +38,7 @@ const ProviderConnectGuide = ({ provider, onBack, onConnected }: Props) => {
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tested, setTested] = useState(false);
+  const [savedEmail, setSavedEmail] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [smtpHost, setSmtpHost] = useState(provider.smtp_host);
   const [smtpPort, setSmtpPort] = useState<number>(provider.smtp_port);
@@ -46,7 +48,7 @@ const ProviderConnectGuide = ({ provider, onBack, onConnected }: Props) => {
   const cleanPassword = appPassword.replace(/\s+/g, "");
   const canSubmit = email.includes("@") && cleanPassword.length >= 6;
 
-  const handleTest = async () => {
+  const runTest = async (): Promise<boolean> => {
     setTesting(true);
     try {
       const { data, error } = await supabase.functions.invoke("test-smtp", {
@@ -61,15 +63,26 @@ const ProviderConnectGuide = ({ provider, onBack, onConnected }: Props) => {
       });
       if (error || data?.error) throw data?.error ?? error;
       setTested(true);
-      toast.success(t("emailAccounts.testOk"));
+      return true;
     } catch (e: any) {
       toast.error(toUserMessage(e, t, "errors.smtp.generic"));
+      return false;
     } finally {
       setTesting(false);
     }
   };
 
+  const handleTest = async () => {
+    const ok = await runTest();
+    if (ok) toast.success(t("emailAccounts.testOk"));
+  };
+
   const handleSave = async () => {
+    // Auto-test before saving if the user hasn't already.
+    if (!tested) {
+      const ok = await runTest();
+      if (!ok) return;
+    }
     setSaving(true);
     try {
       const { data, error } = await supabase.functions.invoke(
@@ -94,13 +107,45 @@ const ProviderConnectGuide = ({ provider, onBack, onConnected }: Props) => {
       if (error || data?.error) throw data?.error ?? error;
       toast.success(t("emailAccounts.connected"));
       qc.invalidateQueries({ queryKey: ["email_accounts"] });
-      onConnected();
+      setSavedEmail(email);
     } catch (e: any) {
       toast.error(toUserMessage(e, t, "emailAccounts.connectFailed"));
     } finally {
       setSaving(false);
     }
   };
+
+  if (savedEmail) {
+    return (
+      <div className="space-y-5 py-4">
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="h-14 w-14 rounded-full bg-success/10 flex items-center justify-center">
+            <CheckCircle2 className="h-8 w-8 text-success" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-lg">{t("emailAccounts.success.title")}</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t("emailAccounts.success.subtitle", { email: savedEmail })}
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-center gap-2 pt-2">
+          <Button variant="outline" onClick={() => {
+            setSavedEmail(null);
+            setEmail("");
+            setDisplayName("");
+            setAppPassword("");
+            setTested(false);
+            onBack();
+          }}>
+            {t("emailAccounts.success.addAnother")}
+          </Button>
+          <Button onClick={onConnected}>{t("emailAccounts.success.done")}</Button>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-5">
@@ -263,19 +308,18 @@ const ProviderConnectGuide = ({ provider, onBack, onConnected }: Props) => {
           type="button"
           variant="outline"
           onClick={handleTest}
-          disabled={testing || !canSubmit}
+          disabled={testing || saving || !canSubmit}
         >
           {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : t("emailAccounts.testConnection")}
         </Button>
-        <Button onClick={handleSave} disabled={saving || !tested}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("emailAccounts.save")}
+        <Button onClick={handleSave} disabled={saving || testing || !canSubmit}>
+          {saving || (testing && !tested) ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            t("emailAccounts.save")
+          )}
         </Button>
       </div>
-      {!tested && canSubmit && (
-        <p className="text-xs text-muted-foreground text-right">
-          {t("emailAccounts.testFirst")}
-        </p>
-      )}
     </div>
   );
 };

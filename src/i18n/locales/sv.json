@@ -55,6 +55,23 @@
       "appPasswordHint": "Klistra in app-lösenordet från {{provider}}. Mellanslag tas bort automatiskt.",
       "showAdvanced": "Visa avancerat (serverinställningar)",
       "hideAdvanced": "Dölj avancerat"
+    },
+    "custom": {
+      "hostHint": "Vanligtvis mail.dindomän.se eller smtp.dindomän.se. Hör med ditt webbhotell om du är osäker.",
+      "imapHostHint": "Brukar vara samma som SMTP men med imap. som prefix.",
+      "portSsl": "465 — SSL (rekommenderas)",
+      "portStartTls": "587 — STARTTLS",
+      "portPlain": "25 — okrypterat (avrådes)",
+      "sameAsSmtpToggle": "Använd samma inställningar för IMAP",
+      "noImapWarning": "Utan IMAP kan vi bara skicka mejl — vi kan inte synka inkommande svar till inkorgen.",
+      "detectedProvider": "Det här ser ut som ett {{provider}}-konto. Vill du använda guiden istället?",
+      "useGuide": "Använd {{provider}}-guiden"
+    },
+    "success": {
+      "title": "Mejlkonto anslutet",
+      "subtitle": "Allt klart. Du kan nu använda {{email}} för utskick.",
+      "done": "Klart",
+      "addAnother": "Anslut ett till konto"
     }
   },
   "common": {
