@@ -64,19 +64,6 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Social Proof */}
-      <section className="border-y bg-muted/30 py-10">
-        <div className="container">
-          <div className="flex flex-col items-center gap-8 sm:flex-row sm:justify-center sm:gap-20">
-            {socialProof.map((item) => (
-              <div key={item.label} className="text-center">
-                <div className="text-3xl font-bold text-primary">{item.metric}</div>
-                <div className="text-sm text-muted-foreground mt-1">{item.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* How it works */}
       <section className="py-24">
@@ -123,31 +110,6 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="border-y bg-muted/30 py-20">
-        <div className="container">
-          <div className="grid gap-12 md:grid-cols-2 max-w-4xl mx-auto">
-            <div className="space-y-6">
-              <div className="flex gap-1">
-                {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 fill-primary text-primary" />)}
-              </div>
-              <blockquote className="text-lg font-medium leading-relaxed">"{t("landing.quote1")}"</blockquote>
-              <div className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{t("landing.quote1Author")}</span> · {t("landing.quote1Role")}
-              </div>
-            </div>
-            <div className="space-y-6">
-              <div className="flex gap-1">
-                {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 fill-primary text-primary" />)}
-              </div>
-              <blockquote className="text-lg font-medium leading-relaxed">"{t("landing.quote2")}"</blockquote>
-              <div className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{t("landing.quote2Author")}</span> · {t("landing.quote2Role")}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* CTA */}
       <section className="container py-24">
