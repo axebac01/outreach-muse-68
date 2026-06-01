@@ -7,6 +7,57 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Map raw SMTP / network errors → stable error codes the frontend translates.
+function classifySmtpError(err: unknown, host: string): {
+  code: string;
+  message: string;
+  detail: string;
+} {
+  const raw = err instanceof Error ? err.message : String(err ?? "");
+  const m = raw.toLowerCase();
+  const detail = raw.slice(0, 400);
+
+  if (host.includes("outlook.com") || host.includes("hotmail")) {
+    if (m.includes("535") || m.includes("5.7.139") || m.includes("authentication")) {
+      return {
+        code: "smtp_personal_outlook_blocked",
+        message: "Personal Outlook/Hotmail SMTP is disabled by Microsoft.",
+        detail,
+      };
+    }
+  }
+  if (m.includes("535") || m.includes("authentication unsuccessful") ||
+      m.includes("authentication failed") || m.includes("invalid login") ||
+      m.includes("username and password not accepted")) {
+    return { code: "smtp_auth_failed", message: "SMTP authentication failed.", detail };
+  }
+  if (m.includes("enotfound") || m.includes("getaddrinfo") ||
+      m.includes("name or service not known")) {
+    return { code: "smtp_host_not_found", message: `Host not found: ${host}`, detail };
+  }
+  if (m.includes("econnrefused") || m.includes("connection refused")) {
+    return { code: "smtp_connection_refused", message: "Connection refused.", detail };
+  }
+  if (m.includes("tls") || m.includes("ssl") || m.includes("certificate") ||
+      m.includes("handshake")) {
+    return { code: "smtp_tls_failed", message: "TLS handshake failed.", detail };
+  }
+  if (m.includes("timeout") || m.includes("timed out")) {
+    return { code: "smtp_timeout", message: "SMTP server did not respond in time.", detail };
+  }
+  return { code: "smtp_generic", message: "SMTP test failed.", detail };
+}
+
+function jsonError(
+  status: number,
+  payload: { code: string; message: string; detail?: string },
+) {
+  return new Response(JSON.stringify({ error: payload }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -15,10 +66,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(401, { code: "unauthorized", message: "Unauthorized" });
     }
 
     const supabase = createClient(
@@ -29,10 +77,7 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(401, { code: "unauthorized", message: "Unauthorized" });
     }
 
     const body = await req.json();
@@ -46,13 +91,25 @@ Deno.serve(async (req) => {
     } = body ?? {};
 
     if (!smtp_host || !smtp_port || !smtp_username || !smtp_password) {
-      return new Response(
-        JSON.stringify({ error: "Missing SMTP credentials" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return jsonError(400, {
+        code: "smtp_missing_fields",
+        message: "Missing SMTP credentials",
+      });
+    }
+
+    // Quick heuristic: warn before even trying for personal Outlook/Hotmail.
+    const hostLc = String(smtp_host).toLowerCase();
+    const userLc = String(smtp_username).toLowerCase();
+    if (
+      (hostLc.includes("outlook.com") || hostLc.includes("hotmail") ||
+        hostLc === "smtp-mail.outlook.com") &&
+      (userLc.endsWith("@outlook.com") || userLc.endsWith("@hotmail.com") ||
+        userLc.endsWith("@live.com"))
+    ) {
+      return jsonError(400, {
+        code: "smtp_personal_outlook_blocked",
+        message: "Personal Outlook/Hotmail SMTP is disabled by Microsoft.",
+      });
     }
 
     const client = new SMTPClient({
@@ -64,26 +121,25 @@ Deno.serve(async (req) => {
       },
     });
 
-    // Verify connection by sending a tiny self-check email
-    await client.send({
-      from: from_email || smtp_username,
-      to: from_email || smtp_username,
-      subject: "MailLead.ai – SMTP test",
-      content: "This is an automated test from MailLead.ai. Connection OK.",
-    });
-    await client.close();
+    try {
+      await client.send({
+        from: from_email || smtp_username,
+        to: from_email || smtp_username,
+        subject: "MailLead.ai – SMTP test",
+        content: "This is an automated test from MailLead.ai. Connection OK.",
+      });
+    } finally {
+      try { await client.close(); } catch { /* ignore */ }
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("test-smtp error", err);
-    return new Response(
-      JSON.stringify({ error: err?.message || "SMTP test failed" }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    const body = await (async () => { try { return null; } catch { return null; } })();
+    const host = (body as any)?.smtp_host ?? "";
+    const classified = classifySmtpError(err, String(host));
+    return jsonError(400, classified);
   }
 });
