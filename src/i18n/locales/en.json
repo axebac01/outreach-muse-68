@@ -515,6 +515,13 @@
       "recipientRefused": "The recipient address was rejected by the server. Check that it's correct.",
       "generic": "Email could not be sent: {{detail}}"
     },
+    "oauth": {
+      "userDeclined": "You cancelled or denied access. Try again and approve the permissions to connect the account.",
+      "adminConsentRequired": "Your IT administrator must approve the app for your organization first. Ask an admin to sign in once and grant the permissions — after that anyone can connect.",
+      "microsoftAccountUnsupported": "This Microsoft account can't be used. Use your work/school account or a personal Outlook/Hotmail account.",
+      "microsoftMisconfigured": "The Microsoft connection isn't configured correctly. Contact support — this is a problem on our side.",
+      "googleDisabled": "Gmail via OAuth is temporarily disabled. Use Outlook or connect via app password under \"Other provider\"."
+    },
     "ai": {
       "noCredits": "Out of AI credits. Top up in Settings → Usage.",
       "rateLimited": "AI is busy right now. Try again in a moment.",
