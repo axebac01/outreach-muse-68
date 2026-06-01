@@ -308,19 +308,18 @@ const ProviderConnectGuide = ({ provider, onBack, onConnected }: Props) => {
           type="button"
           variant="outline"
           onClick={handleTest}
-          disabled={testing || !canSubmit}
+          disabled={testing || saving || !canSubmit}
         >
           {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : t("emailAccounts.testConnection")}
         </Button>
-        <Button onClick={handleSave} disabled={saving || !tested}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("emailAccounts.save")}
+        <Button onClick={handleSave} disabled={saving || testing || !canSubmit}>
+          {saving || (testing && !tested) ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            t("emailAccounts.save")
+          )}
         </Button>
       </div>
-      {!tested && canSubmit && (
-        <p className="text-xs text-muted-foreground text-right">
-          {t("emailAccounts.testFirst")}
-        </p>
-      )}
     </div>
   );
 };
