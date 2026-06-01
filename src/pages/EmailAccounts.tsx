@@ -128,6 +128,18 @@ const EmailAccounts = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      {acc.auth_type === "oauth" && acc.status !== "active" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => handleReconnect(acc)}
+                          title={t("emailAccounts.reconnectHint")}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          {t("emailAccounts.reconnect")}
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" onClick={() => setEditing(acc)} title="Edit signature">
                         <PenLine className="h-4 w-4 text-muted-foreground" />
                       </Button>
@@ -135,6 +147,7 @@ const EmailAccounts = () => {
                         <Trash2 className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </div>
+
                   </div>
 
                   <div className="rounded-lg bg-muted/40 p-3 flex items-center justify-between gap-3 text-xs">
