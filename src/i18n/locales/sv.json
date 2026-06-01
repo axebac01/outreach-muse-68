@@ -45,6 +45,7 @@
       "appPasswordTag": "App-lösenord krävs",
       "microsoftLabel": "Outlook / Microsoft 365 (OAuth)",
       "microsoftDesc": "Logga in med Microsoft — ingen konfiguration.",
+      "microsoftNote": "Första gången du ansluter visar Microsoft en samtyckesruta där du godkänner att vi får skicka och läsa e-post i ditt namn. Tokens lagras krypterat och kan återkallas när som helst.",
       "customLabel": "Annan leverantör / egen domän",
       "customDesc": "Manuell SMTP & IMAP — för cPanel, Postfix, Exchange m.m."
     },
