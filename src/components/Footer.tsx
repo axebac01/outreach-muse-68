@@ -33,11 +33,13 @@ const Footer = () => (
               {LEGAL.contactEmail}
             </a>
           </li>
-          <li>
-            <a href={`mailto:${LEGAL.privacyEmail}`} className="hover:underline">
-              {LEGAL.privacyEmail} (integritet)
-            </a>
-          </li>
+          {LEGAL.privacyEmail !== LEGAL.contactEmail && (
+            <li>
+              <a href={`mailto:${LEGAL.privacyEmail}`} className="hover:underline">
+                {LEGAL.privacyEmail} (integritet)
+              </a>
+            </li>
+          )}
         </ul>
       </div>
     </div>
