@@ -31,19 +31,43 @@ Deno.serve(async (req) => {
     const { provider, redirect_uri } = await req.json();
     if (provider !== "google" && provider !== "microsoft") {
       return new Response(
-        JSON.stringify({ error: "Unsupported provider" }),
+        JSON.stringify({ error: { code: "unsupported_provider", message: "Unsupported provider" } }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
     }
+
+    // Feature-flag Google OAuth off in production. Google requires the paid
+    // CASA security review for gmail.send/readonly scopes; until that is in
+    // place we keep Gmail behind an explicit opt-in env var so users get a
+    // clear error instead of an "unverified app" warning from Google.
+    const googleEnabled =
+      String(Deno.env.get("ENABLE_GOOGLE_OAUTH") ?? "").toLowerCase() === "true";
+    if (provider === "google" && !googleEnabled) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "google_oauth_disabled",
+            message:
+              "Gmail via OAuth is temporarily disabled. Use Outlook or connect Gmail via app password.",
+          },
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     if (!redirect_uri || typeof redirect_uri !== "string") {
-      return new Response(JSON.stringify({ error: "redirect_uri required" }), {
+      return new Response(JSON.stringify({ error: { code: "redirect_uri_required", message: "redirect_uri required" } }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     const clientId = provider === "google"
       ? Deno.env.get("GOOGLE_CLIENT_ID")
