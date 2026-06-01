@@ -38,6 +38,23 @@ const EmailAccounts = () => {
     }
   };
 
+  const handleReconnect = async (acc: EmailAccount) => {
+    try {
+      const provider = acc.provider === "outlook" ? "microsoft" : "google";
+      const redirect_uri = `${window.location.origin}/oauth/callback`;
+      const { data, error } = await supabase.functions.invoke("oauth-start", {
+        body: { provider, redirect_uri },
+      });
+      if (error || data?.error || !data?.url) {
+        throw data?.error ?? error ?? new Error("oauth_start_failed");
+      }
+      window.location.href = data.url;
+    } catch (e: any) {
+      toast.error(toUserMessage(e, t, "errors.auth.oauthFailed"));
+    }
+  };
+
+
   return (
     <Layout>
       <div className="container py-12 max-w-3xl">
