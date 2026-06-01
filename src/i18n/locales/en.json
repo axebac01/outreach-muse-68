@@ -55,6 +55,23 @@
       "appPasswordHint": "Paste the app password from {{provider}}. Spaces are stripped automatically.",
       "showAdvanced": "Show advanced (server settings)",
       "hideAdvanced": "Hide advanced"
+    },
+    "custom": {
+      "hostHint": "Usually mail.yourdomain.com or smtp.yourdomain.com. Ask your hosting provider if unsure.",
+      "imapHostHint": "Usually the same as SMTP but with an imap. prefix.",
+      "portSsl": "465 — SSL (recommended)",
+      "portStartTls": "587 — STARTTLS",
+      "portPlain": "25 — unencrypted (not recommended)",
+      "sameAsSmtpToggle": "Use the same settings for IMAP",
+      "noImapWarning": "Without IMAP we can only send mail — we cannot sync inbound replies to the inbox.",
+      "detectedProvider": "This looks like a {{provider}} account. Want to use the guide instead?",
+      "useGuide": "Use {{provider}} guide"
+    },
+    "success": {
+      "title": "Email account connected",
+      "subtitle": "All set. You can now use {{email}} for outreach.",
+      "done": "Done",
+      "addAnother": "Connect another account"
     }
   },
   "common": {
