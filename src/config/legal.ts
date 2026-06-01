@@ -1,16 +1,15 @@
 // Company / legal contact info.
-// UPDATE THESE before going live — they appear in Privacy Policy, ToS,
-// Cookie Policy, Subprocessor list and the public DSR form.
+// Used in Privacy Policy, ToS, Cookie Policy, Subprocessor list and the public DSR form.
 export const LEGAL = {
-  companyName: "MailLead AB",
-  orgNumber: "—", // TODO: lägg in organisationsnummer
-  address: "Stockholm, Sverige", // TODO: lägg in besöksadress
+  companyName: "CRMdata i Sverige AB",
+  orgNumber: "559255-7929",
+  address: "Hagaesplanaden 86, 113 67 Stockholm",
   productName: "MailLead",
-  contactEmail: "support@maillead.io",
-  privacyEmail: "privacy@maillead.io",
-  dpoEmail: "dpo@maillead.io",
-  website: "https://maillead.io",
-  lastUpdated: "2026-05-18",
+  contactEmail: "info@insynia.ai",
+  privacyEmail: "info@insynia.ai",
+  dpoEmail: "info@insynia.ai",
+  website: "https://maillead.ai",
+  lastUpdated: "2026-06-01",
 } as const;
 
 export const SUBPROCESSORS = [

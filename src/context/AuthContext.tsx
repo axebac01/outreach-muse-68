@@ -35,10 +35,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const realSignIn = event === "SIGNED_IN" && prevUserId === null && newUserId !== null;
         const realSignOut = event === "SIGNED_OUT" && prevUserId !== null;
         if (realSignIn || realSignOut) {
-          const userId = (realSignIn ? newUserId : prevUserId) as string;
           setTimeout(() => {
             import("@/lib/audit").then(({ logAudit }) => {
-              logAudit(realSignIn ? "auth.sign_in" : "auth.sign_out", { user_id: userId });
+              logAudit(realSignIn ? "auth.sign_in" : "auth.sign_out");
             });
           }, 0);
         }
