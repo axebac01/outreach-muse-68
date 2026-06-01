@@ -35,8 +35,10 @@
     "testFailed": "Connection failed",
     "testFirst": "Test the connection before saving",
     "save": "Save account",
-    "oauthSoon": "Best deliverability with app passwords",
-    "oauthSoonDesc": "We recommend Gmail/Outlook with app passwords — safer, no recurring re-auth, better deliverability. Google OAuth is available in Testing mode for advanced users.",
+    "oauthSoon": "Recommended: Outlook or your own domain",
+    "oauthSoonDesc": "Outlook/Microsoft 365 connects in one click (OAuth) — safest and easiest. Have Gmail or your own domain? Connect with an app password or SMTP/IMAP.",
+    "reconnect": "Reconnect",
+    "reconnectHint": "Your connection has expired or been revoked. Click to sign in again.",
     "providerPicker": {
       "title": "Connect email account",
       "subtitle": "Pick your email provider below. We'll walk you through connecting it securely.",
