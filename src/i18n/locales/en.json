@@ -45,6 +45,7 @@
       "appPasswordTag": "App password required",
       "microsoftLabel": "Outlook / Microsoft 365 (OAuth)",
       "microsoftDesc": "Sign in with Microsoft — no configuration.",
+      "microsoftNote": "The first time you connect, Microsoft shows a consent screen asking you to allow sending and reading email on your behalf. Tokens are stored encrypted and can be revoked at any time.",
       "customLabel": "Other provider / custom domain",
       "customDesc": "Manual SMTP & IMAP — for cPanel, Postfix, Exchange and more."
     },
