@@ -318,7 +318,21 @@ export function getProvider(id: string): EmailProvider | undefined {
   return EMAIL_PROVIDERS.find((p) => p.id === id);
 }
 
+/**
+ * Filtered provider list for the UI. Gmail is hidden by default in
+ * production because Google requires the paid CASA security review for
+ * `gmail.send`/`gmail.readonly` scopes. Set
+ * `VITE_ENABLE_GOOGLE_OAUTH=true` to surface the Gmail app-password guide.
+ */
+export function getVisibleProviders(): EmailProvider[] {
+  const googleEnabled =
+    String(import.meta.env.VITE_ENABLE_GOOGLE_OAUTH ?? "")
+      .toLowerCase() === "true";
+  return EMAIL_PROVIDERS.filter((p) => p.id !== "gmail" || googleEnabled);
+}
+
 /** Pick the right language variant for a LocalizedText. */
 export function localized(text: LocalizedText, lang: string): string {
   return lang.startsWith("sv") ? text.sv : text.en;
 }
+
