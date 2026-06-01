@@ -68,7 +68,9 @@
     "copy": "Kopiera",
     "copied": "Kopierat",
     "optional": "valfritt",
-    "continue": "Fortsätt"
+    "continue": "Fortsätt",
+    "show": "Visa",
+    "hide": "Dölj"
   },
   "nav": {
     "features": "Funktioner",
