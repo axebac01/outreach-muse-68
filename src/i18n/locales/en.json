@@ -68,7 +68,9 @@
     "copy": "Copy",
     "copied": "Copied",
     "optional": "optional",
-    "continue": "Continue"
+    "continue": "Continue",
+    "show": "Show",
+    "hide": "Hide"
   },
   "nav": {
     "features": "Features",
