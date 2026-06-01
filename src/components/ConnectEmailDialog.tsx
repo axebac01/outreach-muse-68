@@ -35,9 +35,9 @@ import {
 } from "lucide-react";
 import ProviderConnectGuide from "./email/ProviderConnectGuide";
 import {
-  EMAIL_PROVIDERS,
   EmailProvider,
   detectProviderByEmail,
+  getVisibleProviders,
 } from "@/lib/emailProviders";
 import { toUserMessage } from "@/lib/errorMessages";
 
