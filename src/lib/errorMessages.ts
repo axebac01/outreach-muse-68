@@ -55,6 +55,14 @@ const KNOWN_CODES: Record<string, string> = {
   user_already_exists: "errors.auth.userAlreadyExists",
   weak_password: "errors.auth.weakPassword",
   auth_rate_limited: "errors.auth.rateLimited",
+  // Microsoft OAuth (consent / token errors)
+  google_oauth_disabled: "errors.oauth.googleDisabled",
+  access_denied: "errors.oauth.userDeclined",
+  consent_required: "errors.oauth.userDeclined",
+  admin_consent_required: "errors.oauth.adminConsentRequired",
+  microsoft_admin_consent_required: "errors.oauth.adminConsentRequired",
+  microsoft_account_unsupported: "errors.oauth.microsoftAccountUnsupported",
+  microsoft_misconfigured: "errors.oauth.microsoftMisconfigured",
 };
 
 const SUPABASE_AUTH_MAP: Record<string, string> = {
