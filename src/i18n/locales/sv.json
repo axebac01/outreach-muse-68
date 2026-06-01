@@ -35,8 +35,10 @@
     "testFailed": "Anslutning misslyckades",
     "testFirst": "Testa anslutningen innan du sparar",
     "save": "Spara konto",
-    "oauthSoon": "Bäst leverans med app-lösenord",
-    "oauthSoonDesc": "Vi rekommenderar Gmail/Outlook med app-lösenord — säkrare, ingen återkommande inloggning, bättre leveransstatistik. Google OAuth finns i Testing-läge för avancerade användare.",
+    "oauthSoon": "Rekommendation: Outlook eller egen domän",
+    "oauthSoonDesc": "Outlook/Microsoft 365 ansluts med ett klick (OAuth) — säkrast och enklast. Har du Gmail eller en egen domän går det utmärkt att ansluta via app-lösenord eller SMTP/IMAP.",
+    "reconnect": "Återanslut",
+    "reconnectHint": "Din anslutning har gått ut eller återkallats. Klicka för att logga in igen.",
     "providerPicker": {
       "title": "Anslut mejlkonto",
       "subtitle": "Välj din mejlleverantör nedan. Vi visar steg-för-steg hur du kopplar in den säkert.",
