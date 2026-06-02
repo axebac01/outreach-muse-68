@@ -59,6 +59,9 @@ export async function apolloSearch(params: ApolloSearchParams): Promise<{
       ...(params.organization_num_employees_ranges?.length && {
         organization_num_employees_ranges: params.organization_num_employees_ranges,
       }),
+      ...(params.organization_industry_tag_ids?.length && {
+        organization_industry_tag_ids: params.organization_industry_tag_ids,
+      }),
     }),
   });
 

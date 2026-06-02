@@ -60,6 +60,33 @@ const SENIORITIES = [
   { value: "senior", label: "Senior" },
 ];
 
+const ROLES: { value: string; label: string; titles: string[] }[] = [
+  { value: "ceo", label: "VD / CEO", titles: ["CEO", "VD", "Managing Director", "Chief Executive Officer"] },
+  { value: "sales", label: "Säljchef", titles: ["Head of Sales", "Sales Director", "VP Sales", "Säljchef", "CRO", "Chief Revenue Officer"] },
+  { value: "marketing", label: "Marknadschef", titles: ["CMO", "Marketing Director", "Head of Marketing", "Marknadschef"] },
+  { value: "founder", label: "Grundare", titles: ["Founder", "Co-Founder", "Grundare"] },
+  { value: "hr", label: "HR-chef", titles: ["HR Director", "Head of People", "CHRO", "HR-chef", "People Operations"] },
+  { value: "cto", label: "IT-chef / CTO", titles: ["CTO", "Head of IT", "IT Director", "IT-chef", "Chief Technology Officer"] },
+  { value: "cfo", label: "Ekonomichef / CFO", titles: ["CFO", "Finance Director", "Ekonomichef", "Head of Finance"] },
+  { value: "coo", label: "Operations / COO", titles: ["COO", "Head of Operations", "Operations Director"] },
+  { value: "product", label: "Produktchef", titles: ["CPO", "Head of Product", "Product Director", "Produktchef"] },
+];
+
+const INDUSTRIES: { value: string; label: string }[] = [
+  { value: "5567cd4773696439b10b0000", label: "SaaS / Software" },
+  { value: "5567cd4e7369644d39040000", label: "IT-tjänster" },
+  { value: "5567cdda7369644d250c0000", label: "Marknadsföring / Reklam" },
+  { value: "5567cdf27369643dbf260000", label: "E-handel" },
+  { value: "5567cd49736964397e020000", label: "Konsulttjänster" },
+  { value: "5567cdd87369644d391c0000", label: "Finans" },
+  { value: "5567cdbc7369644eed130000", label: "Bygg" },
+  { value: "5567cdda7369643b80510000", label: "Tillverkning" },
+  { value: "5567cdde73696439dd350000", label: "Hälso- & sjukvård" },
+  { value: "5567cd4d7369644d2d010000", label: "Utbildning" },
+  { value: "5567cdf27369643b791f0000", label: "Fastigheter" },
+  { value: "5567cdd47369644cf94c0000", label: "Restaurang / Hospitality" },
+];
+
 export default function Leads() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -67,6 +94,8 @@ export default function Leads() {
   const { balance } = useCreditBalance();
 
   const [titles, setTitles] = useState("");
+  const [role, setRole] = useState<string>("");
+  const [industry, setIndustry] = useState<string>("");
   const [locations, setLocations] = useState("Sweden");
   const [keywords, setKeywords] = useState("");
   const [seniority, setSeniority] = useState<string>("");
@@ -92,25 +121,48 @@ export default function Leads() {
   });
 
   const search = useQuery({
-    queryKey: ["leads-search", { titles, locations, keywords, seniority, employees, page }],
+    queryKey: ["leads-search", { titles, role, industry, locations, keywords, seniority, employees, page }],
     queryFn: async () => {
+      // Merge free-text titles with preset role titles
+      const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
+      const roleTitles = role ? ROLES.find((r) => r.value === role)?.titles ?? [] : [];
+      const mergedTitles = Array.from(new Set([...freeTitles, ...roleTitles]));
+
       const { data, error } = await supabase.functions.invoke("leads-search", {
         body: {
           page,
           per_page: 25,
           q_keywords: keywords || undefined,
-          person_titles: titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+          person_titles: mergedTitles.length ? mergedTitles : undefined,
           person_seniorities: seniority ? [seniority] : undefined,
           organization_locations: locations
             ? locations.split(",").map((s) => s.trim()).filter(Boolean)
             : undefined,
           organization_num_employees_ranges: employees ? [employees] : undefined,
+          organization_industry_tag_ids: industry ? [industry] : undefined,
         },
       });
-      if (error) throw error;
+      if (error) {
+        // FunctionsHttpError — try to extract the JSON body for friendlier UI
+        const ctx = (error as any)?.context;
+        if (ctx?.json) {
+          const body = await ctx.json().catch(() => null);
+          if (body?.error === "apollo_plan_required") {
+            const err: any = new Error(body.message);
+            err.code = "apollo_plan_required";
+            err.upgradeUrl = body.upgrade_url;
+            throw err;
+          }
+          if (body?.message || body?.error) {
+            throw new Error(body.message || body.error);
+          }
+        }
+        throw error;
+      }
       return data as { people: LeadPreview[]; pagination: { total_entries: number; total_pages: number } };
     },
     enabled: searchTriggered,
+    retry: false,
   });
 
   const revealMutation = useMutation({
@@ -202,10 +254,42 @@ export default function Leads() {
             <Card>
               <CardContent className="pt-6 space-y-4">
                 <div>
-                  <Label htmlFor="titles">Titlar (kommaseparerade)</Label>
+                  <Label htmlFor="role">Roll</Label>
+                  <Select value={role} onValueChange={(v) => setRole(v === "any" ? "" : v)}>
+                    <SelectTrigger id="role">
+                      <SelectValue placeholder="Alla roller" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Alla roller</SelectItem>
+                      {ROLES.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                          {r.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="industry">Bransch</Label>
+                  <Select value={industry} onValueChange={(v) => setIndustry(v === "any" ? "" : v)}>
+                    <SelectTrigger id="industry">
+                      <SelectValue placeholder="Alla branscher" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Alla branscher</SelectItem>
+                      {INDUSTRIES.map((i) => (
+                        <SelectItem key={i.value} value={i.value}>
+                          {i.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="titles">Egna titlar (kommaseparerade)</Label>
                   <Input
                     id="titles"
-                    placeholder="VD, Säljchef, CMO"
+                    placeholder="t.ex. Head of Growth"
                     value={titles}
                     onChange={(e) => setTitles(e.target.value)}
                   />
@@ -295,13 +379,36 @@ export default function Leads() {
               </div>
             )}
 
-            {search.isError && (
-              <Card className="border-destructive/40">
-                <CardContent className="py-6 text-destructive text-sm">
-                  Kunde inte söka: {(search.error as Error).message}
-                </CardContent>
-              </Card>
-            )}
+            {search.isError && (() => {
+              const err = search.error as any;
+              if (err?.code === "apollo_plan_required") {
+                return (
+                  <Card className="border-amber-500/40 bg-amber-500/5">
+                    <CardContent className="py-5 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                          <h3 className="font-semibold text-sm">Apollo-nyckeln behöver uppgraderas</h3>
+                          <p className="text-sm text-muted-foreground mt-1">{err.message}</p>
+                        </div>
+                      </div>
+                      <Button asChild size="sm" variant="outline" className="gap-1.5">
+                        <a href={err.upgradeUrl} target="_blank" rel="noopener noreferrer">
+                          Uppgradera Apollo <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return (
+                <Card className="border-destructive/40">
+                  <CardContent className="py-6 text-destructive text-sm">
+                    Kunde inte söka: {err?.message ?? "Okänt fel"}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {search.data && search.data.people.length === 0 && (
               <Card>
