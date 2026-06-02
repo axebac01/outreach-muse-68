@@ -34,11 +34,20 @@ const Inbox = () => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("inbox_show_all") === "1";
   });
+  const [view, setView] = useState<"inbox" | "sent">(() => {
+    if (typeof window === "undefined") return "inbox";
+    return (localStorage.getItem("inbox_view") as "inbox" | "sent") || "inbox";
+  });
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("inbox_show_all", showAll ? "1" : "0");
     }
   }, [showAll]);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("inbox_view", view);
+    }
+  }, [view]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [replyTouched, setReplyTouched] = useState(false);
