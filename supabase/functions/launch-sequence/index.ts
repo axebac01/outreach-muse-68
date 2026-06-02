@@ -113,12 +113,14 @@ Deno.serve(async (req) => {
 
     const { error: insertErr } = await admin.from("scheduled_sends").insert(rows);
     if (insertErr) {
+      // Do NOT mark sequence active if scheduling failed.
       return new Response(JSON.stringify({ error: insertErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Only flip status AFTER scheduled_sends are persisted.
     await admin.from("sequences").update({ status: "active" }).eq("id", sequenceId);
     await admin
       .from("sequence_leads")
