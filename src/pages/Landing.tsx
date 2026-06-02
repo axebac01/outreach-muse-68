@@ -2,9 +2,8 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock, Upload, Sparkles, Send } from "lucide-react";
-import logo from "@/assets/logo.svg";
 import { useTranslation } from "react-i18next";
-import { PipelineMockup } from "@/components/ui/pipeline-mockup";
+import AuroraHero from "@/components/AuroraHero";
 
 const Landing = () => {
   const { t } = useTranslation();
@@ -18,9 +17,6 @@ const Landing = () => {
     { icon: Mail, title: t("landing.f6Title"), description: t("landing.f6Desc") },
   ];
 
-
-
-
   const howItWorks = [
     { step: "1", icon: Upload, title: t("landing.step1Title"), description: t("landing.step1Desc") },
     { step: "2", icon: Sparkles, title: t("landing.step2Title"), description: t("landing.step2Desc") },
@@ -29,40 +25,9 @@ const Landing = () => {
 
   return (
     <Layout>
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-        <div className="container relative py-20 md:py-28">
-          <div className="mx-auto max-w-3xl text-center space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm text-muted-foreground animate-fade-in">
-              <Zap className="h-3.5 w-3.5" />
-              {t("landing.badge")}
-            </div>
-            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-7xl leading-[1.05] animate-fade-in">
-              <span className="text-primary">{t("landing.heroHighlight")}</span> {t("landing.heroRest")}
-            </h1>
-            <p className="mx-auto max-w-xl text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in">
-              {t("landing.heroSub")}
-            </p>
-            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center animate-fade-in">
-              <Button variant="hero" size="lg" asChild>
-                <Link to="/signup" className="gap-2">
-                  {t("landing.ctaPrimary")}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button variant="outline" size="lg" asChild>
-                <Link to="/pricing">{t("landing.ctaSecondary")}</Link>
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground animate-fade-in">{t("landing.noCard")}</p>
-          </div>
+      <AuroraHero />
 
-          <div className="mx-auto mt-12 w-full max-w-[880px]">
-            <PipelineMockup />
-          </div>
-        </div>
-      </section>
+
 
 
       {/* How it works */}

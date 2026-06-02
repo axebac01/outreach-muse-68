@@ -14,7 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Schibsted Grotesk", "system-ui", "sans-serif"],
+        display: ["Schibsted Grotesk", "system-ui", "sans-serif"],
+        serif: ["Newsreader", "Georgia", "serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -91,12 +94,20 @@ export default {
           "0%": { backgroundPosition: "200% 0" },
           "100%": { backgroundPosition: "-200% 0" },
         },
+        "aurora-1": { "0%,100%": { transform: "translate(0,0) scale(1)" }, "50%": { transform: "translate(120px,80px) scale(1.15)" } },
+        "aurora-2": { "0%,100%": { transform: "translate(0,0) scale(1.05)" }, "50%": { transform: "translate(-100px,120px) scale(.92)" } },
+        "aurora-3": { "0%,100%": { transform: "translate(0,0) scale(1)" }, "50%": { transform: "translate(60px,-90px) scale(1.1)" } },
+        "ping-soft": { "0%": { transform: "scale(1)", opacity: "0.7" }, "80%,100%": { transform: "scale(3.4)", opacity: "0" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.5s ease-out forwards",
         shimmer: "shimmer 2.2s linear infinite",
+        "aurora-1": "aurora-1 19s ease-in-out infinite",
+        "aurora-2": "aurora-2 23s ease-in-out infinite",
+        "aurora-3": "aurora-3 27s ease-in-out infinite",
+        "ping-soft": "ping-soft 1.8s cubic-bezier(0.22,0.61,0.36,1) infinite",
       },
     },
   },
