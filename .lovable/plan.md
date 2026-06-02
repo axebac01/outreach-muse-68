@@ -1,96 +1,47 @@
-
 # Mål
 
-Unibox ska endast visa mejl som är relaterade till MailLead-aktivitet: svar på utskick, eller mejl från/till en adress som finns som lead hos användaren. Allt annat (nyhetsbrev, fakturor, interna mejl) filtreras bort. En toggle "Visa alla mejl" finns för power users.
+Unibox ska som default endast visa trådar med inkommande svar. Utgående mejl (det du själv skickat) ska gömmas tills användaren aktivt klickar på "Skickat".
 
-## Definition av "relaterat"
+## Beteende
 
-Ett `email_messages`-rad anses MailLead-relaterat om något av följande gäller:
-1. `sequence_id IS NOT NULL` (svar matchat via References/In-Reply-To till ett utskick).
-2. `lead_id IS NOT NULL` (avsändaradressen finns i `sequence_leads` för användaren).
-3. Mejlet är `direction='outbound'` skickat av MailLead (alltid relevant).
-4. Tråden (`thread_key` + `email_account_id`) innehåller minst ett av ovanstående.
+- **Default ("Inkorg")**: Visa endast trådar där `last_direction = 'inbound'` ELLER `unread_count > 0` ELLER tråden har minst ett inbound-meddelande. Pure outbound-trådar (ingen svarat ännu) syns inte.
+- **"Skickat"-flik/filter**: Visa trådar där senaste meddelandet är `outbound` och inga svar finns. (Allt du skickat, väntar på svar.)
+- **"Alla"** (befintlig "Visa alla mejl"-toggle): Oförändrad — visar även icke-lead-relaterade.
 
-Punkt 4 är viktig: om leaden svarar från en sidoadress eller forwardar internt så att en ny person går in i tråden, ska resten av tråden fortfarande synas.
+## UI (`src/pages/Inbox.tsx`)
 
----
+Lägg till ett segmenterat filter högst upp i tråd-listan med tre lägen:
+- **Inkorg** (default) — svar från leads
+- **Skickat** — utgående utskick som väntar på svar
+- (Befintlig "Visa alla mejl"-switch behålls separat för lead-related-filtret)
 
-## Tekniska steg
+Persistera valet i `localStorage` (`inbox_view: "inbox" | "sent"`).
 
-### 1. Databas — ny kolumn + backfill (migration)
+## Datalager (`src/hooks/useInbox.ts`)
 
-- Lägg till `is_lead_related BOOLEAN NOT NULL DEFAULT false` på både `email_messages` och `email_threads`.
-- Index: `CREATE INDEX ON email_threads (user_id, is_lead_related, last_message_at DESC) WHERE is_archived = false;`
-- Backfill:
-  - Markera `email_messages.is_lead_related = true` där `lead_id IS NOT NULL` ELLER `sequence_id IS NOT NULL` ELLER `direction='outbound'`.
-  - Markera `email_threads.is_lead_related = true` om någon meddelandet i tråden uppfyller kriterierna (subquery per thread_key + email_account_id).
+Utöka `useInboxThreads(filters)` med `view?: "inbox" | "sent"` (default `"inbox"`):
 
-### 2. `sync-inbox/index.ts` — sätt flaggan vid insert
+- `view = "inbox"`: `.neq("last_direction", "outbound")` ELLER `.gt("unread_count", 0)` — enklast: `.or("last_direction.neq.outbound,unread_count.gt.0")`.
+- `view = "sent"`: `.eq("last_direction", "outbound")`.
 
-I `persistInbound`:
-- Beräkna `isLeadRelated = !!leadId || !!sequenceId`.
-- Om false: gör en till lookup — kolla om någon adress i `To`/`Cc` finns i `sequence_leads` (för forwardade fall). Sätt även då.
-- Skicka `is_lead_related` i insert.
-- Efter trådupsert: om nya meddelandet är lead-related ELLER tråden redan är det, sätt `is_lead_related=true` på tråden. Annars behåll false.
-- AI-analysen (`analyze-inbound-email`) triggas **endast om** `is_lead_related === true`. Sparar credits och undviker nonsens-etiketter på nyhetsbrev.
-
-### 3. `send-email/index.ts` — outbound markeras alltid
-
-När MailLead själv skickar mejl: sätt `is_lead_related = true` på både `email_messages` och `email_threads` (tråden skapas/uppdateras vid outbound också).
-
-### 4. Frontend
-
-**`src/hooks/useInbox.ts`**
-- `useInboxThreads(filters)`: lägg till `showAll?: boolean` i filters. Default false → `.eq("is_lead_related", true)`.
-- `useUnreadInboxCount`: filtrera på `is_lead_related=true` (annars blir badge missvisande).
-
-**`src/pages/Inbox.tsx`**
-- Ny toggle/switch i toolbar: "Visa alla mejl" (av som default). Persisteras i localStorage.
-- När av: visa endast lead-relaterade. När på: visa allt (men markera icke-lead-trådar visuellt med en discreet "Ej kopplad till lead"-badge).
-- Tom-state-text uppdateras: "Inga svar från dina kampanjer ännu. När en lead svarar dyker det upp här."
-
-### 5. Retroaktiv "uppgradering" av trådar
-
-Om en användare lägger till en lead vars adress redan finns i en befintlig tråd, ska tråden bli synlig i Unibox. Lösning:
-- Lägg till en trigger på `sequence_leads` (AFTER INSERT): uppdatera `email_threads` där `participants @> ARRAY[NEW.email]` och `user_id = NEW.user_id` → sätt `is_lead_related=true` och `lead_id=NEW.id` om null. Samma för matchande `email_messages`.
-
-### 6. Inbox-räknare och realtime
-- `useInboxRealtime` är redan trådsbaserad — fungerar utan ändring eftersom flaggan ligger på tråden.
-- Badge i sidomenyn (om finns) ska bara räkna lead-related olästa.
-
----
+`useUnreadInboxCount` är redan korrekt (räknar `unread_count > 0`, vilket per definition är inbound).
 
 ## Vad ändras inte
 
-- `sync-inbox` syncar fortfarande alla inbox-mejl från Gmail/Outlook (vi behöver dem för att kunna matcha framtida leads). Vi *filtrerar*, vi *blockerar inte hämtning*.
-- Bounce-detektion, reply-pause-logik, scheduled_sends cancellation: oförändrad.
-- `email_messages`-tabellens RLS och struktur i övrigt: oförändrad.
+- Databas: inga schema-ändringar. Vi använder existerande `last_direction` på `email_threads`.
+- `is_lead_related`-filtret och dess toggle: oförändrade.
+- Trådvyn när man klickar på en tråd: visar fortfarande hela konversationen (in + ut).
+- Edge functions: oförändrade.
 
----
+## Filer
 
-## Filer som berörs
+- `src/hooks/useInbox.ts` — lägg till `view` i filters + query-logik.
+- `src/pages/Inbox.tsx` — segmenterat filter (Inkorg/Skickat), localStorage, skicka `view` till hooken, uppdatera tomma states.
+- `src/i18n/locales/{sv,en}.json` — strängar för "Inkorg" / "Skickat" / tom state.
 
-- Migration: ny kolumn + index + backfill + trigger
-- `supabase/functions/sync-inbox/index.ts` — sätt flaggan, betinga AI-trigger
-- `supabase/functions/send-email/index.ts` — sätt flaggan för outbound
-- `src/hooks/useInbox.ts` — filtrering + showAll
-- `src/pages/Inbox.tsx` — toggle + tom-state + badge för icke-lead
-- (Ev.) `src/i18n/locales/{sv,en}.json` — nya strängar
+## Verifiering
 
----
-
-## Risker & öppna frågor
-
-- **Aliases/plus-addressing**: `firstname+tag@domain.com` matchar inte `ilike("email", from)`. Vi behåller dagens enkla match; kan förbättras separat om problem uppstår.
-- **Stora trådar**: backfill-subquery kan vara tung. Vi kör den en gång under migration — acceptabelt.
-- **Användare som redan vant sig vid att se allt**: visa en engångs-toast första gången Inbox laddas efter deploy som förklarar filtreringen och pekar på toggeln.
-
----
-
-## Verifiering efter implementation
-
-1. Skicka kampanjmejl → leaden svarar → svaret syns i Unibox. ✅
-2. Få ett nyhetsbrev till samma adress → syns INTE i Unibox (men finns i Gmail). ✅
-3. Slå på "Visa alla" → nyhetsbrevet syns med "Ej kopplad till lead"-badge. ✅
-4. Lägg till en lead vars adress finns i tidigare tråd → tråden dyker upp i Unibox. ✅
-5. AI-analys körs bara på lead-related inbound (kolla `analyze-inbound-email`-loggar). ✅
+1. Default-vy: endast trådar där någon svarat syns. ✅
+2. Klicka "Skickat": ser utskick som väntar på svar. ✅
+3. Lead svarar på ett utskick → tråden flyttas från "Skickat" till "Inkorg". ✅
+4. "Visa alla mejl"-toggle fungerar oberoende av Inkorg/Skickat. ✅
