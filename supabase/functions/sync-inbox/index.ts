@@ -218,6 +218,8 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
   })();
 
+  const isLeadRelated = !!leadId || !!sequenceId;
+
   const { data: inserted, error: insErr } = await admin.from("email_messages").insert({
     user_id: account.user_id,
     email_account_id: account.id,
@@ -238,6 +240,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     received_at: receivedAt,
     status: "received",
     is_read: false,
+    is_lead_related: isLeadRelated,
   }).select("id").maybeSingle();
 
   if (insErr) {
@@ -245,8 +248,8 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     return;
   }
 
-  // Trigger AI analysis (fire-and-forget; don't block sync)
-  if (inserted?.id) {
+  // Trigger AI analysis only for lead-related inbound (saves credits, avoids noise)
+  if (inserted?.id && isLeadRelated) {
     const analyzeUrl = `${SUPABASE_URL}/functions/v1/analyze-inbound-email`;
     fetch(analyzeUrl, {
       method: "POST",
