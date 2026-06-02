@@ -174,10 +174,10 @@ export function PipelineMockup() {
         {/* Column 1: Leads */}
         <div className="relative z-10">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t("landing.pipeline.leads")}
             </span>
-            <span className="rounded-full bg-[#2563eb]/10 px-2 py-0.5 text-[10px] font-semibold text-[#2563eb]">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
               {LEAD_POOL.length}
             </span>
           </div>
@@ -185,21 +185,20 @@ export function PipelineMockup() {
             {leads.map((lead, idx) => (
               <li
                 key={lead.key}
-                className={`pm-row-in flex items-center gap-2.5 rounded-[10px] border bg-white p-2 ${
-                  idx === leads.length - 1 ? "border-l-2 border-l-[#2563eb]/50" : ""
+                className={`pm-row-in flex items-center gap-2.5 rounded-[10px] border bg-background p-2 ${
+                  idx === leads.length - 1 ? "border-l-2 border-l-primary/50" : ""
                 }`}
-                style={{ borderColor: "rgba(0,0,0,0.06)" }}
               >
-                <div className="grid h-7 w-7 place-items-center rounded-full bg-[#2563eb] text-[10px] font-semibold text-white">
+                <div className="grid h-7 w-7 place-items-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
                   {initials(lead.name)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-semibold text-[#0f172a]">
+                  <div className="truncate text-xs font-semibold text-foreground">
                     {lead.name}
                   </div>
-                  <div className="truncate text-[10px] text-[#64748b]">{lead.company}</div>
+                  <div className="truncate text-[10px] text-muted-foreground">{lead.company}</div>
                 </div>
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-[#64748b]">
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                   {lead.role}
                 </span>
               </li>
