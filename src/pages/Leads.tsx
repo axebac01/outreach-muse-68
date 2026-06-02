@@ -21,6 +21,9 @@ import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { toast } from "sonner";
 import { Search, Linkedin, Sparkles, Coins, Loader2, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
+import MyLeadsTab from "@/components/leads/MyLeadsTab";
 
 const CREDITS_PER_REVEAL = 2;
 
