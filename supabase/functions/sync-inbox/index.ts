@@ -218,6 +218,8 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
   })();
 
+  const isLeadRelated = !!leadId || !!sequenceId;
+
   const { data: inserted, error: insErr } = await admin.from("email_messages").insert({
     user_id: account.user_id,
     email_account_id: account.id,
@@ -238,6 +240,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     received_at: receivedAt,
     status: "received",
     is_read: false,
+    is_lead_related: isLeadRelated,
   }).select("id").maybeSingle();
 
   if (insErr) {
@@ -245,8 +248,8 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     return;
   }
 
-  // Trigger AI analysis (fire-and-forget; don't block sync)
-  if (inserted?.id) {
+  // Trigger AI analysis only for lead-related inbound (saves credits, avoids noise)
+  if (inserted?.id && isLeadRelated) {
     const analyzeUrl = `${SUPABASE_URL}/functions/v1/analyze-inbound-email`;
     fetch(analyzeUrl, {
       method: "POST",
@@ -261,7 +264,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
   // Upsert thread
   const { data: existingThread } = await admin
     .from("email_threads")
-    .select("id, participants, message_count, unread_count")
+    .select("id, participants, message_count, unread_count, is_lead_related")
     .eq("email_account_id", account.id)
     .eq("thread_key", threadKey)
     .maybeSingle();
@@ -269,6 +272,8 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
   const participants = new Set<string>(existingThread?.participants ?? []);
   participants.add(fromEmail);
   participants.add(account.email.toLowerCase());
+
+  const threadLeadRelated = isLeadRelated || !!existingThread?.is_lead_related;
 
   if (existingThread) {
     await admin.from("email_threads").update({
@@ -281,6 +286,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
       lead_id: leadId,
       sequence_id: sequenceId,
       is_archived: false,
+      is_lead_related: threadLeadRelated,
     }).eq("id", existingThread.id);
   } else {
     await admin.from("email_threads").insert({
@@ -296,6 +302,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
       message_count: 1,
       lead_id: leadId,
       sequence_id: sequenceId,
+      is_lead_related: threadLeadRelated,
     });
   }
 

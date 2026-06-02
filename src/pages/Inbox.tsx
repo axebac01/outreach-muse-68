@@ -30,6 +30,15 @@ const Inbox = () => {
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("inbox_show_all") === "1";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("inbox_show_all", showAll ? "1" : "0");
+    }
+  }, [showAll]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [replyTouched, setReplyTouched] = useState(false);
@@ -54,6 +63,7 @@ const Inbox = () => {
     accountId: accountId === "all" ? undefined : accountId,
     onlyUnread,
     sentiment: sentimentFilter === "all" ? undefined : sentimentFilter,
+    showAll,
   });
 
   const filteredThreads = useMemo(() => {
@@ -256,6 +266,18 @@ const Inbox = () => {
                 <Input className="pl-7" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Avsändare, ämne…" />
               </div>
             </div>
+            <div className="pt-2 border-t space-y-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">Omfång</label>
+              <div className="flex gap-1">
+                <Button size="sm" variant={!showAll ? "secondary" : "ghost"} onClick={() => setShowAll(false)} className="flex-1 text-xs">Endast leads</Button>
+                <Button size="sm" variant={showAll ? "secondary" : "ghost"} onClick={() => setShowAll(true)} className="flex-1 text-xs">Visa alla</Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                {showAll
+                  ? "Visar alla mejl i dina synkade konton."
+                  : "Visar bara mejl till/från dina leads och kampanjsvar."}
+              </p>
+            </div>
           </div>
 
           {/* Thread list */}
@@ -267,8 +289,15 @@ const Inbox = () => {
               {isLoading ? (
                 <div className="p-6 text-center text-sm text-muted-foreground">Laddar…</div>
               ) : filteredThreads.length === 0 ? (
-                <div className="p-6 text-center text-sm text-muted-foreground">
-                  Inga konversationer ännu. Klicka <strong>Hämta nytt</strong> för att synka.
+                <div className="p-6 text-center text-sm text-muted-foreground space-y-2">
+                  {showAll ? (
+                    <p>Inga konversationer ännu. Klicka <strong>Hämta nytt</strong> för att synka.</p>
+                  ) : (
+                    <>
+                      <p>Inga svar från dina kampanjer ännu.</p>
+                      <p className="text-xs">När en lead svarar dyker det upp här. Vill du se alla inkommande mejl, slå på <strong>Visa alla</strong>.</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <ul className="divide-y">
@@ -447,8 +476,15 @@ const ThreadRow = ({ thread, accounts, active, onClick }: {
               )}
               <div className={`text-sm truncate ${unread ? "font-semibold" : ""}`}>{otherParticipant}</div>
             </div>
-            <div className={`text-sm truncate ${unread ? "font-medium" : "text-muted-foreground"}`}>
-              {thread.subject || "(utan ämne)"}
+            <div className="text-sm truncate mt-0.5 flex items-center gap-1.5">
+              <span className={unread ? "font-medium" : "text-muted-foreground"}>
+                {thread.subject || "(utan ämne)"}
+              </span>
+              {!thread.is_lead_related && (
+                <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 shrink-0 text-muted-foreground border-muted-foreground/30">
+                  Ej lead
+                </Badge>
+              )}
             </div>
             <div className="text-xs text-muted-foreground truncate mt-0.5">
               {thread.last_direction === "outbound" ? "Du: " : ""}{thread.last_snippet}

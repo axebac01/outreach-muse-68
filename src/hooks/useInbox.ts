@@ -20,6 +20,7 @@ export interface InboxThread {
   lead_id: string | null;
   sequence_id: string | null;
   is_archived: boolean;
+  is_lead_related: boolean;
 }
 
 export interface InboxMessage {
@@ -52,7 +53,7 @@ export interface InboxMessage {
   ai_analysis_error: string | null;
 }
 
-export const useInboxThreads = (filters: { accountId?: string; sequenceId?: string; onlyUnread?: boolean; sentiment?: string } = {}) => {
+export const useInboxThreads = (filters: { accountId?: string; sequenceId?: string; onlyUnread?: boolean; sentiment?: string; showAll?: boolean } = {}) => {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["inbox_threads", user?.id, filters],
@@ -64,6 +65,7 @@ export const useInboxThreads = (filters: { accountId?: string; sequenceId?: stri
         .eq("is_archived", false)
         .order("last_message_at", { ascending: false })
         .limit(200);
+      if (!filters.showAll) q = q.eq("is_lead_related", true);
       if (filters.accountId) q = q.eq("email_account_id", filters.accountId);
       if (filters.sequenceId) q = q.eq("sequence_id", filters.sequenceId);
       if (filters.onlyUnread) q = q.gt("unread_count", 0);
@@ -123,6 +125,7 @@ export const useUnreadInboxCount = () => {
         .from("email_threads")
         .select("unread_count")
         .eq("user_id", user!.id)
+        .eq("is_lead_related", true)
         .gt("unread_count", 0);
       if (error) throw error;
       return (data ?? []).reduce((acc, r) => acc + (r.unread_count ?? 0), 0);
