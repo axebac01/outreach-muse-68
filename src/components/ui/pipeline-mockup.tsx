@@ -274,10 +274,7 @@ export function PipelineMockup() {
       </div>
 
       {/* Stats */}
-      <div
-        className="mt-6 grid grid-cols-3 gap-2 border-t pt-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      >
+      <div className="mt-6 grid grid-cols-3 gap-2 border-t pt-4">
         {[
           { value: sent, label: t("landing.pipeline.sentLabel") },
           { value: `${open}%`, label: t("landing.pipeline.openRate") },
