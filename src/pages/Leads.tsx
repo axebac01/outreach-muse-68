@@ -115,7 +115,7 @@ export default function Leads() {
     queryFn: async () => {
       const { data } = await supabase
         .from("sequences")
-        .select("id, name, status")
+        .select("id, name, status, campaign_id")
         .order("created_at", { ascending: false })
         .limit(50);
       return data ?? [];
