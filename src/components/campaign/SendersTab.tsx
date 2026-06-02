@@ -70,6 +70,11 @@ export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
   };
 
   const isActive = sequence.status === "active";
+  const isTrulyLaunched = isActive && scheduledCount > 0;
+  const isStuckActive = isActive && scheduledCount === 0;
+  const brokenAccounts = accounts.filter(
+    (a) => selectedSenderIds.has(a.id) && /invalid_grant|expired|revoked/i.test(a.status_message ?? ""),
+  );
 
   return (
     <div className="space-y-6 max-w-3xl">
