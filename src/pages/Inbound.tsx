@@ -204,16 +204,7 @@ const Inbound = () => {
           </div>
 
           <div className="flex flex-wrap justify-center gap-2 pt-2">
-            <Button
-              onClick={() =>
-                toast.success("Tack!", {
-                  description: "Vi hör av oss så snart Inbound släpps.",
-                })
-              }
-              className="gap-2"
-            >
-              <Bell className="h-4 w-4" /> Notifiera mig vid lansering
-            </Button>
+            <NotifyMeDialog />
             <Button
               variant="outline"
               onClick={() =>
