@@ -121,25 +121,48 @@ export default function Leads() {
   });
 
   const search = useQuery({
-    queryKey: ["leads-search", { titles, locations, keywords, seniority, employees, page }],
+    queryKey: ["leads-search", { titles, role, industry, locations, keywords, seniority, employees, page }],
     queryFn: async () => {
+      // Merge free-text titles with preset role titles
+      const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
+      const roleTitles = role ? ROLES.find((r) => r.value === role)?.titles ?? [] : [];
+      const mergedTitles = Array.from(new Set([...freeTitles, ...roleTitles]));
+
       const { data, error } = await supabase.functions.invoke("leads-search", {
         body: {
           page,
           per_page: 25,
           q_keywords: keywords || undefined,
-          person_titles: titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+          person_titles: mergedTitles.length ? mergedTitles : undefined,
           person_seniorities: seniority ? [seniority] : undefined,
           organization_locations: locations
             ? locations.split(",").map((s) => s.trim()).filter(Boolean)
             : undefined,
           organization_num_employees_ranges: employees ? [employees] : undefined,
+          organization_industry_tag_ids: industry ? [industry] : undefined,
         },
       });
-      if (error) throw error;
+      if (error) {
+        // FunctionsHttpError — try to extract the JSON body for friendlier UI
+        const ctx = (error as any)?.context;
+        if (ctx?.json) {
+          const body = await ctx.json().catch(() => null);
+          if (body?.error === "apollo_plan_required") {
+            const err: any = new Error(body.message);
+            err.code = "apollo_plan_required";
+            err.upgradeUrl = body.upgrade_url;
+            throw err;
+          }
+          if (body?.message || body?.error) {
+            throw new Error(body.message || body.error);
+          }
+        }
+        throw error;
+      }
       return data as { people: LeadPreview[]; pagination: { total_entries: number; total_pages: number } };
     },
     enabled: searchTriggered,
+    retry: false,
   });
 
   const revealMutation = useMutation({
