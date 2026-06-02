@@ -1,14 +1,20 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Rocket, AlertTriangle, Mail } from "lucide-react";
+import { Rocket, AlertTriangle, Mail, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSequenceSenders,
+  useToggleSender,
+  useUpdateSequence,
+  useSequenceLeads,
+  type Sequence,
+} from "@/hooks/useSequence";
   useToggleSender,
   useUpdateSequence,
   useSequenceLeads,
