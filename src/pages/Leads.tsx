@@ -196,11 +196,23 @@ export default function Leads() {
         if (importErr) {
           toast.error("Avslöjade men kunde inte importera");
         } else {
-          toast.success(`${importRes.inserted} importerade till sekvens (${importRes.skipped} fanns redan)`);
+          const seq = (sequences as any[]).find((s) => s.id === sequenceId);
+          const campaignId = seq?.campaign_id ?? null;
+          const action = campaignId
+            ? { label: "Visa", onClick: () => navigate(`/campaign/${campaignId}`) }
+            : undefined;
+          if (importRes.inserted === 0 && importRes.skipped > 0) {
+            toast.warning(`Alla ${importRes.total} fanns redan i sekvensen`);
+          } else if (importRes.skipped > 0) {
+            toast.success(`${importRes.inserted} importerade · ${importRes.skipped} fanns redan`, { action });
+          } else {
+            toast.success(`${importRes.inserted} importerade till sekvens`, { action });
+          }
         }
       }
       setSelected(new Set());
       queryClient.invalidateQueries({ queryKey: ["credit-wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["marketplace-leads"] });
     },
     onError: (e: any) => {
       toast.error(e?.message ?? "Något gick fel");
