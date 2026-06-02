@@ -153,7 +153,7 @@ export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
       )}
 
       {isStuckActive && (
-        <div className="flex items-start gap-2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 p-3 text-sm">
+        <div className="flex items-start gap-2 rounded-md bg-warning/10 text-warning p-3 text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           <span>Kampanjen är markerad som aktiv men inga utskick är schemalagda. Klicka <strong>Starta kampanj</strong> igen för att schemalägga utskicken.</span>
         </div>
