@@ -28,6 +28,18 @@ export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
   const update = useUpdateSequence(sequence.id);
   const [launching, setLaunching] = useState(false);
 
+  const { data: scheduledCount = 0 } = useQuery({
+    queryKey: ["scheduled_sends_count", sequence.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("scheduled_sends")
+        .select("id", { count: "exact", head: true })
+        .eq("sequence_id", sequence.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const selectedSenderIds = new Set(senders.map((s) => s.email_account_id));
   const dailyLimit = sequence.daily_limit_per_account;
   const totalCapacity = senders.length * dailyLimit;
