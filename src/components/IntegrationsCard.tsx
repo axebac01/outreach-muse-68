@@ -151,8 +151,8 @@ const IntegrationsCard = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 flex items-start gap-2 text-xs">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 flex items-start gap-2 text-xs">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                 <span>Spara nyckeln på ett säkert ställe. Vi kan inte visa den igen.</span>
               </div>
 
