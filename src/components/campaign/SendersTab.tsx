@@ -15,11 +15,6 @@ import {
   useSequenceLeads,
   type Sequence,
 } from "@/hooks/useSequence";
-  useToggleSender,
-  useUpdateSequence,
-  useSequenceLeads,
-  type Sequence,
-} from "@/hooks/useSequence";
 import { useEmailAccounts } from "@/hooks/useEmailAccounts";
 import { supabase } from "@/integrations/supabase/client";
 import { PreLaunchChecklist } from "./PreLaunchChecklist";
