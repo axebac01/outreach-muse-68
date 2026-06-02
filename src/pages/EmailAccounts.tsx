@@ -152,7 +152,7 @@ const EmailAccounts = () => {
 
                   <div className="rounded-lg bg-muted/40 p-3 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2">
-                      <Flame className="h-3.5 w-3.5 text-orange-500" />
+                      <Flame className="h-3.5 w-3.5 text-primary" />
                       <span className="font-medium">{used} / {cap} skickade idag</span>
                       {rampUpDay !== null && (
                         <span className="text-muted-foreground">· Ramp up dag {rampUpDay}/14</span>

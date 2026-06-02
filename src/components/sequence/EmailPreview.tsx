@@ -97,7 +97,7 @@ export const EmailPreview = ({
         {missing.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {missing.map((m) => (
-              <Badge key={m} variant="outline" className="text-[10px] text-amber-600 border-amber-300">
+              <Badge key={m} variant="outline" className="text-[10px] text-warning border-warning/40">
                 saknar {`{{${m}}}`}
               </Badge>
             ))}

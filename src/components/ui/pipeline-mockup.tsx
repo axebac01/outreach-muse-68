@@ -119,10 +119,8 @@ export function PipelineMockup() {
 
   return (
     <div
-      className="relative mx-auto w-full max-w-[880px] rounded-[16px] border bg-white p-4 sm:p-6"
+      className="relative mx-auto w-full max-w-[880px] rounded-[16px] border bg-card text-card-foreground p-4 sm:p-6 shadow-sm"
       style={{
-        borderColor: "rgba(0,0,0,0.08)",
-        boxShadow: "0 2px 24px rgba(0,0,0,0.06)",
         opacity: 0,
         animation: `pm-card-in 500ms ${EASE} 400ms forwards`,
       }}
@@ -157,7 +155,7 @@ export function PipelineMockup() {
           </defs>
           {!reduced &&
             [0, 0.5, 1].map((begin, i) => (
-              <circle key={`a${i}`} r="2.5" fill="#2563eb" filter="url(#pm-glow)">
+              <circle key={`a${i}`} r="2.5" fill="hsl(var(--primary))" filter="url(#pm-glow)">
                 <animateMotion dur="1.5s" repeatCount="indefinite" begin={`${begin}s`}>
                   <mpath href="#pm-p1" />
                 </animateMotion>
@@ -165,7 +163,7 @@ export function PipelineMockup() {
             ))}
           {!reduced &&
             [0.25, 0.75, 1.25].map((begin, i) => (
-              <circle key={`b${i}`} r="2.5" fill="#2563eb" filter="url(#pm-glow)">
+              <circle key={`b${i}`} r="2.5" fill="hsl(var(--primary))" filter="url(#pm-glow)">
                 <animateMotion dur="1.5s" repeatCount="indefinite" begin={`${begin}s`}>
                   <mpath href="#pm-p2" />
                 </animateMotion>
@@ -176,10 +174,10 @@ export function PipelineMockup() {
         {/* Column 1: Leads */}
         <div className="relative z-10">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t("landing.pipeline.leads")}
             </span>
-            <span className="rounded-full bg-[#2563eb]/10 px-2 py-0.5 text-[10px] font-semibold text-[#2563eb]">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
               {LEAD_POOL.length}
             </span>
           </div>
@@ -187,21 +185,20 @@ export function PipelineMockup() {
             {leads.map((lead, idx) => (
               <li
                 key={lead.key}
-                className={`pm-row-in flex items-center gap-2.5 rounded-[10px] border bg-white p-2 ${
-                  idx === leads.length - 1 ? "border-l-2 border-l-[#2563eb]/50" : ""
+                className={`pm-row-in flex items-center gap-2.5 rounded-[10px] border bg-background p-2 ${
+                  idx === leads.length - 1 ? "border-l-2 border-l-primary/50" : ""
                 }`}
-                style={{ borderColor: "rgba(0,0,0,0.06)" }}
               >
-                <div className="grid h-7 w-7 place-items-center rounded-full bg-[#2563eb] text-[10px] font-semibold text-white">
+                <div className="grid h-7 w-7 place-items-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
                   {initials(lead.name)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-semibold text-[#0f172a]">
+                  <div className="truncate text-xs font-semibold text-foreground">
                     {lead.name}
                   </div>
-                  <div className="truncate text-[10px] text-[#64748b]">{lead.company}</div>
+                  <div className="truncate text-[10px] text-muted-foreground">{lead.company}</div>
                 </div>
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-[#64748b]">
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                   {lead.role}
                 </span>
               </li>
@@ -212,20 +209,19 @@ export function PipelineMockup() {
         {/* Column 2: Sequence */}
         <div className="relative z-10">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t("landing.pipeline.sequence")}
             </span>
           </div>
           <div className="space-y-2">
             {[
-              { day: t("landing.pipeline.day1"), status: t("landing.pipeline.sent"), color: "#16a34a", pulse: false },
-              { day: t("landing.pipeline.day3"), status: t("landing.pipeline.sent"), color: "#16a34a", pulse: false },
-              { day: t("landing.pipeline.day7"), status: t("landing.pipeline.scheduled"), color: "#d97706", pulse: true },
+              { day: t("landing.pipeline.day1"), status: t("landing.pipeline.sent"), color: "hsl(var(--success))", pulse: false },
+              { day: t("landing.pipeline.day3"), status: t("landing.pipeline.sent"), color: "hsl(var(--success))", pulse: false },
+              { day: t("landing.pipeline.day7"), status: t("landing.pipeline.scheduled"), color: "hsl(var(--warning))", pulse: true },
             ].map((step, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2.5 rounded-[10px] border bg-white p-2.5"
-                style={{ borderColor: "rgba(0,0,0,0.06)" }}
+                className="flex items-center gap-2.5 rounded-[10px] border bg-background p-2.5"
               >
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
@@ -235,8 +231,8 @@ export function PipelineMockup() {
                   }}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-semibold text-[#0f172a]">{step.day}</div>
-                  <div className="text-[10px] text-[#64748b]">{step.status}</div>
+                  <div className="truncate text-xs font-semibold text-foreground">{step.day}</div>
+                  <div className="text-[10px] text-muted-foreground">{step.status}</div>
                 </div>
               </div>
             ))}
@@ -246,7 +242,7 @@ export function PipelineMockup() {
         {/* Column 3: Replies */}
         <div className="relative z-10">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t("landing.pipeline.replies")}
             </span>
           </div>
@@ -254,21 +250,20 @@ export function PipelineMockup() {
             {replies.map((r) => (
               <li
                 key={r.key}
-                className="pm-row-down rounded-[10px] border border-l-2 bg-white p-2.5"
-                style={{ borderColor: "rgba(0,0,0,0.06)", borderLeftColor: "rgba(22,163,74,0.5)" }}
+                className="pm-row-down rounded-[10px] border border-l-2 border-l-success/50 bg-background p-2.5"
               >
                 <div className="flex items-center gap-2">
-                  <div className="grid h-6 w-6 place-items-center rounded-full bg-[#16a34a]/10 text-[9px] font-semibold text-[#16a34a]">
+                  <div className="grid h-6 w-6 place-items-center rounded-full bg-success/10 text-[9px] font-semibold text-success">
                     {initials(r.name)}
                   </div>
-                  <div className="min-w-0 flex-1 truncate text-xs font-semibold text-[#0f172a]">
+                  <div className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">
                     {r.name}
                   </div>
-                  <span className="text-[10px] text-[#64748b]">{ageLabel(r.ageMin)}</span>
+                  <span className="text-[10px] text-muted-foreground">{ageLabel(r.ageMin)}</span>
                 </div>
-                <div className="mt-1 truncate text-[11px] text-[#64748b]">{r.snippet}</div>
+                <div className="mt-1 truncate text-[11px] text-muted-foreground">{r.snippet}</div>
                 <div className="mt-1.5">
-                  <span className="rounded bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+                  <span className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success">
                     {t("landing.pipeline.replied")} ↩
                   </span>
                 </div>
@@ -279,20 +274,17 @@ export function PipelineMockup() {
       </div>
 
       {/* Stats */}
-      <div
-        className="mt-6 grid grid-cols-3 gap-2 border-t pt-4"
-        style={{ borderColor: "rgba(0,0,0,0.06)" }}
-      >
+      <div className="mt-6 grid grid-cols-3 gap-2 border-t pt-4">
         {[
           { value: sent, label: t("landing.pipeline.sentLabel") },
           { value: `${open}%`, label: t("landing.pipeline.openRate") },
           { value: `${reply}%`, label: t("landing.pipeline.replyRate") },
         ].map((s, i) => (
           <div key={i} className="text-center">
-            <div className="text-xl font-bold tracking-tight text-[#0f172a] tabular-nums md:text-2xl">
+            <div className="text-xl font-bold tracking-tight text-foreground tabular-nums md:text-2xl">
               {s.value}
             </div>
-            <div className="mt-0.5 text-[11px] text-[#64748b]">{s.label}</div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground">{s.label}</div>
           </div>
         ))}
       </div>
