@@ -287,7 +287,7 @@ const Inbound = () => {
                               <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">Lead</Badge>
                             )}
                             {v.hot && (
-                              <Flame className="h-3 w-3 text-orange-500 dark:text-orange-400 shrink-0" />
+                              <Flame className="h-3 w-3 text-primary shrink-0" />
                             )}
                           </div>
                           <div className="text-[11px] text-muted-foreground truncate">
