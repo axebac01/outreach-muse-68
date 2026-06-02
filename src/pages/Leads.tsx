@@ -21,6 +21,9 @@ import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { toast } from "sonner";
 import { Search, Linkedin, Sparkles, Coins, Loader2, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
+import MyLeadsTab from "@/components/leads/MyLeadsTab";
 
 const CREDITS_PER_REVEAL = 2;
 
@@ -112,7 +115,7 @@ export default function Leads() {
     queryFn: async () => {
       const { data } = await supabase
         .from("sequences")
-        .select("id, name, status")
+        .select("id, name, status, campaign_id")
         .order("created_at", { ascending: false })
         .limit(50);
       return data ?? [];
@@ -193,11 +196,23 @@ export default function Leads() {
         if (importErr) {
           toast.error("Avslöjade men kunde inte importera");
         } else {
-          toast.success(`${importRes.inserted} importerade till sekvens (${importRes.skipped} fanns redan)`);
+          const seq = (sequences as any[]).find((s) => s.id === sequenceId);
+          const campaignId = seq?.campaign_id ?? null;
+          const action = campaignId
+            ? { label: "Visa", onClick: () => navigate(`/campaign/${campaignId}`) }
+            : undefined;
+          if (importRes.inserted === 0 && importRes.skipped > 0) {
+            toast.warning(`Alla ${importRes.total} fanns redan i sekvensen`);
+          } else if (importRes.skipped > 0) {
+            toast.success(`${importRes.inserted} importerade · ${importRes.skipped} fanns redan`, { action });
+          } else {
+            toast.success(`${importRes.inserted} importerade till sekvens`, { action });
+          }
         }
       }
       setSelected(new Set());
       queryClient.invalidateQueries({ queryKey: ["credit-wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["marketplace-leads"] });
     },
     onError: (e: any) => {
       toast.error(e?.message ?? "Något gick fel");
@@ -248,6 +263,13 @@ export default function Leads() {
           </Link>
         </div>
 
+        <Tabs defaultValue="search" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="search">Sök</TabsTrigger>
+            <TabsTrigger value="mine">Mina leads</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="search" className="mt-0">
         <div className="grid lg:grid-cols-[280px_1fr] gap-6">
           {/* Filter */}
           <form onSubmit={onSearch} className="space-y-4">
@@ -528,6 +550,14 @@ export default function Leads() {
             )}
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="mine" className="mt-0">
+            <MyLeadsTab />
+          </TabsContent>
+        </Tabs>
+
+
 
         {/* Sticky footer when leads are selected */}
         {selected.size > 0 && (
@@ -547,23 +577,13 @@ export default function Leads() {
                 </div>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                <Select value={sequenceId} onValueChange={setSequenceId}>
-                  <SelectTrigger className="w-[220px]">
-                    <SelectValue placeholder="Importera till sekvens (valfritt)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sequences.length === 0 && (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        Skapa en kampanj först
-                      </div>
-                    )}
-                    {sequences.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ImportToSequencePicker
+                  sequences={sequences as any}
+                  value={sequenceId}
+                  onChange={setSequenceId}
+                  className="w-[240px]"
+                  placeholder="Importera till sekvens (valfritt)"
+                />
                 <Button variant="ghost" onClick={() => setSelected(new Set())}>
                   Avmarkera
                 </Button>
