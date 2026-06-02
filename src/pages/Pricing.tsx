@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SeoHead from "@/components/SeoHead";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Check, X, Shield, ChevronDown } from "lucide-react";
@@ -45,6 +46,20 @@ const Pricing = () => {
 
   return (
     <Layout>
+      <SeoHead
+        title="Priser — MailLead.ai"
+        description="Starter (gratis) eller Growth — välj plan för att skicka personliga kalla mejl i stor skala. Inga dolda kostnader, avsluta när du vill."
+        path="/pricing"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: (t("pricing.faqs", { returnObjects: true }) as { q: string; a: string }[]).map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }}
+      />
       <div className="container py-24">
         <div className="mx-auto max-w-2xl text-center mb-16">
           <h1 className="text-4xl font-bold mb-4">{t("pricing.title")}</h1>
@@ -66,7 +81,7 @@ const Pricing = () => {
                 </div>
               )}
               <div>
-                <h3 className="font-semibold text-lg">{tier.name}</h3>
+                <h2 className="font-semibold text-lg">{tier.name}</h2>
                 <p className="text-sm text-muted-foreground mt-1">{tier.description}</p>
               </div>
               <div>

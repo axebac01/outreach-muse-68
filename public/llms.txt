@@ -1,0 +1,18 @@
+# MailLead.ai
+
+> Personliga kalla mejl i stor skala för svenska B2B-team. AI:n skriver unika mejl och uppföljningar per lead — sedan skickar du från dina egna inkorgar.
+
+MailLead.ai är en svensk SaaS som hjälper säljteam göra outbound mer relevant: ladda upp leads (CSV eller manuellt), låt AI:n generera ett unikt kallt mejl och två uppföljningar per lead baserat på företag, roll och kontext, och skicka via dina Gmail-, Outlook- eller SMTP-konton. Alla svar samlas i en Unibox.
+
+## Sidor
+
+- [Start](/): Översikt, hur det funkar, funktioner och vanliga frågor.
+- [Priser](/pricing): Starter (gratis) och Growth — jämförelse och vanliga frågor.
+
+## Juridik
+
+- [Integritetspolicy](/legal/privacy): Hur vi behandlar personuppgifter (GDPR).
+- [Användarvillkor](/legal/terms): Avtalsvillkor för tjänsten.
+- [Cookies](/legal/cookies): Cookie-policy.
+- [Underbiträden](/legal/subprocessors): Lista över databehandlare.
+- [Datarättigheter](/dsr): Formulär för att utöva GDPR-rättigheter.

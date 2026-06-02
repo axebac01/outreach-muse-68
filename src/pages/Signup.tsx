@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import SeoHead from "@/components/SeoHead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,11 @@ const Signup = () => {
 
   return (
     <Layout>
+      <SeoHead
+        title="Skapa konto — MailLead.ai"
+        description="Kom igång gratis med MailLead.ai. Generera personliga kalla mejl per lead och skicka från dina egna Gmail-, Outlook- eller SMTP-konton."
+        path="/signup"
+      />
       <div className="container flex min-h-[calc(100vh-4rem)] items-center justify-center py-12">
         <div className="mx-auto w-full max-w-sm">
           <div className="rounded-xl border bg-card p-8 space-y-6 shadow-sm border-t-2 border-t-primary">
