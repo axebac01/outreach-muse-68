@@ -1,71 +1,69 @@
 
 ## Mål
 
-1. Lägga till **roll-** och **bransch-filter** i Lead Marketplace-sökningen.
-2. Hantera Apollo 403 (free plan) snyggt så användaren förstår vad som hänt istället för en cryptisk 500.
+Stänga gapen i Lead Marketplace-flödet före launch så att hela kedjan **sök → avslöja → kampanj** funkar utan att lämna `/leads`-sidan, och så att köpta leads aldrig "försvinner".
 
 ---
 
-## 1. Roll-filter (förvalda titlar)
+## A. Skapa ny kampanj inline från Leads
 
-Idag finns ett fritextfält "Titlar" + "Senioritet". Lägger till en **rollkategori-dropdown** med vanliga svenska B2B-roller som expanderar till en lista av Apollo `person_titles`:
+I sticky-footern vid `Select`-dropdownen "Importera till sekvens" läggs ett alternativ längst upp:
 
-- VD / CEO → `["CEO", "VD", "Managing Director", "Chief Executive Officer"]`
-- Säljchef → `["Head of Sales", "Sales Director", "VP Sales", "Säljchef", "CRO"]`
-- Marknadschef → `["CMO", "Marketing Director", "Head of Marketing", "Marknadschef"]`
-- Grundare → `["Founder", "Co-Founder", "Grundare"]`
-- HR-chef → `["HR Director", "Head of People", "CHRO", "HR-chef"]`
-- IT-chef / CTO → `["CTO", "Head of IT", "IT Director", "IT-chef"]`
-- Ekonomichef / CFO → `["CFO", "Finance Director", "Ekonomichef"]`
-- Operations → `["COO", "Head of Operations", "Operations Director"]`
-- Produktchef → `["CPO", "Head of Product", "Product Director", "Produktchef"]`
+> **+ Skapa ny kampanj…**
 
-Fritextfältet "Titlar" finns kvar för avancerade användare. Rollen och titlarna slås ihop när de skickas till Apollo.
+Klick öppnar en `<Dialog>` med fälten: **Namn**, **Målgrupp**, **Produkt**, **Erbjudande**, **Ton** (samma som `/campaigns/new` kräver, men i en kompakt vy).
 
-## 2. Bransch-filter
+Vid submit:
+- Anropar `useCreateCampaign().mutateAsync(form)` (befintlig hook).
+- DB-triggern `create_sequence_for_campaign` skapar automatiskt en matchande sekvens.
+- Frontenden hämtar sekvensens id (`sequences.campaign_id = campaign.id`) och sätter `sequenceId` så att nästa "Avslöja"-klick importerar direkt till den.
+- Toast: "Kampanj skapad — leads importeras dit".
 
-Apollo använder `organization_industry_tag_ids` (deras interna IDs, inte fritext). Vi lägger till en dropdown med de vanligaste branscherna och deras Apollo tag-IDs hårdkodade:
+Ingen DB-ändring krävs.
 
-- SaaS / Software → `5567cd4773696439b10b0000`
-- IT-tjänster → `5567cd4e7369644d39040000`
-- Marknadsföring / Reklam → `5567cdda7369644d250c0000`
-- E-handel → `5567cdf27369643dbf260000`
-- Konsult → `5567cd49736964397e020000`
-- Finans → `5567cdd87369644d391c0000`
-- Bygg / Construction → `5567cdbc7369644eed130000`
-- Tillverkning → `5567cdda7369643b80510000`
-- Hälso- & sjukvård → `5567cdde73696439dd350000`
-- Utbildning → `5567cd4d7369644d2d010000`
-- Fastigheter → `5567cdf27369643b791f0000`
-- Restaurang / Hospitality → `5567cdd47369644cf94c0000`
+## B. Tab "Mina köpta leads" på /leads
 
-(IDs hämtas från Apollos publika industri-lista. Vi börjar med dessa och kan utöka senare.)
+Sidan får två tabs överst (shadcn `<Tabs>`):
 
-Sänds som `organization_industry_tag_ids: [id]` — fältet stöds redan i `apolloSearch`-typen, behöver bara wiras genom edge-funktionen + UI.
+1. **Sök** (befintlig vy)
+2. **Mina leads** (ny vy)
 
-## 3. Bättre felhantering för 403 / free plan
+### "Mina leads"-vyn
 
-`leads-search/index.ts` fångar Apollo-fel och returnerar:
-- `403` med `API_INACCESSIBLE` → HTTP 402 + meddelande "Apollo-nyckeln är på gratisplan. Sökning kräver minst Basic-plan ($49/mån). Uppgradera på apollo.io eller byt API-nyckel."
-- Andra Apollo-fel → behåller statuskod + parsead `error` string
+Listar `marketplace_leads` för användaren (RLS finns redan) med:
+- Tabell-rader: namn, titel, företag, email, datum avslöjad, kostnad (credits).
+- Sökfält (filtrera på namn/företag/email, klient-sida räcker för MVP).
+- Checkbox per rad + "Markera alla".
+- Sticky footer (samma mönster som söktabben): dropdown för sekvens + "+ Skapa ny kampanj…" + knapp **Importera valda**.
+- Tom-state: "Inga köpta leads än. Gå till Sök för att börja."
 
-Frontend (`Leads.tsx`) visar meddelandet i ett tydligt varningskort med länk till apollo.io upgrade-sida istället för dagens cryptiska text. Knappen "Sök" stoppas inte — felet är informativt.
+Återanvänder `leads-import` edge-funktionen (tar redan `marketplace_lead_ids` + `sequence_id`).
 
----
+Ingen ny edge-funktion, inga nya tabeller, ingen ny migration.
 
-## Filer som ändras
+## C. Förbättrad feedback efter import
 
-- `supabase/functions/leads-search/index.ts` — pass through `organization_industry_tag_ids`, parsea Apollo-felkroppen och returnera 402 + tydligt meddelande vid `API_INACCESSIBLE`.
-- `src/pages/Leads.tsx` — två nya `<Select>`-fält (Roll, Bransch), konstanter `ROLES` och `INDUSTRIES`, merge av roll-titlar med fritext-titlar innan sökanrop, snyggare felkort.
+Efter lyckad import via `leads-import` (gäller både Sök-tabben och Mina leads):
 
-Ingen DB-ändring, inga nya secrets, inga ändringar i `apollo.ts` (fältet finns redan i typen).
+- Toast får en **Action-knapp** "Visa i sekvens" som navigerar till `/campaign/:campaignId` (vi slår upp campaign_id via sequence_id).
+- Om 0 importerade (alla dubbletter) → varningstoast: "Alla {n} leads fanns redan i sekvensen".
+- Om partiell: "X importerade · Y fanns redan".
 
 ---
 
-## Notering om Apollo free plan
+## Filer som ändras / skapas
 
-Apollos free plan blockerar `mixed_people/search`. För att MVP:n ska fungera behöver du antingen:
-- Uppgradera nyckeln till minst Apollo Basic ($49/mån), eller
-- Byta till en annan provider (kan göras senare — `apollo.ts` är redan isolerad).
+- **src/pages/Leads.tsx** — wrappa innehållet i `<Tabs>`, lägg in nya tab-vyn, lägg till "+ Skapa ny kampanj" i båda sekvens-dropdowns, förbättrad toast.
+- **src/components/leads/CreateCampaignInlineDialog.tsx** (ny) — kompakt kampanj-skapande-dialog som returnerar `{ campaignId, sequenceId }`.
+- **src/components/leads/MyLeadsTab.tsx** (ny) — vyn för köpta leads med tabell, filter, sticky import-footer.
+- **src/components/leads/ImportToSequencePicker.tsx** (ny, valfritt refactor) — delad komponent för dropdown + "+ Skapa ny kampanj" så A används på båda tabs utan duplicering.
 
-Detta löser inte vi i koden — bara visar felet snyggt.
+Inga ändringar i edge-funktioner, DB-schema eller secrets.
+
+---
+
+## Out of scope (medvetet)
+
+- Re-reveal av samma lead (Apollo kostar igen — vi visar bara att den finns).
+- Export till CSV från Mina leads (kan läggas till efter launch).
+- Bulk-radera köpta leads (RLS tillåter inte DELETE idag, kräver migration — väntar).
