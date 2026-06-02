@@ -73,6 +73,10 @@ function Mark({ size = 36 }: { size?: number }) {
 
 export default function AuroraLanding() {
   const { resolvedTheme, setTheme } = useTheme();
+  const { i18n } = useTranslation();
+  const isSwedish = (i18n.language || "").toLowerCase().startsWith("sv");
+  const growthPrice = isSwedish ? "990 kr" : "€99";
+  const growthPeriod = isSwedish ? "/månad" : "/month";
   const [mounted, setMounted] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [statsRun, setStatsRun] = useState(false);
