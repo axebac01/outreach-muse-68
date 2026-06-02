@@ -63,6 +63,7 @@ const Inbox = () => {
     accountId: accountId === "all" ? undefined : accountId,
     onlyUnread,
     sentiment: sentimentFilter === "all" ? undefined : sentimentFilter,
+    showAll,
   });
 
   const filteredThreads = useMemo(() => {
