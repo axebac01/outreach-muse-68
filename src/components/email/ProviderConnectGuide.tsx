@@ -198,7 +198,7 @@ const ProviderConnectGuide = ({ provider, onBack, onConnected }: Props) => {
 
       {provider.note && (
         <div className="flex items-start gap-2 rounded-md bg-muted/60 p-3 text-xs">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-orange-500" />
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-warning" />
           <span className="text-muted-foreground">{localized(provider.note, lang)}</span>
         </div>
       )}
