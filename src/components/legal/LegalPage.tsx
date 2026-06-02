@@ -16,6 +16,7 @@ export const LegalPage = ({ title, description, children }: LegalPageProps) => {
     `${title} för ${LEGAL.productName}. Läs hur ${LEGAL.companyName} hanterar dina uppgifter och rättigheter.`;
   return (
   <div className="min-h-screen bg-background">
+    <SeoHead title={`${title} — ${LEGAL.productName}`} description={desc} path={pathname} />
     <header className="border-b">
       <div className="container py-4 flex items-center justify-between">
         <Link to="/" className="font-semibold text-lg">{LEGAL.productName}</Link>
@@ -45,6 +46,8 @@ export const LegalPage = ({ title, description, children }: LegalPageProps) => {
       </div>
     </main>
   </div>
-);
+  );
+};
+
 
 export default LegalPage;
