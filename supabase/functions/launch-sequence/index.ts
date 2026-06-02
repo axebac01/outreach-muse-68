@@ -59,6 +59,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Guard against duplicate scheduling on re-launch.
+    const { count: existingScheduled } = await admin
+      .from("scheduled_sends")
+      .select("id", { count: "exact", head: true })
+      .eq("sequence_id", sequenceId);
+    if ((existingScheduled ?? 0) > 0) {
+      return new Response(JSON.stringify({ error: "Kampanjen är redan startad." }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     const [{ data: leadsRaw }, { data: steps }, { data: senders }, { data: unsubs }] = await Promise.all([
       admin.from("sequence_leads").select("id,email").eq("sequence_id", sequenceId).eq("status", "pending"),
       admin.from("sequence_steps").select("*").eq("sequence_id", sequenceId).order("step_order"),
