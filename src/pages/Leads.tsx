@@ -379,13 +379,36 @@ export default function Leads() {
               </div>
             )}
 
-            {search.isError && (
-              <Card className="border-destructive/40">
-                <CardContent className="py-6 text-destructive text-sm">
-                  Kunde inte söka: {(search.error as Error).message}
-                </CardContent>
-              </Card>
-            )}
+            {search.isError && (() => {
+              const err = search.error as any;
+              if (err?.code === "apollo_plan_required") {
+                return (
+                  <Card className="border-amber-500/40 bg-amber-500/5">
+                    <CardContent className="py-5 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                          <h3 className="font-semibold text-sm">Apollo-nyckeln behöver uppgraderas</h3>
+                          <p className="text-sm text-muted-foreground mt-1">{err.message}</p>
+                        </div>
+                      </div>
+                      <Button asChild size="sm" variant="outline" className="gap-1.5">
+                        <a href={err.upgradeUrl} target="_blank" rel="noopener noreferrer">
+                          Uppgradera Apollo <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return (
+                <Card className="border-destructive/40">
+                  <CardContent className="py-6 text-destructive text-sm">
+                    Kunde inte söka: {err?.message ?? "Okänt fel"}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {search.data && search.data.people.length === 0 && (
               <Card>
