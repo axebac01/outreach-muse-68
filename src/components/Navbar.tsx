@@ -66,12 +66,17 @@ const Navbar = () => {
             </div>
             <div className="flex items-center gap-1 md:hidden">
               <LanguageSwitcher />
-              <button onClick={() => setMobileOpen(!mobileOpen)}>
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                aria-label={mobileOpen ? "Stäng meny" : "Öppna meny"}
+                aria-expanded={mobileOpen}
+                aria-controls="mobile-menu"
+              >
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
             {mobileOpen && (
-              <div className="absolute top-16 left-0 right-0 border-b bg-background p-4 md:hidden">
+              <div id="mobile-menu" className="absolute top-16 left-0 right-0 border-b bg-background p-4 md:hidden">
                 <div className="flex flex-col gap-3">
                   <Link to="/pricing" className="text-sm py-2" onClick={() => setMobileOpen(false)}>{t("nav.pricing")}</Link>
                   {user ? (
@@ -108,7 +113,7 @@ const Navbar = () => {
             <Button variant="ghost" asChild><Link to="/analytics">{t("nav.analytics")}</Link></Button>
             <div className="w-px h-5 bg-border mx-1" />
             <Button variant="ghost" size="icon" asChild>
-              <Link to="/settings"><Settings className="h-4 w-4" /></Link>
+              <Link to="/settings" aria-label="Inställningar"><Settings className="h-4 w-4" /></Link>
             </Button>
             <LanguageSwitcher />
             <div className="w-px h-5 bg-border mx-1" />
