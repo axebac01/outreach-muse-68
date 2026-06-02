@@ -1,36 +1,43 @@
-## Plan: Nordic Signal-tema + Aurora-hero
+## Plan: Applicera "Nordic Signal" Aurora-landning + light/dark-tema
 
-Du har bifogat ett komplett designpaket (HANDOFF.md, index.css, tailwind-snippet, AuroraHero.tsx, logo.svg). Eftersom appen redan bygger på shadcn-tokens räcker det att byta tokens + fonts + logo + lägga in hero-komponenten. Resten av appen byter "skinn" automatiskt.
+Zipens tokens, fonts, aurora-animationer och logo är **redan på plats** i projektet sedan tidigare iterationer. Det enda som faktiskt är nytt är `AuroraLanding.tsx` och `next-themes`-wrappern.
 
-### Vad jag ändrar
+### Ändringar
 
-**1. `src/index.css`** — token-byte
-- Byt Google Fonts-import: Inter → Schibsted Grotesk + Newsreader + JetBrains Mono.
-- Ersätt `:root`-blocket och `.dark`-blocket med Nordic Signal-tokens (varmt papper i ljust, varmt ember-mörker i mörkt, ember/persimmon som `--primary`, pine `--success`, honey `--warning`).
-- Behåll resten av filen (body-bakgrund, `.prose`, Tiptap-stilarna).
+**1. `src/components/AuroraLanding.tsx` (NY)**
+- Kopiera filen 1:1 från zipen (447 rader). Temadriven landningssida som funkar i både ljust och mörkt läge via `useTheme()` från `next-themes`. Innehåller egen sun/moon-toggle, hero med typewriter-effekt, leads-tabell, steps, features, FAQ och CTA.
 
-**2. `tailwind.config.ts`** — fonts + aurora-animationer
-- `fontFamily.sans` → Schibsted Grotesk, plus `display`, `serif` (Newsreader), `mono` (JetBrains Mono).
-- Lägg till keyframes `aurora-1/2/3` och `ping-soft` + matchande `animation`-entries vid sidan av befintliga.
+**2. `src/pages/Landing.tsx` (ERSÄTT innehåll)**
+```tsx
+import AuroraLanding from "@/components/AuroraLanding";
+const Landing = () => <AuroraLanding />;
+export default Landing;
+```
+Tar bort nuvarande Layout/Navbar/Footer-wrappers på `/` — AuroraLanding är fristående med egen header och footer. Övriga sidor (login, signup, app) påverkas inte.
 
-**3. `src/assets/logo.svg`** — ersätt med den nya märket från zippen.
+**3. `src/App.tsx` — wrappa i `ThemeProvider`**
+```tsx
+import { ThemeProvider } from "next-themes";
+// ...
+<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+  <QueryClientProvider ...>...</QueryClientProvider>
+</ThemeProvider>
+```
+`next-themes` ^0.3.0 finns redan i `package.json`, ingen install behövs.
 
-**4. `src/components/AuroraHero.tsx`** — ny komponent (drop-in från zippen, scoped CSS, alltid mörk).
+### Skippas (redan på plats — verifierat)
 
-**5. `src/pages/Landing.tsx`** — ersätt nuvarande `<section>`-hero (raderna 33–65, inkl. `PipelineMockup`) med `<AuroraHero />`. Resten av sidan (How it works, features, CTA) behålls — de plockar upp de nya tokens automatiskt.
-
-**6. Navbar-ordmärke** — uppdatera till `Mail` + `Lead` (i `text-primary`) + `.ai` (i `text-muted-foreground`) enligt HANDOFF, så texten matchar nya logon.
-
-### Vad jag INTE ändrar
-
-- Inga DB-, edge function- eller logikändringar.
-- Appen (inloggat läge) förblir i ljust läge som idag — bara hero-sektionen är alltid mörk (Aurora). Vill du ha hela appen mörk sätter vi `class="dark"` på `<html>` separat — säg till.
-- `PipelineMockup` tas bort från landningssidan (Aurora-hero har egen visuell mockup). Komponenten ligger kvar i kodbasen och kan återanvändas senare om du vill.
-- Övriga sidor (Dashboard, Leads, Campaign etc.) får automatiskt nya färger/typsnitt — ingen manuell genomgång krävs nu, men jag noterar i loopen om något ser brutet ut efter token-bytet.
+- `src/index.css` — `:root` + `.dark` Nordic Signal-tokens redan applicerade. Endast skillnad: nuvarande fil har även `--info` / `--sidebar-*` tokens som zipen saknar. **Behåller dessa** eftersom shadcn sidebar och tidigare token-städning beror på dem. Tar inte bort något.
+- `tailwind.config.ts` — Schibsted Grotesk / Newsreader / JetBrains Mono + aurora-1/2/3 + ping-soft keyframes/animations är redan inlagda.
+- `src/assets/logo.svg` — identisk med zipens version.
+- Google Fonts `@import` — redan högst upp i `index.css`.
 
 ### Risker
 
-- Schibsted Grotesk har annan x-höjd än Inter → vissa knappar/badges kan se aningen tätare/glesare ut. Justeras vid behov efter visuell granskning.
-- Aurora-hero har egna inline-CSS-värden (hex) som inte använder tokens — det är medvetet eftersom sektionen är alltid mörk och fristående.
+- AuroraLanding har egen header med theme-toggle. Befintlig `Navbar` används bara på app-sidor (Login/Signup/Dashboard etc), så ingen dubblering på `/`.
+- App-sidor (Dashboard, Inbox, Leads...) ärver nu också tema-toggleläget via `<html class="dark">`. De plockar upp tokens automatiskt — fungerar redan eftersom token-städning gjordes i Step A. Användaren kan dock inte byta tema inifrån appen ännu (toggle finns bara på landningen). Säg till om du vill att jag lägger en toggle även i app-navbaren — annars hoppar jag det.
+- `defaultTheme="system"` betyder att första besöket följer OS-inställning. Säg till om du hellre vill ha `defaultTheme="light"`.
 
-Säg till om jag ska köra, eller om du vill ändra något (t.ex. behålla `PipelineMockup` under hero, eller göra hela appen mörk direkt).
+### Vad jag INTE rör
+
+Ingen DB, inga edge functions, ingen logik, inga andra sidor/komponenter.
