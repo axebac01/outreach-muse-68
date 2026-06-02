@@ -119,10 +119,8 @@ export function PipelineMockup() {
 
   return (
     <div
-      className="relative mx-auto w-full max-w-[880px] rounded-[16px] border bg-white p-4 sm:p-6"
+      className="relative mx-auto w-full max-w-[880px] rounded-[16px] border bg-card text-card-foreground p-4 sm:p-6 shadow-sm"
       style={{
-        borderColor: "rgba(0,0,0,0.08)",
-        boxShadow: "0 2px 24px rgba(0,0,0,0.06)",
         opacity: 0,
         animation: `pm-card-in 500ms ${EASE} 400ms forwards`,
       }}
