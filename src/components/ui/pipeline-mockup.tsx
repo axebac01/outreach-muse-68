@@ -155,7 +155,7 @@ export function PipelineMockup() {
           </defs>
           {!reduced &&
             [0, 0.5, 1].map((begin, i) => (
-              <circle key={`a${i}`} r="2.5" fill="#2563eb" filter="url(#pm-glow)">
+              <circle key={`a${i}`} r="2.5" fill="hsl(var(--primary))" filter="url(#pm-glow)">
                 <animateMotion dur="1.5s" repeatCount="indefinite" begin={`${begin}s`}>
                   <mpath href="#pm-p1" />
                 </animateMotion>
@@ -163,7 +163,7 @@ export function PipelineMockup() {
             ))}
           {!reduced &&
             [0.25, 0.75, 1.25].map((begin, i) => (
-              <circle key={`b${i}`} r="2.5" fill="#2563eb" filter="url(#pm-glow)">
+              <circle key={`b${i}`} r="2.5" fill="hsl(var(--primary))" filter="url(#pm-glow)">
                 <animateMotion dur="1.5s" repeatCount="indefinite" begin={`${begin}s`}>
                   <mpath href="#pm-p2" />
                 </animateMotion>
