@@ -2,6 +2,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Mail, Zap, Target, BarChart3, Users, Clock, Upload, Sparkles, Send } from "lucide-react";
+import logo from "@/assets/logo.svg";
 import { useTranslation } from "react-i18next";
 import AuroraHero from "@/components/AuroraHero";
 
