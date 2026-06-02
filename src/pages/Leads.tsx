@@ -263,6 +263,13 @@ export default function Leads() {
           </Link>
         </div>
 
+        <Tabs defaultValue="search" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="search">Sök</TabsTrigger>
+            <TabsTrigger value="mine">Mina leads</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="search" className="mt-0">
         <div className="grid lg:grid-cols-[280px_1fr] gap-6">
           {/* Filter */}
           <form onSubmit={onSearch} className="space-y-4">
