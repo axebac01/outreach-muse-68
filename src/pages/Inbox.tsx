@@ -292,6 +292,20 @@ const Inbox = () => {
 
           {/* Thread list */}
           <div className="rounded-lg border bg-card overflow-hidden flex flex-col xl:col-auto lg:col-span-1">
+            <div className="border-b flex">
+              <button
+                onClick={() => { setView("inbox"); setSelectedId(null); }}
+                className={`flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${view === "inbox" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <InboxIcon className="h-3.5 w-3.5 inline mr-1.5" />Inkorg
+              </button>
+              <button
+                onClick={() => { setView("sent"); setSelectedId(null); }}
+                className={`flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${view === "sent" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Send className="h-3.5 w-3.5 inline mr-1.5" />Skickat
+              </button>
+            </div>
             <div className="px-3 py-2 border-b text-xs text-muted-foreground">
               {filteredThreads.length} {filteredThreads.length === 1 ? "konversation" : "konversationer"}
             </div>
@@ -300,12 +314,14 @@ const Inbox = () => {
                 <div className="p-6 text-center text-sm text-muted-foreground">Laddar…</div>
               ) : filteredThreads.length === 0 ? (
                 <div className="p-6 text-center text-sm text-muted-foreground space-y-2">
-                  {showAll ? (
-                    <p>Inga konversationer ännu. Klicka <strong>Hämta nytt</strong> för att synka.</p>
+                  {view === "sent" ? (
+                    <p>Inga utskickade mejl som väntar på svar.</p>
+                  ) : showAll ? (
+                    <p>Inga svar ännu. Klicka <strong>Hämta nytt</strong> för att synka.</p>
                   ) : (
                     <>
                       <p>Inga svar från dina kampanjer ännu.</p>
-                      <p className="text-xs">När en lead svarar dyker det upp här. Vill du se alla inkommande mejl, slå på <strong>Visa alla</strong>.</p>
+                      <p className="text-xs">När en lead svarar dyker det upp här. För att se utskick du gjort, klicka på <strong>Skickat</strong>.</p>
                     </>
                   )}
                 </div>
