@@ -209,20 +209,19 @@ export function PipelineMockup() {
         {/* Column 2: Sequence */}
         <div className="relative z-10">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t("landing.pipeline.sequence")}
             </span>
           </div>
           <div className="space-y-2">
             {[
-              { day: t("landing.pipeline.day1"), status: t("landing.pipeline.sent"), color: "#16a34a", pulse: false },
-              { day: t("landing.pipeline.day3"), status: t("landing.pipeline.sent"), color: "#16a34a", pulse: false },
-              { day: t("landing.pipeline.day7"), status: t("landing.pipeline.scheduled"), color: "#d97706", pulse: true },
+              { day: t("landing.pipeline.day1"), status: t("landing.pipeline.sent"), color: "hsl(var(--success))", pulse: false },
+              { day: t("landing.pipeline.day3"), status: t("landing.pipeline.sent"), color: "hsl(var(--success))", pulse: false },
+              { day: t("landing.pipeline.day7"), status: t("landing.pipeline.scheduled"), color: "hsl(var(--warning))", pulse: true },
             ].map((step, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2.5 rounded-[10px] border bg-white p-2.5"
-                style={{ borderColor: "rgba(0,0,0,0.06)" }}
+                className="flex items-center gap-2.5 rounded-[10px] border bg-background p-2.5"
               >
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
@@ -232,8 +231,8 @@ export function PipelineMockup() {
                   }}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-semibold text-[#0f172a]">{step.day}</div>
-                  <div className="text-[10px] text-[#64748b]">{step.status}</div>
+                  <div className="truncate text-xs font-semibold text-foreground">{step.day}</div>
+                  <div className="text-[10px] text-muted-foreground">{step.status}</div>
                 </div>
               </div>
             ))}
