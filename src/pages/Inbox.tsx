@@ -73,6 +73,7 @@ const Inbox = () => {
     onlyUnread,
     sentiment: sentimentFilter === "all" ? undefined : sentimentFilter,
     showAll,
+    view,
   });
 
   const filteredThreads = useMemo(() => {
