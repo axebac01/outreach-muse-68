@@ -250,7 +250,7 @@ export default function AuroraLanding() {
               <span className="pbadge">Populärast</span>
               <h3 className="pname">Growth</h3>
               <p className="pdesc">För team som menar allvar med pipeline</p>
-              <div className="pamt"><span className="pbig">€99</span><span className="pper">/månad</span></div>
+              <div className="pamt"><span className="pbig">{growthPrice}</span><span className="pper">{growthPeriod}</span></div>
               <ul className="pfeats">
                 {["Obegränsade kampanjer", "Obegränsade leads", "Obegränsade genereringar", "Prioriterad support", "Teamsamarbete"].map((f) => (
                   <li key={f}><Check size={16} strokeWidth={2.5} /> {f}</li>
