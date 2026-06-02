@@ -437,11 +437,11 @@ const Inbox = () => {
 
 const sentimentDotClass = (s: string | null | undefined) => {
   switch (s) {
-    case "positive": return "bg-green-500";
+    case "positive": return "bg-success";
     case "negative": return "bg-destructive";
-    case "neutral": return "bg-yellow-500";
-    case "auto_reply": return "bg-blue-400";
-    case "unsubscribe_request": return "bg-orange-500";
+    case "neutral": return "bg-warning";
+    case "auto_reply": return "bg-info";
+    case "unsubscribe_request": return "bg-primary";
     default: return "bg-muted-foreground/30";
   }
 };
