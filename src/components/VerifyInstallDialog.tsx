@@ -104,8 +104,8 @@ export default function VerifyInstallDialog({ open, onOpenChange, siteId, domain
 
         {state === "timeout" && (
           <div className="space-y-4 py-2">
-            <div className="flex items-center gap-3 p-4 bg-amber-500/10 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+            <div className="flex items-center gap-3 p-4 bg-warning/10 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-warning shrink-0" />
               <div className="text-sm">
                 <div className="font-medium">Vi hörde inget på 60 sekunder.</div>
                 <div className="text-muted-foreground text-xs mt-0.5">Det betyder inte att det är fel — testa felsökningen nedan.</div>
