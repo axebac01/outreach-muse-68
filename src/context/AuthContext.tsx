@@ -32,12 +32,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Only log REAL transitions: anonymous→user (real sign-in) and
         // user→anonymous (real sign-out). Skip INITIAL_SESSION and
         // TOKEN_REFRESHED which also emit SIGNED_IN.
+        // Only log real sign-in here. Sign-out is logged in signOut() before
+        // the JWT is revoked, otherwise the edge function rejects the call.
         const realSignIn = event === "SIGNED_IN" && prevUserId === null && newUserId !== null;
-        const realSignOut = event === "SIGNED_OUT" && prevUserId !== null;
-        if (realSignIn || realSignOut) {
+        if (realSignIn) {
           setTimeout(() => {
             import("@/lib/audit").then(({ logAudit }) => {
-              logAudit(realSignIn ? "auth.sign_in" : "auth.sign_out");
+              logAudit("auth.sign_in");
             });
           }, 0);
         }
@@ -55,8 +56,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    // Log BEFORE signOut so the JWT is still valid for the edge function.
+    try {
+      const { logAudit } = await import("@/lib/audit");
+      await logAudit("auth.sign_out");
+    } catch {
+      // never block sign-out
+    }
     await supabase.auth.signOut();
   };
+
 
   return (
     <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>
