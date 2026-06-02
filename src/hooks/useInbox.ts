@@ -20,6 +20,7 @@ export interface InboxThread {
   lead_id: string | null;
   sequence_id: string | null;
   is_archived: boolean;
+  is_lead_related: boolean;
 }
 
 export interface InboxMessage {
