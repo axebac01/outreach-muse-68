@@ -550,6 +550,14 @@ export default function Leads() {
             )}
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="mine" className="mt-0">
+            <MyLeadsTab />
+          </TabsContent>
+        </Tabs>
+
+
 
         {/* Sticky footer when leads are selected */}
         {selected.size > 0 && (
