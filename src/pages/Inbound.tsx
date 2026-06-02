@@ -1,289 +1,99 @@
-import { useState } from "react";
 import Layout from "@/components/Layout";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useInboundCompanies, useCompanyVisits, useTrackingSites, useRecentVisits, useInboundStats, useIdentifiedVisitors } from "@/hooks/useInbound";
-import { Building2, ExternalLink, Settings as SettingsIcon, MapPin, Eye, User, Activity, MailCheck } from "lucide-react";
-import { Link } from "react-router-dom";
-import EmptyState from "@/components/EmptyState";
-import { formatDistanceToNow } from "date-fns";
+import { Radar, Building2, Target, Bell, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
-function formatDuration(ms?: number | null) {
-  if (!ms || ms < 1000) return null;
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rs = s % 60;
-  return rs ? `${m}m ${rs}s` : `${m}m`;
-}
+const features = [
+  {
+    icon: Building2,
+    title: "Företagsidentifiering",
+    desc: "Identifiera B2B-besökare via IP och berika med bransch, storlek och kontaktytor.",
+  },
+  {
+    icon: Target,
+    title: "Lead-matchning",
+    desc: "Få notiser när dina befintliga leads återbesöker sajten — följ upp i rätt ögonblick.",
+  },
+  {
+    icon: Sparkles,
+    title: "Smart prioritering",
+    desc: "Se vilka sidor besökaren tittat på och hur het signalen är, så du vet vem du ska kontakta först.",
+  },
+];
 
 const Inbound = () => {
-  const [filter, setFilter] = useState<"all" | "known" | "live">("all");
-  const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { data: companies = [], isLoading } = useInboundCompanies({ knownOnly: filter === "known" });
-  const { data: sites = [] } = useTrackingSites();
-  const { data: visits = [] } = useCompanyVisits(selectedId || undefined);
-  const { data: liveVisits = [] } = useRecentVisits(50);
-  const { data: stats } = useInboundStats();
-  const { data: identified = [] } = useIdentifiedVisitors(20);
-
-  const filtered = companies.filter((c) => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return (c.name || "").toLowerCase().includes(s) || c.domain.toLowerCase().includes(s);
-  });
-
-  const selected = companies.find((c) => c.id === selectedId);
-
   return (
     <Layout>
-      <div className="container py-8 space-y-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold">Inbound leads</h1>
-            <p className="text-muted-foreground mt-1">Företag som besökt din sajt</p>
+      <div className="container max-w-4xl py-16">
+        <div className="text-center space-y-6">
+          <div className="flex justify-center">
+            <Badge variant="secondary" className="gap-1.5 px-3 py-1">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              Beta · Under utveckling
+            </Badge>
           </div>
-          <Button asChild variant="outline" className="gap-1.5">
-            <Link to="/settings/tracking"><SettingsIcon className="h-4 w-4" /> Tracking-inställningar</Link>
-          </Button>
+
+          <div className="relative inline-flex mx-auto">
+            <div className="absolute inset-0 -m-8 rounded-full bg-primary/20 blur-3xl" aria-hidden />
+            <div className="relative rounded-2xl border bg-card p-6 shadow-lg">
+              <Radar className="h-12 w-12 text-primary" strokeWidth={1.5} />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h1 className="text-4xl font-semibold tracking-tight">
+              Inbound — kommer snart
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Se vilka företag som besöker din hemsida — även om de aldrig
+              fyller i ett formulär. Förvandla anonym trafik till varma leads.
+            </p>
+          </div>
+
+          <div className="flex justify-center gap-2 pt-2">
+            <Button
+              onClick={() =>
+                toast.success("Tack!", {
+                  description: "Vi hör av oss så snart Inbound släpps.",
+                })
+              }
+              className="gap-2"
+            >
+              <Bell className="h-4 w-4" /> Notifiera mig vid lansering
+            </Button>
+          </div>
         </div>
 
-        {sites.length === 0 ? (
-          <Card className="p-12">
-            <EmptyState
-              title="Du har inte installerat snippeten än"
-              description="Lägg till din webbplats och klistra in tracking-snippeten i headern för att börja se vilka företag som besöker dig."
-              actionLabel="Kom igång"
-              actionHref="/settings/tracking"
-            />
-          </Card>
-        ) : (
-          <>
-            {sites.every((s: any) => !s.verified_at) && (
-              <Card className="p-4 bg-amber-500/10 border-amber-500/30 flex items-start gap-3">
-                <div className="text-sm flex-1">
-                  <div className="font-medium">Vi har inte tagit emot några besök än</div>
-                  <div className="text-muted-foreground text-xs mt-0.5">Snippeten verkar inte vara installerad. Verifiera installationen för att börja samla inbound-leads.</div>
-                </div>
-                <Button asChild size="sm" variant="outline">
-                  <Link to="/settings/tracking">Verifiera</Link>
-                </Button>
-              </Card>
-            )}
-            <div className="grid grid-cols-3 gap-3">
-              <Card className="p-4">
-                <div className="text-xs text-muted-foreground">Besök idag</div>
-                <div className="text-2xl font-semibold mt-1">{stats?.visits ?? "—"}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-xs text-muted-foreground">Unika besökare idag</div>
-                <div className="text-2xl font-semibold mt-1">{stats?.visitors ?? "—"}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-xs text-muted-foreground">Identifierade företag idag</div>
-                <div className="text-2xl font-semibold mt-1">{stats?.companies ?? "—"}</div>
-              </Card>
-            </div>
-
-            {identified.length > 0 && (
-              <Card className="p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <MailCheck className="h-4 w-4 text-primary" />
-                  <h2 className="font-semibold text-sm">Identifierade leads</h2>
-                  <Badge variant="secondary" className="text-[10px]">{identified.length}</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground -mt-1">
-                  Mottagare som klickat en länk i dina mejl och besökt sajten. Vi kommer ihåg dem vid återbesök.
+        <div className="grid sm:grid-cols-3 gap-4 mt-16">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="rounded-xl border bg-card p-5 space-y-3 hover:border-primary/40 transition-colors"
+            >
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <f.icon className="h-5 w-5" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="font-medium">{f.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {f.desc}
                 </p>
-                <div className="divide-y">
-                  {identified.map((v: any) => (
-                    <div key={v.id} className="flex items-center gap-3 py-2 text-sm">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">
-                          {v.lead?.full_name || v.lead?.email || v.email || "Okänd"}
-                          {v.lead?.company && <span className="text-muted-foreground font-normal"> · {v.lead.company}</span>}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {v.visit_count} besök · senast {formatDistanceToNow(new Date(v.last_seen_at), { addSuffix: true })}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            <div className="flex items-center gap-3 flex-wrap">
-              <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "known" | "live")}>
-                <TabsList>
-                  <TabsTrigger value="all">Alla företag</TabsTrigger>
-                  <TabsTrigger value="known">Kända leads</TabsTrigger>
-                  <TabsTrigger value="live" className="gap-1.5">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    Live-besök
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              {filter !== "live" && (
-                <Input
-                  placeholder="Sök företag eller domän…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="max-w-xs"
-                />
-              )}
+              </div>
             </div>
+          ))}
+        </div>
 
-            {filter === "live" ? (
-              liveVisits.length === 0 ? (
-                <Card className="p-12">
-                  <EmptyState
-                    title="Inga besök loggade än"
-                    description="Så fort någon laddar din sajt dyker besöket upp här i realtid."
-                  />
-                </Card>
-              ) : (
-                <Card className="divide-y">
-                  {liveVisits.map((v: any) => (
-                    <div key={v.id} className="flex items-center gap-4 p-3 text-sm">
-                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                        {v.company_id ? <Building2 className="h-4 w-4 text-primary" /> : <User className="h-4 w-4 text-muted-foreground" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{v.path || v.url}</div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
-                          {(v.city || v.country) && (
-                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{[v.city, v.country].filter(Boolean).join(", ")}</span>
-                          )}
-                          {formatDuration(v.duration_ms) && <span>· {formatDuration(v.duration_ms)} på sidan</span>}
-                          {typeof v.scroll_depth === "number" && v.scroll_depth > 0 && <span>· {v.scroll_depth}% scroll</span>}
-                          {v.referrer && (() => { try { return <span>· från {new URL(v.referrer).hostname}</span>; } catch { return null; } })()}
-                          {v.utm_source && <span>· utm: {v.utm_source}</span>}
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground shrink-0">
-                        {formatDistanceToNow(new Date(v.created_at), { addSuffix: true })}
-                      </div>
-                    </div>
-                  ))}
-                </Card>
-              )
-            ) : isLoading ? (
-              <Card className="p-12 text-center text-muted-foreground">Laddar…</Card>
-            ) : filtered.length === 0 ? (
-              <Card className="p-12">
-                <EmptyState
-                  title="Inga identifierade företag ännu"
-                  description="Vi visar företag här när IPinfo kan koppla en besökar-IP till ett företag. Anonyma besök syns under fliken Live-besök."
-                />
-              </Card>
-            ) : (
-              <Card className="divide-y">
-                {filtered.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setSelectedId(c.id)}
-                    className="w-full flex items-center gap-4 p-4 hover:bg-muted/40 transition-colors text-left"
-                  >
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium truncate">{c.name || c.domain}</span>
-                        {c.is_known_lead && (
-                          <Badge variant="default" className="text-[10px]">Känd lead</Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
-                        <span>{c.domain}</span>
-                        {c.country && (
-                          <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{c.country}</span>
-                        )}
-                        {c.industry && <span>· {c.industry}</span>}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-sm font-medium flex items-center gap-1 justify-end">
-                        <Eye className="h-3.5 w-3.5" /> {c.visit_count}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(c.last_seen_at), { addSuffix: true })}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </Card>
-            )}
-          </>
-        )}
+        <div className="mt-16 rounded-xl border border-dashed bg-muted/30 p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Vi bygger Inbound just nu. Under tiden kan du fokusera på dina
+            kampanjer och Unibox — där svaren landar.
+          </p>
+        </div>
       </div>
-
-      <Sheet open={!!selectedId} onOpenChange={(o) => !o && setSelectedId(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{selected?.name || selected?.domain}</SheetTitle>
-          </SheetHeader>
-          {selected && (
-            <div className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <div className="text-muted-foreground text-xs">Domän</div>
-                  <a href={`https://${selected.domain}`} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                    {selected.domain} <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-                <div>
-                  <div className="text-muted-foreground text-xs">Antal besök</div>
-                  <div>{selected.visit_count}</div>
-                </div>
-                {selected.country && (
-                  <div>
-                    <div className="text-muted-foreground text-xs">Land</div>
-                    <div>{selected.country}{selected.city ? `, ${selected.city}` : ""}</div>
-                  </div>
-                )}
-                {selected.industry && (
-                  <div>
-                    <div className="text-muted-foreground text-xs">Bransch</div>
-                    <div>{selected.industry}</div>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-sm mb-2">Besökshistorik</h3>
-                <div className="space-y-1 max-h-[400px] overflow-y-auto">
-                  {visits.map((v) => (
-                    <div key={v.id} className="text-xs border rounded p-2">
-                      <div className="font-medium truncate">{v.path || v.url}</div>
-                      <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
-                        <span>{formatDistanceToNow(new Date(v.created_at), { addSuffix: true })}</span>
-                        {formatDuration((v as any).duration_ms) && <span>· {formatDuration((v as any).duration_ms)}</span>}
-                        {typeof (v as any).scroll_depth === "number" && (v as any).scroll_depth > 0 && <span>· {(v as any).scroll_depth}% scroll</span>}
-                        {v.referrer && (() => { try { return <span>· från {new URL(v.referrer).hostname}</span>; } catch { return null; } })()}
-                        {v.utm_source && <span>· utm: {v.utm_source}</span>}
-                      </div>
-                    </div>
-                  ))}
-                  {visits.length === 0 && <div className="text-xs text-muted-foreground">Inga besök loggade</div>}
-                </div>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
     </Layout>
   );
 };
