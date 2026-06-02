@@ -305,6 +305,7 @@ export type Database = {
           id: string
           in_reply_to: string | null
           is_archived: boolean
+          is_lead_related: boolean
           is_read: boolean
           language: string | null
           lead_id: string | null
@@ -337,6 +338,7 @@ export type Database = {
           id?: string
           in_reply_to?: string | null
           is_archived?: boolean
+          is_lead_related?: boolean
           is_read?: boolean
           language?: string | null
           lead_id?: string | null
@@ -369,6 +371,7 @@ export type Database = {
           id?: string
           in_reply_to?: string | null
           is_archived?: boolean
+          is_lead_related?: boolean
           is_read?: boolean
           language?: string | null
           lead_id?: string | null
@@ -410,6 +413,7 @@ export type Database = {
           email_account_id: string
           id: string
           is_archived: boolean
+          is_lead_related: boolean
           last_category: string | null
           last_direction: string | null
           last_message_at: string
@@ -430,6 +434,7 @@ export type Database = {
           email_account_id: string
           id?: string
           is_archived?: boolean
+          is_lead_related?: boolean
           last_category?: string | null
           last_direction?: string | null
           last_message_at?: string
@@ -450,6 +455,7 @@ export type Database = {
           email_account_id?: string
           id?: string
           is_archived?: boolean
+          is_lead_related?: boolean
           last_category?: string | null
           last_direction?: string | null
           last_message_at?: string
