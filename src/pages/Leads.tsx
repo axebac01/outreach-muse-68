@@ -254,10 +254,42 @@ export default function Leads() {
             <Card>
               <CardContent className="pt-6 space-y-4">
                 <div>
-                  <Label htmlFor="titles">Titlar (kommaseparerade)</Label>
+                  <Label htmlFor="role">Roll</Label>
+                  <Select value={role} onValueChange={(v) => setRole(v === "any" ? "" : v)}>
+                    <SelectTrigger id="role">
+                      <SelectValue placeholder="Alla roller" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Alla roller</SelectItem>
+                      {ROLES.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                          {r.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="industry">Bransch</Label>
+                  <Select value={industry} onValueChange={(v) => setIndustry(v === "any" ? "" : v)}>
+                    <SelectTrigger id="industry">
+                      <SelectValue placeholder="Alla branscher" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Alla branscher</SelectItem>
+                      {INDUSTRIES.map((i) => (
+                        <SelectItem key={i.value} value={i.value}>
+                          {i.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="titles">Egna titlar (kommaseparerade)</Label>
                   <Input
                     id="titles"
-                    placeholder="VD, Säljchef, CMO"
+                    placeholder="t.ex. Head of Growth"
                     value={titles}
                     onChange={(e) => setTitles(e.target.value)}
                   />
