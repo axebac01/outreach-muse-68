@@ -405,10 +405,10 @@ export default function Leads() {
               const err = search.error as any;
               if (err?.code === "apollo_plan_required") {
                 return (
-                  <Card className="border-amber-500/40 bg-amber-500/5">
+                  <Card className="border-warning/40 bg-warning/5">
                     <CardContent className="py-5 space-y-3">
                       <div className="flex items-start gap-2">
-                        <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <Sparkles className="h-5 w-5 text-warning shrink-0 mt-0.5" />
                         <div>
                           <h3 className="font-semibold text-sm">Apollo-nyckeln behöver uppgraderas</h3>
                           <p className="text-sm text-muted-foreground mt-1">{err.message}</p>
