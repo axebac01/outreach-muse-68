@@ -242,7 +242,7 @@ export function PipelineMockup() {
         {/* Column 3: Replies */}
         <div className="relative z-10">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#64748b]">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t("landing.pipeline.replies")}
             </span>
           </div>
@@ -254,17 +254,17 @@ export function PipelineMockup() {
                 style={{ borderColor: "rgba(0,0,0,0.06)", borderLeftColor: "rgba(22,163,74,0.5)" }}
               >
                 <div className="flex items-center gap-2">
-                  <div className="grid h-6 w-6 place-items-center rounded-full bg-[#16a34a]/10 text-[9px] font-semibold text-[#16a34a]">
+                  <div className="grid h-6 w-6 place-items-center rounded-full bg-success/10 text-[9px] font-semibold text-success">
                     {initials(r.name)}
                   </div>
-                  <div className="min-w-0 flex-1 truncate text-xs font-semibold text-[#0f172a]">
+                  <div className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">
                     {r.name}
                   </div>
-                  <span className="text-[10px] text-[#64748b]">{ageLabel(r.ageMin)}</span>
+                  <span className="text-[10px] text-muted-foreground">{ageLabel(r.ageMin)}</span>
                 </div>
-                <div className="mt-1 truncate text-[11px] text-[#64748b]">{r.snippet}</div>
+                <div className="mt-1 truncate text-[11px] text-muted-foreground">{r.snippet}</div>
                 <div className="mt-1.5">
-                  <span className="rounded bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+                  <span className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success">
                     {t("landing.pipeline.replied")} ↩
                   </span>
                 </div>
@@ -285,10 +285,10 @@ export function PipelineMockup() {
           { value: `${reply}%`, label: t("landing.pipeline.replyRate") },
         ].map((s, i) => (
           <div key={i} className="text-center">
-            <div className="text-xl font-bold tracking-tight text-[#0f172a] tabular-nums md:text-2xl">
+            <div className="text-xl font-bold tracking-tight text-foreground tabular-nums md:text-2xl">
               {s.value}
             </div>
-            <div className="mt-0.5 text-[11px] text-[#64748b]">{s.label}</div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground">{s.label}</div>
           </div>
         ))}
       </div>
