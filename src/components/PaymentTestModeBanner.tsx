@@ -10,7 +10,7 @@ export function PaymentTestModeBanner() {
   }
   if (clientToken.startsWith("pk_test_")) {
     return (
-      <div className="w-full bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-center text-sm text-amber-900 dark:text-amber-200">
+      <div className="w-full bg-warning/10 border-b border-warning/30 px-4 py-2 text-center text-sm text-warning-foreground/80 dark:text-warning">
         Alla betalningar i förhandsvisningen är i testläge — inga riktiga pengar dras.
       </div>
     );
