@@ -8,6 +8,7 @@
 // ============================================================
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 import {
   Check, ChevronDown, Sun, Moon, Upload, Sparkles,
   Send, Zap, Target, Inbox, Shield,
@@ -72,6 +73,10 @@ function Mark({ size = 36 }: { size?: number }) {
 
 export default function AuroraLanding() {
   const { resolvedTheme, setTheme } = useTheme();
+  const { i18n } = useTranslation();
+  const isSwedish = (i18n.language || "").toLowerCase().startsWith("sv");
+  const growthPrice = isSwedish ? "990 kr" : "€99";
+  const growthPeriod = isSwedish ? "/månad" : "/month";
   const [mounted, setMounted] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [statsRun, setStatsRun] = useState(false);
@@ -245,7 +250,7 @@ export default function AuroraLanding() {
               <span className="pbadge">Populärast</span>
               <h3 className="pname">Growth</h3>
               <p className="pdesc">För team som menar allvar med pipeline</p>
-              <div className="pamt"><span className="pbig">€99</span><span className="pper">/månad</span></div>
+              <div className="pamt"><span className="pbig">{growthPrice}</span><span className="pper">{growthPeriod}</span></div>
               <ul className="pfeats">
                 {["Obegränsade kampanjer", "Obegränsade leads", "Obegränsade genereringar", "Prioriterad support", "Teamsamarbete"].map((f) => (
                   <li key={f}><Check size={16} strokeWidth={2.5} /> {f}</li>
