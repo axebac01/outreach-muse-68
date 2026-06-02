@@ -1,5 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -16,7 +17,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <Helmet>
+        <title>MailLead.ai – Inloggat</title>
+        <meta name="description" content="Inloggad vy i MailLead.ai." />
+        <meta name="robots" content="noindex,nofollow" />
+      </Helmet>
+      {children}
+    </>
+  );
 };
 
 export default ProtectedRoute;
