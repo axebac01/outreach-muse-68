@@ -56,8 +56,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    // Log BEFORE signOut so the JWT is still valid for the edge function.
+    try {
+      const { logAudit } = await import("@/lib/audit");
+      await logAudit("auth.sign_out");
+    } catch {
+      // never block sign-out
+    }
     await supabase.auth.signOut();
   };
+
 
   return (
     <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>
