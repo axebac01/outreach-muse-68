@@ -21,6 +21,9 @@ import Onboarding from "./pages/Onboarding";
 import Inbox from "./pages/Inbox";
 import Inbound from "./pages/Inbound";
 import TrackingSettings from "./pages/TrackingSettings";
+import Leads from "./pages/Leads";
+import LeadsCredits from "./pages/LeadsCredits";
+import LeadsCreditsReturn from "./pages/LeadsCreditsReturn";
 import OnboardingGate from "@/components/OnboardingGate";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/legal/Privacy";
@@ -54,6 +57,9 @@ const App = () => (
             <Route path="/email-accounts" element={<ProtectedRoute><OnboardingGate><EmailAccounts /></OnboardingGate></ProtectedRoute>} />
             <Route path="/inbox" element={<ProtectedRoute><OnboardingGate><Inbox /></OnboardingGate></ProtectedRoute>} />
             <Route path="/inbound" element={<ProtectedRoute><OnboardingGate><Inbound /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute><OnboardingGate><Leads /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/leads/credits" element={<ProtectedRoute><OnboardingGate><LeadsCredits /></OnboardingGate></ProtectedRoute>} />
+            <Route path="/leads/credits/return" element={<ProtectedRoute><LeadsCreditsReturn /></ProtectedRoute>} />
             <Route path="/settings/tracking" element={<ProtectedRoute><OnboardingGate><TrackingSettings /></OnboardingGate></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><OnboardingGate><Analytics /></OnboardingGate></ProtectedRoute>} />
             <Route path="/settings/email-accounts" element={<Navigate to="/email-accounts" replace />} />

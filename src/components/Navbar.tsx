@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, Settings, Inbox as InboxIcon, Building2 } from "lucide-react";
+import { Menu, X, LogOut, Settings, Inbox as InboxIcon, Building2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
 import logo from "@/assets/logo.svg";
@@ -20,6 +20,7 @@ const Navbar = () => {
     location.pathname.startsWith("/email-accounts") ||
     location.pathname.startsWith("/inbox") ||
     location.pathname.startsWith("/inbound") ||
+    location.pathname.startsWith("/leads") ||
     location.pathname.startsWith("/analytics") ||
     location.pathname.startsWith("/settings");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -96,6 +97,9 @@ const Navbar = () => {
             </Button>
             <Button variant="ghost" asChild>
               <Link to="/inbound" className="gap-1.5"><Building2 className="h-4 w-4" /> Inbound</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link to="/leads" className="gap-1.5"><Users className="h-4 w-4" /> Leads</Link>
             </Button>
             <Button variant="ghost" asChild><Link to="/email-accounts">{t("nav.emailAccounts")}</Link></Button>
             <Button variant="ghost" asChild><Link to="/analytics">{t("nav.analytics")}</Link></Button>
