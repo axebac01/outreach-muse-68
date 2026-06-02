@@ -11,8 +11,8 @@ interface CheckItem {
 }
 
 const Icon = ({ level }: { level: CheckLevel }) => {
-  if (level === "ok") return <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />;
-  if (level === "warn") return <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />;
+  if (level === "ok") return <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />;
+  if (level === "warn") return <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />;
   return <Circle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />;
 };
 
