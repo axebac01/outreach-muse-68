@@ -289,8 +289,15 @@ const Inbox = () => {
               {isLoading ? (
                 <div className="p-6 text-center text-sm text-muted-foreground">Laddar…</div>
               ) : filteredThreads.length === 0 ? (
-                <div className="p-6 text-center text-sm text-muted-foreground">
-                  Inga konversationer ännu. Klicka <strong>Hämta nytt</strong> för att synka.
+                <div className="p-6 text-center text-sm text-muted-foreground space-y-2">
+                  {showAll ? (
+                    <p>Inga konversationer ännu. Klicka <strong>Hämta nytt</strong> för att synka.</p>
+                  ) : (
+                    <>
+                      <p>Inga svar från dina kampanjer ännu.</p>
+                      <p className="text-xs">När en lead svarar dyker det upp här. Vill du se alla inkommande mejl, slå på <strong>Visa alla</strong>.</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <ul className="divide-y">
