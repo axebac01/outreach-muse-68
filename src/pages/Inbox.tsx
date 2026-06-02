@@ -266,6 +266,18 @@ const Inbox = () => {
                 <Input className="pl-7" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Avsändare, ämne…" />
               </div>
             </div>
+            <div className="pt-2 border-t space-y-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">Omfång</label>
+              <div className="flex gap-1">
+                <Button size="sm" variant={!showAll ? "secondary" : "ghost"} onClick={() => setShowAll(false)} className="flex-1 text-xs">Endast leads</Button>
+                <Button size="sm" variant={showAll ? "secondary" : "ghost"} onClick={() => setShowAll(true)} className="flex-1 text-xs">Visa alla</Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                {showAll
+                  ? "Visar alla mejl i dina synkade konton."
+                  : "Visar bara mejl till/från dina leads och kampanjsvar."}
+              </p>
+            </div>
           </div>
 
           {/* Thread list */}
