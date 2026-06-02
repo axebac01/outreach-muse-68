@@ -30,6 +30,15 @@ const Inbox = () => {
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("inbox_show_all") === "1";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("inbox_show_all", showAll ? "1" : "0");
+    }
+  }, [showAll]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [replyTouched, setReplyTouched] = useState(false);
