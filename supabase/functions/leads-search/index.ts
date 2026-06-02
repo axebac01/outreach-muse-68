@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
       person_seniorities,
       organization_locations,
       organization_num_employees_ranges,
+      organization_industry_tag_ids,
     } = body;
 
     const result = await apolloSearch({
@@ -48,6 +49,9 @@ Deno.serve(async (req) => {
       organization_locations: Array.isArray(organization_locations) ? organization_locations.slice(0, 20) : undefined,
       organization_num_employees_ranges: Array.isArray(organization_num_employees_ranges)
         ? organization_num_employees_ranges.slice(0, 10)
+        : undefined,
+      organization_industry_tag_ids: Array.isArray(organization_industry_tag_ids)
+        ? organization_industry_tag_ids.slice(0, 10)
         : undefined,
     });
 
@@ -72,8 +76,27 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
-    console.error("leads-search error:", e);
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
+    const msg = (e as Error).message ?? "Unknown error";
+    console.error("leads-search error:", msg);
+
+    const isInaccessible =
+      msg.includes("API_INACCESSIBLE") ||
+      msg.includes("free plan") ||
+      msg.includes("Apollo search failed (403)");
+
+    if (isInaccessible) {
+      return new Response(
+        JSON.stringify({
+          error: "apollo_plan_required",
+          message:
+            "Apollo-nyckeln är på gratisplan. Sökning kräver minst Apollo Basic ($49/mån). Uppgradera ditt Apollo-konto eller byt API-nyckel.",
+          upgrade_url: "https://app.apollo.io/#/settings/plans/upgrade",
+        }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
