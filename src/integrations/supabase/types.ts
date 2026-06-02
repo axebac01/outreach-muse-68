@@ -113,6 +113,66 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_ledger: {
+        Row: {
+          balance_after: number
+          created_at: string
+          delta: number
+          id: string
+          lead_id: string | null
+          metadata: Json
+          reason: string
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string
+          delta: number
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          reason: string
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string
+          delta?: number
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          reason?: string
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       dsr_requests: {
         Row: {
           completed_at: string | null
@@ -666,6 +726,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      marketplace_leads: {
+        Row: {
+          city: string | null
+          company: string | null
+          company_domain: string | null
+          cost_credits: number
+          country: string | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          full_name: string | null
+          id: string
+          last_name: string | null
+          linkedin_url: string | null
+          phone: string | null
+          provider: string
+          provider_id: string
+          raw: Json
+          revealed_at: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          company?: string | null
+          company_domain?: string | null
+          cost_credits?: number
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          last_name?: string | null
+          linkedin_url?: string | null
+          phone?: string | null
+          provider: string
+          provider_id: string
+          raw?: Json
+          revealed_at?: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          company?: string | null
+          company_domain?: string | null
+          cost_credits?: number
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          last_name?: string | null
+          linkedin_url?: string | null
+          phone?: string | null
+          provider?: string
+          provider_id?: string
+          raw?: Json
+          revealed_at?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1311,6 +1437,16 @@ export type Database = {
       }
     }
     Functions: {
+      add_credits: {
+        Args: {
+          _amount: number
+          _metadata?: Json
+          _reason: string
+          _stripe_session_id?: string
+          _user_id: string
+        }
+        Returns: number
+      }
       decrypt_secret: {
         Args: { ciphertext: string; key: string }
         Returns: string
@@ -1318,6 +1454,16 @@ export type Database = {
       encrypt_secret: {
         Args: { key: string; plaintext: string }
         Returns: string
+      }
+      spend_credits: {
+        Args: {
+          _amount: number
+          _lead_id?: string
+          _metadata?: Json
+          _reason: string
+          _user_id: string
+        }
+        Returns: number
       }
     }
     Enums: {
