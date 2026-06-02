@@ -250,8 +250,7 @@ export function PipelineMockup() {
             {replies.map((r) => (
               <li
                 key={r.key}
-                className="pm-row-down rounded-[10px] border border-l-2 bg-white p-2.5"
-                style={{ borderColor: "rgba(0,0,0,0.06)", borderLeftColor: "rgba(22,163,74,0.5)" }}
+                className="pm-row-down rounded-[10px] border border-l-2 border-l-success/50 bg-background p-2.5"
               >
                 <div className="flex items-center gap-2">
                   <div className="grid h-6 w-6 place-items-center rounded-full bg-success/10 text-[9px] font-semibold text-success">
