@@ -1,6 +1,18 @@
+import { useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Radar,
   Building2,
@@ -14,6 +26,89 @@ import {
   Globe,
 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+
+const FEATURE_KEY = "inbound";
+const emailSchema = z.string().trim().email("Ange en giltig e-postadress").max(255);
+
+const NotifyMeDialog = () => {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = emailSchema.safeParse(email);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message);
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.from("launch_interest").insert({
+      email: parsed.data.toLowerCase(),
+      feature: FEATURE_KEY,
+      user_id: user?.id ?? null,
+    });
+    setSubmitting(false);
+
+    if (error) {
+      if (error.code === "23505") {
+        toast.success("Du står redan på listan", {
+          description: "Vi hör av oss så snart Inbound släpps.",
+        });
+        setOpen(false);
+        return;
+      }
+      toast.error("Något gick fel", { description: error.message });
+      return;
+    }
+    toast.success("Tack!", {
+      description: "Vi hör av oss så snart Inbound släpps.",
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <Bell className="h-4 w-4" /> Notifiera mig vid lansering
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Få besked när Inbound släpps</DialogTitle>
+          <DialogDescription>
+            Vi mejlar dig så fort funktionen är redo. Inget spam.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="notify-email">E-post</Label>
+            <Input
+              id="notify-email"
+              type="email"
+              autoComplete="email"
+              placeholder="du@foretag.se"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              maxLength={255}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+              {submitting ? "Skickar..." : "Notifiera mig"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const visits = [
   { name: "Spotify", initials: "SP", city: "Stockholm", industry: "Music · 4 200 anst.", pages: 6, time: "2 min sedan", hot: true, known: true },
@@ -109,16 +204,7 @@ const Inbound = () => {
           </div>
 
           <div className="flex flex-wrap justify-center gap-2 pt-2">
-            <Button
-              onClick={() =>
-                toast.success("Tack!", {
-                  description: "Vi hör av oss så snart Inbound släpps.",
-                })
-              }
-              className="gap-2"
-            >
-              <Bell className="h-4 w-4" /> Notifiera mig vid lansering
-            </Button>
+            <NotifyMeDialog />
             <Button
               variant="outline"
               onClick={() =>

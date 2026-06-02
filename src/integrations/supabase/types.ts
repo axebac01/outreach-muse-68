@@ -593,6 +593,30 @@ export type Database = {
         }
         Relationships: []
       }
+      launch_interest: {
+        Row: {
+          created_at: string
+          email: string
+          feature: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          feature: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          feature?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       lead_import_log: {
         Row: {
           api_key_id: string | null
