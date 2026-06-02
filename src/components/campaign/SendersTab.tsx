@@ -137,14 +137,36 @@ export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
         </CardContent>
       </Card>
 
+      {brokenAccounts.length > 0 && (
+        <div className="flex items-start gap-2 rounded-md bg-destructive/10 text-destructive p-3 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-medium">Återanslut kontot för att kunna skicka</div>
+            <div className="text-xs mt-1">
+              {brokenAccounts.map((a) => a.email).join(", ")} har en utgången inloggning.
+            </div>
+          </div>
+          <Button asChild size="sm" variant="outline" className="gap-1">
+            <Link to="/email-accounts"><RefreshCw className="h-3 w-3" />Återanslut</Link>
+          </Button>
+        </div>
+      )}
+
+      {isStuckActive && (
+        <div className="flex items-start gap-2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 p-3 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>Kampanjen är markerad som aktiv men inga utskick är schemalagda. Klicka <strong>Starta kampanj</strong> igen för att schemalägga utskicken.</span>
+        </div>
+      )}
+
       <PreLaunchChecklist sequence={sequence} />
 
       <div className="flex justify-end">
         <Button size="lg" variant="hero" onClick={launch}
-          disabled={launching || isActive || senders.length === 0 || leads.length === 0}
+          disabled={launching || isTrulyLaunched || senders.length === 0 || leads.length === 0}
           className="gap-2">
           <Rocket className="h-4 w-4" />
-          {isActive ? "Kampanj aktiv" : launching ? "Startar..." : "Starta kampanj"}
+          {isTrulyLaunched ? "Kampanj aktiv" : launching ? "Startar..." : "Starta kampanj"}
         </Button>
       </div>
     </div>
