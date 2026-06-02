@@ -1,69 +1,36 @@
+## Plan: Nordic Signal-tema + Aurora-hero
 
-## Mål
+Du har bifogat ett komplett designpaket (HANDOFF.md, index.css, tailwind-snippet, AuroraHero.tsx, logo.svg). Eftersom appen redan bygger på shadcn-tokens räcker det att byta tokens + fonts + logo + lägga in hero-komponenten. Resten av appen byter "skinn" automatiskt.
 
-Stänga gapen i Lead Marketplace-flödet före launch så att hela kedjan **sök → avslöja → kampanj** funkar utan att lämna `/leads`-sidan, och så att köpta leads aldrig "försvinner".
+### Vad jag ändrar
 
----
+**1. `src/index.css`** — token-byte
+- Byt Google Fonts-import: Inter → Schibsted Grotesk + Newsreader + JetBrains Mono.
+- Ersätt `:root`-blocket och `.dark`-blocket med Nordic Signal-tokens (varmt papper i ljust, varmt ember-mörker i mörkt, ember/persimmon som `--primary`, pine `--success`, honey `--warning`).
+- Behåll resten av filen (body-bakgrund, `.prose`, Tiptap-stilarna).
 
-## A. Skapa ny kampanj inline från Leads
+**2. `tailwind.config.ts`** — fonts + aurora-animationer
+- `fontFamily.sans` → Schibsted Grotesk, plus `display`, `serif` (Newsreader), `mono` (JetBrains Mono).
+- Lägg till keyframes `aurora-1/2/3` och `ping-soft` + matchande `animation`-entries vid sidan av befintliga.
 
-I sticky-footern vid `Select`-dropdownen "Importera till sekvens" läggs ett alternativ längst upp:
+**3. `src/assets/logo.svg`** — ersätt med den nya märket från zippen.
 
-> **+ Skapa ny kampanj…**
+**4. `src/components/AuroraHero.tsx`** — ny komponent (drop-in från zippen, scoped CSS, alltid mörk).
 
-Klick öppnar en `<Dialog>` med fälten: **Namn**, **Målgrupp**, **Produkt**, **Erbjudande**, **Ton** (samma som `/campaigns/new` kräver, men i en kompakt vy).
+**5. `src/pages/Landing.tsx`** — ersätt nuvarande `<section>`-hero (raderna 33–65, inkl. `PipelineMockup`) med `<AuroraHero />`. Resten av sidan (How it works, features, CTA) behålls — de plockar upp de nya tokens automatiskt.
 
-Vid submit:
-- Anropar `useCreateCampaign().mutateAsync(form)` (befintlig hook).
-- DB-triggern `create_sequence_for_campaign` skapar automatiskt en matchande sekvens.
-- Frontenden hämtar sekvensens id (`sequences.campaign_id = campaign.id`) och sätter `sequenceId` så att nästa "Avslöja"-klick importerar direkt till den.
-- Toast: "Kampanj skapad — leads importeras dit".
+**6. Navbar-ordmärke** — uppdatera till `Mail` + `Lead` (i `text-primary`) + `.ai` (i `text-muted-foreground`) enligt HANDOFF, så texten matchar nya logon.
 
-Ingen DB-ändring krävs.
+### Vad jag INTE ändrar
 
-## B. Tab "Mina köpta leads" på /leads
+- Inga DB-, edge function- eller logikändringar.
+- Appen (inloggat läge) förblir i ljust läge som idag — bara hero-sektionen är alltid mörk (Aurora). Vill du ha hela appen mörk sätter vi `class="dark"` på `<html>` separat — säg till.
+- `PipelineMockup` tas bort från landningssidan (Aurora-hero har egen visuell mockup). Komponenten ligger kvar i kodbasen och kan återanvändas senare om du vill.
+- Övriga sidor (Dashboard, Leads, Campaign etc.) får automatiskt nya färger/typsnitt — ingen manuell genomgång krävs nu, men jag noterar i loopen om något ser brutet ut efter token-bytet.
 
-Sidan får två tabs överst (shadcn `<Tabs>`):
+### Risker
 
-1. **Sök** (befintlig vy)
-2. **Mina leads** (ny vy)
+- Schibsted Grotesk har annan x-höjd än Inter → vissa knappar/badges kan se aningen tätare/glesare ut. Justeras vid behov efter visuell granskning.
+- Aurora-hero har egna inline-CSS-värden (hex) som inte använder tokens — det är medvetet eftersom sektionen är alltid mörk och fristående.
 
-### "Mina leads"-vyn
-
-Listar `marketplace_leads` för användaren (RLS finns redan) med:
-- Tabell-rader: namn, titel, företag, email, datum avslöjad, kostnad (credits).
-- Sökfält (filtrera på namn/företag/email, klient-sida räcker för MVP).
-- Checkbox per rad + "Markera alla".
-- Sticky footer (samma mönster som söktabben): dropdown för sekvens + "+ Skapa ny kampanj…" + knapp **Importera valda**.
-- Tom-state: "Inga köpta leads än. Gå till Sök för att börja."
-
-Återanvänder `leads-import` edge-funktionen (tar redan `marketplace_lead_ids` + `sequence_id`).
-
-Ingen ny edge-funktion, inga nya tabeller, ingen ny migration.
-
-## C. Förbättrad feedback efter import
-
-Efter lyckad import via `leads-import` (gäller både Sök-tabben och Mina leads):
-
-- Toast får en **Action-knapp** "Visa i sekvens" som navigerar till `/campaign/:campaignId` (vi slår upp campaign_id via sequence_id).
-- Om 0 importerade (alla dubbletter) → varningstoast: "Alla {n} leads fanns redan i sekvensen".
-- Om partiell: "X importerade · Y fanns redan".
-
----
-
-## Filer som ändras / skapas
-
-- **src/pages/Leads.tsx** — wrappa innehållet i `<Tabs>`, lägg in nya tab-vyn, lägg till "+ Skapa ny kampanj" i båda sekvens-dropdowns, förbättrad toast.
-- **src/components/leads/CreateCampaignInlineDialog.tsx** (ny) — kompakt kampanj-skapande-dialog som returnerar `{ campaignId, sequenceId }`.
-- **src/components/leads/MyLeadsTab.tsx** (ny) — vyn för köpta leads med tabell, filter, sticky import-footer.
-- **src/components/leads/ImportToSequencePicker.tsx** (ny, valfritt refactor) — delad komponent för dropdown + "+ Skapa ny kampanj" så A används på båda tabs utan duplicering.
-
-Inga ändringar i edge-funktioner, DB-schema eller secrets.
-
----
-
-## Out of scope (medvetet)
-
-- Re-reveal av samma lead (Apollo kostar igen — vi visar bara att den finns).
-- Export till CSV från Mina leads (kan läggas till efter launch).
-- Bulk-radera köpta leads (RLS tillåter inte DELETE idag, kräver migration — väntar).
+Säg till om jag ska köra, eller om du vill ändra något (t.ex. behålla `PipelineMockup` under hero, eller göra hela appen mörk direkt).

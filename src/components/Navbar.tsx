@@ -35,8 +35,11 @@ const Navbar = () => {
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg shadow-[0_1px_3px_0_hsl(var(--foreground)/0.04)]">
       <div className="container flex h-20 items-center justify-between">
-        <Link to="/" className="flex items-center" aria-label="MailLead">
-          <img src={logo} alt="MailLead" className="h-14 w-auto" />
+        <Link to="/" className="flex items-center gap-2.5" aria-label="MailLead.ai">
+          <img src={logo} alt="" className="h-10 w-auto" />
+          <span className="font-display text-xl font-extrabold tracking-tight">
+            Mail<span className="text-primary">Lead</span><span className="text-muted-foreground">.ai</span>
+          </span>
         </Link>
 
         {!isApp ? (
