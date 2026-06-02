@@ -125,6 +125,7 @@ export const useUnreadInboxCount = () => {
         .from("email_threads")
         .select("unread_count")
         .eq("user_id", user!.id)
+        .eq("is_lead_related", true)
         .gt("unread_count", 0);
       if (error) throw error;
       return (data ?? []).reduce((acc, r) => acc + (r.unread_count ?? 0), 0);
