@@ -94,6 +94,8 @@ export default function Leads() {
   const { balance } = useCreditBalance();
 
   const [titles, setTitles] = useState("");
+  const [role, setRole] = useState<string>("");
+  const [industry, setIndustry] = useState<string>("");
   const [locations, setLocations] = useState("Sweden");
   const [keywords, setKeywords] = useState("");
   const [seniority, setSeniority] = useState<string>("");
