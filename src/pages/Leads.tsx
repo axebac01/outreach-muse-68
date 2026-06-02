@@ -562,23 +562,13 @@ export default function Leads() {
                 </div>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                <Select value={sequenceId} onValueChange={setSequenceId}>
-                  <SelectTrigger className="w-[220px]">
-                    <SelectValue placeholder="Importera till sekvens (valfritt)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sequences.length === 0 && (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        Skapa en kampanj först
-                      </div>
-                    )}
-                    {sequences.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ImportToSequencePicker
+                  sequences={sequences as any}
+                  value={sequenceId}
+                  onChange={setSequenceId}
+                  className="w-[240px]"
+                  placeholder="Importera till sekvens (valfritt)"
+                />
                 <Button variant="ghost" onClick={() => setSelected(new Set())}>
                   Avmarkera
                 </Button>
