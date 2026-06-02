@@ -476,8 +476,15 @@ const ThreadRow = ({ thread, accounts, active, onClick }: {
               )}
               <div className={`text-sm truncate ${unread ? "font-semibold" : ""}`}>{otherParticipant}</div>
             </div>
-            <div className={`text-sm truncate ${unread ? "font-medium" : "text-muted-foreground"}`}>
-              {thread.subject || "(utan ämne)"}
+            <div className="text-sm truncate mt-0.5 flex items-center gap-1.5">
+              <span className={unread ? "font-medium" : "text-muted-foreground"}>
+                {thread.subject || "(utan ämne)"}
+              </span>
+              {!thread.is_lead_related && (
+                <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 shrink-0 text-muted-foreground border-muted-foreground/30">
+                  Ej lead
+                </Badge>
+              )}
             </div>
             <div className="text-xs text-muted-foreground truncate mt-0.5">
               {thread.last_direction === "outbound" ? "Du: " : ""}{thread.last_snippet}
