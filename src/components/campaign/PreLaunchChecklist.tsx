@@ -90,13 +90,13 @@ export const PreLaunchChecklist = ({ sequence }: { sequence: Sequence }) => {
         <CardTitle className="text-base flex items-center gap-2">
           Redo att starta?
           {fails === 0 && warns === 0 && (
-            <span className="text-xs font-normal text-emerald-600">Allt ser bra ut</span>
+            <span className="text-xs font-normal text-success">Allt ser bra ut</span>
           )}
           {fails > 0 && (
             <span className="text-xs font-normal text-destructive">{fails} att fixa</span>
           )}
           {fails === 0 && warns > 0 && (
-            <span className="text-xs font-normal text-amber-600">{warns} varning{warns > 1 ? "ar" : ""}</span>
+            <span className="text-xs font-normal text-warning">{warns} varning{warns > 1 ? "ar" : ""}</span>
           )}
         </CardTitle>
       </CardHeader>
