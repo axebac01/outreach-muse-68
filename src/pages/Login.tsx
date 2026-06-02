@@ -33,6 +33,12 @@ const Login = () => {
 
   return (
     <Layout>
+      <SeoHead
+        title="Logga in — MailLead.ai"
+        description="Logga in på ditt MailLead.ai-konto för att fortsätta skicka personliga kalla mejl och följa upp svar i Unibox."
+        path="/login"
+        noindex
+      />
       <div className="container flex min-h-[calc(100vh-4rem)] items-center justify-center py-12">
         <div className="mx-auto w-full max-w-sm">
           <div className="rounded-xl border bg-card p-8 space-y-6 shadow-sm border-t-2 border-t-primary">
