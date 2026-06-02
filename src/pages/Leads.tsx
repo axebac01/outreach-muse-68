@@ -60,6 +60,33 @@ const SENIORITIES = [
   { value: "senior", label: "Senior" },
 ];
 
+const ROLES: { value: string; label: string; titles: string[] }[] = [
+  { value: "ceo", label: "VD / CEO", titles: ["CEO", "VD", "Managing Director", "Chief Executive Officer"] },
+  { value: "sales", label: "Säljchef", titles: ["Head of Sales", "Sales Director", "VP Sales", "Säljchef", "CRO", "Chief Revenue Officer"] },
+  { value: "marketing", label: "Marknadschef", titles: ["CMO", "Marketing Director", "Head of Marketing", "Marknadschef"] },
+  { value: "founder", label: "Grundare", titles: ["Founder", "Co-Founder", "Grundare"] },
+  { value: "hr", label: "HR-chef", titles: ["HR Director", "Head of People", "CHRO", "HR-chef", "People Operations"] },
+  { value: "cto", label: "IT-chef / CTO", titles: ["CTO", "Head of IT", "IT Director", "IT-chef", "Chief Technology Officer"] },
+  { value: "cfo", label: "Ekonomichef / CFO", titles: ["CFO", "Finance Director", "Ekonomichef", "Head of Finance"] },
+  { value: "coo", label: "Operations / COO", titles: ["COO", "Head of Operations", "Operations Director"] },
+  { value: "product", label: "Produktchef", titles: ["CPO", "Head of Product", "Product Director", "Produktchef"] },
+];
+
+const INDUSTRIES: { value: string; label: string }[] = [
+  { value: "5567cd4773696439b10b0000", label: "SaaS / Software" },
+  { value: "5567cd4e7369644d39040000", label: "IT-tjänster" },
+  { value: "5567cdda7369644d250c0000", label: "Marknadsföring / Reklam" },
+  { value: "5567cdf27369643dbf260000", label: "E-handel" },
+  { value: "5567cd49736964397e020000", label: "Konsulttjänster" },
+  { value: "5567cdd87369644d391c0000", label: "Finans" },
+  { value: "5567cdbc7369644eed130000", label: "Bygg" },
+  { value: "5567cdda7369643b80510000", label: "Tillverkning" },
+  { value: "5567cdde73696439dd350000", label: "Hälso- & sjukvård" },
+  { value: "5567cd4d7369644d2d010000", label: "Utbildning" },
+  { value: "5567cdf27369643b791f0000", label: "Fastigheter" },
+  { value: "5567cdd47369644cf94c0000", label: "Restaurang / Hospitality" },
+];
+
 export default function Leads() {
   const { user } = useAuth();
   const navigate = useNavigate();
