@@ -257,7 +257,7 @@ const Inbound = () => {
                 <div className="rounded-lg border bg-background/50 p-3">
                   <div className="text-xs text-muted-foreground">Kända leads</div>
                   <div className="text-2xl font-semibold mt-0.5">8</div>
-                  <div className="text-[11px] text-orange-500 dark:text-orange-400 flex items-center gap-0.5 mt-0.5">
+                  <div className="text-[11px] text-primary flex items-center gap-0.5 mt-0.5">
                     <Flame className="h-3 w-3" /> 3 heta just nu
                   </div>
                 </div>
