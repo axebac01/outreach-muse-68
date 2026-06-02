@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Rocket, AlertTriangle, Mail } from "lucide-react";
+import { Rocket, AlertTriangle, Mail, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSequenceSenders,
@@ -26,6 +27,18 @@ export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
   const toggleSender = useToggleSender(sequence.id);
   const update = useUpdateSequence(sequence.id);
   const [launching, setLaunching] = useState(false);
+
+  const { data: scheduledCount = 0 } = useQuery({
+    queryKey: ["scheduled_sends_count", sequence.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("scheduled_sends")
+        .select("id", { count: "exact", head: true })
+        .eq("sequence_id", sequence.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 
   const selectedSenderIds = new Set(senders.map((s) => s.email_account_id));
   const dailyLimit = sequence.daily_limit_per_account;
@@ -57,6 +70,11 @@ export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
   };
 
   const isActive = sequence.status === "active";
+  const isTrulyLaunched = isActive && scheduledCount > 0;
+  const isStuckActive = isActive && scheduledCount === 0;
+  const brokenAccounts = accounts.filter(
+    (a) => selectedSenderIds.has(a.id) && /invalid_grant|expired|revoked/i.test(a.status_message ?? ""),
+  );
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -119,14 +137,36 @@ export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
         </CardContent>
       </Card>
 
+      {brokenAccounts.length > 0 && (
+        <div className="flex items-start gap-2 rounded-md bg-destructive/10 text-destructive p-3 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-medium">Återanslut kontot för att kunna skicka</div>
+            <div className="text-xs mt-1">
+              {brokenAccounts.map((a) => a.email).join(", ")} har en utgången inloggning.
+            </div>
+          </div>
+          <Button asChild size="sm" variant="outline" className="gap-1">
+            <Link to="/email-accounts"><RefreshCw className="h-3 w-3" />Återanslut</Link>
+          </Button>
+        </div>
+      )}
+
+      {isStuckActive && (
+        <div className="flex items-start gap-2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 p-3 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>Kampanjen är markerad som aktiv men inga utskick är schemalagda. Klicka <strong>Starta kampanj</strong> igen för att schemalägga utskicken.</span>
+        </div>
+      )}
+
       <PreLaunchChecklist sequence={sequence} />
 
       <div className="flex justify-end">
         <Button size="lg" variant="hero" onClick={launch}
-          disabled={launching || isActive || senders.length === 0 || leads.length === 0}
+          disabled={launching || isTrulyLaunched || senders.length === 0 || leads.length === 0}
           className="gap-2">
           <Rocket className="h-4 w-4" />
-          {isActive ? "Kampanj aktiv" : launching ? "Startar..." : "Starta kampanj"}
+          {isTrulyLaunched ? "Kampanj aktiv" : launching ? "Startar..." : "Starta kampanj"}
         </Button>
       </div>
     </div>

@@ -59,6 +59,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Guard against duplicate scheduling on re-launch.
+    const { count: existingScheduled } = await admin
+      .from("scheduled_sends")
+      .select("id", { count: "exact", head: true })
+      .eq("sequence_id", sequenceId);
+    if ((existingScheduled ?? 0) > 0) {
+      return new Response(JSON.stringify({ error: "Kampanjen är redan startad." }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     const [{ data: leadsRaw }, { data: steps }, { data: senders }, { data: unsubs }] = await Promise.all([
       admin.from("sequence_leads").select("id,email").eq("sequence_id", sequenceId).eq("status", "pending"),
       admin.from("sequence_steps").select("*").eq("sequence_id", sequenceId).order("step_order"),
@@ -113,12 +126,14 @@ Deno.serve(async (req) => {
 
     const { error: insertErr } = await admin.from("scheduled_sends").insert(rows);
     if (insertErr) {
+      // Do NOT mark sequence active if scheduling failed.
       return new Response(JSON.stringify({ error: insertErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Only flip status AFTER scheduled_sends are persisted.
     await admin.from("sequences").update({ status: "active" }).eq("id", sequenceId);
     await admin
       .from("sequence_leads")
