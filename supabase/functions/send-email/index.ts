@@ -440,6 +440,7 @@ Deno.serve(async (req) => {
       message_id_header: localMessageId,
       in_reply_to: in_reply_to ?? null,
       thread_key: threadKey,
+      is_lead_related: true,
     }).select("id").maybeSingle();
 
     if (status === "sent") {
