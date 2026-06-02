@@ -465,6 +465,7 @@ Deno.serve(async (req) => {
           message_count: (existingThread.message_count ?? 0) + 1,
           lead_id: lead_id ?? null,
           sequence_id: sequence_id ?? null,
+          is_lead_related: true,
         }).eq("id", existingThread.id);
       } else {
         await admin.from("email_threads").insert({
@@ -480,6 +481,7 @@ Deno.serve(async (req) => {
           message_count: 1,
           lead_id: lead_id ?? null,
           sequence_id: sequence_id ?? null,
+          is_lead_related: true,
         });
       }
     }
