@@ -53,8 +53,9 @@ export interface InboxMessage {
   ai_analysis_error: string | null;
 }
 
-export const useInboxThreads = (filters: { accountId?: string; sequenceId?: string; onlyUnread?: boolean; sentiment?: string; showAll?: boolean } = {}) => {
+export const useInboxThreads = (filters: { accountId?: string; sequenceId?: string; onlyUnread?: boolean; sentiment?: string; showAll?: boolean; view?: "inbox" | "sent" } = {}) => {
   const { user } = useAuth();
+  const view = filters.view ?? "inbox";
   return useQuery({
     queryKey: ["inbox_threads", user?.id, filters],
     enabled: !!user?.id,
@@ -70,6 +71,13 @@ export const useInboxThreads = (filters: { accountId?: string; sequenceId?: stri
       if (filters.sequenceId) q = q.eq("sequence_id", filters.sequenceId);
       if (filters.onlyUnread) q = q.gt("unread_count", 0);
       if (filters.sentiment) q = q.eq("last_sentiment", filters.sentiment);
+      if (view === "inbox") {
+        // Show threads with an inbound reply (or unread inbound)
+        q = q.or("last_direction.neq.outbound,last_direction.is.null,unread_count.gt.0");
+      } else if (view === "sent") {
+        // Outbound threads still awaiting a reply
+        q = q.eq("last_direction", "outbound");
+      }
       const { data, error } = await q;
       if (error) throw error;
       return data as InboxThread[];
