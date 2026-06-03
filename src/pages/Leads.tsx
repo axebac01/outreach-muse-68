@@ -999,7 +999,16 @@ export default function Leads() {
                 </div>
 
 
-                {search.data.people.map((p) => {
+                {visiblePeople.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-10 text-center text-muted-foreground text-sm">
+                      {viewMode === "new"
+                        ? "Inga nya leads på denna sida — alla är redan sparade."
+                        : "Inga sparade leads på denna sida."}
+                    </CardContent>
+                  </Card>
+                ) : null}
+                {visiblePeople.map((p) => {
                   const revealed = revealedById[p.provider_id];
                   const isRevealed = !!revealed;
                   return (
