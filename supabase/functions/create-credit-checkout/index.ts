@@ -96,6 +96,34 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validate returnUrl against an allowlist of trusted origins to prevent open redirects.
+    const ALLOWED_RETURN_ORIGINS = [
+      "https://maillead.ai",
+      "https://www.maillead.ai",
+    ];
+    const ALLOWED_RETURN_HOST_SUFFIXES = [
+      ".lovable.app",
+      ".lovableproject.com",
+    ];
+    let parsedReturn: URL;
+    try {
+      parsedReturn = new URL(returnUrl);
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid returnUrl" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const originAllowed = ALLOWED_RETURN_ORIGINS.includes(parsedReturn.origin);
+    const suffixAllowed = parsedReturn.protocol === "https:" &&
+      ALLOWED_RETURN_HOST_SUFFIXES.some((s) => parsedReturn.hostname.endsWith(s));
+    if (!originAllowed && !suffixAllowed) {
+      return new Response(JSON.stringify({ error: "returnUrl origin not allowed" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const stripe = createStripeClient(environment);
 
     const prices = await stripe.prices.list({ lookup_keys: [priceId] });
