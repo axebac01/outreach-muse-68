@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
       return_url: returnUrl,
       customer: customerId,
       automatic_tax: { enabled: true },
+      customer_update: { address: 'auto' },
       payment_intent_data: { description: product.name },
       metadata: {
         userId,
