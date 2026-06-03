@@ -60,7 +60,7 @@ const Inbox = () => {
     enabled: !!user?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("email_accounts")
+        .from("email_accounts_safe")
         .select("id, email, status")
         .eq("user_id", user!.id);
       if (error) throw error;
