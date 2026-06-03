@@ -716,12 +716,12 @@ export default function Leads() {
                       variant="outline"
                       onClick={() => {
                         setTitles("");
-                        setRole("");
-                        setIndustry("");
+                        setRoles([]);
+                        setIndustries([]);
                         setLocations("Sweden");
                         setKeywords("");
-                        setSeniority("");
-                        setEmployees("");
+                        setSeniorities([]);
+                        setEmployeesRanges([]);
                         setPage(1);
                         setSearchTriggered(false);
                         setSelected(new Set());
