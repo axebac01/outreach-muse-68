@@ -1,52 +1,37 @@
-# Bygg IMAP-sync så svar fångas för SMTP-konton
+# Plan
 
-## Kort svar
-Det går. Allt utom själva pull-koden finns redan: vi krypterar och lagrar IMAP-lösenord i `email_accounts.imap_password_enc`, har `imap_host/port/secure/username` och en `imap_last_uid`-kolumn för progress. Edge functions kör Deno som kan öppna TLS-sockets (`Deno.connectTls`) och köra Node-IMAP-bibliotek via `npm:`-specifier. Vi behöver inte byta arkitektur — bara lägga till en `syncImap()`-väg i befintliga `sync-inbox` och släppa filtret i cron-jobbet.
+## Mål
+Fixa två buggar:
+1. Anslutna mejlkonton ska visas korrekt efter refresh / utloggning / inloggning.
+2. Footern ska inte visas inne i den inloggade appen, bara på publika sidor.
 
-## Vad som ändras
+## Det jag kommer bygga
 
-### 1. `sync-inbox-cron`
-Idag: `auth_type IN ('oauth')`. Ändra till att inkludera SMTP-konton som har IMAP konfigurerat:
-```text
-status = 'active' AND (auth_type = 'oauth' OR (auth_type = 'smtp' AND imap_host IS NOT NULL))
-```
+### 1) Stabil auth-gate för data som kräver inloggning
+Jag säkrar att sidor som läser användarspecifik data inte frågar databasen innan sessionen verkligen är återställd. Det ska stoppa läget där kontolistan råkar hämta med `auth.uid() = null` och därför ser tom ut trots att konton finns.
 
-### 2. `sync-inbox` — ny `syncImap(admin, account)`
-- Dekryptera `imap_password_enc` via befintlig `decryptToken` (samma som send-email använder).
-- Koppla med `npm:imapflow` (Node-kompatibel, fungerar i Deno edge runtime — vi kollar i implementationen och faller tillbaka till en minimal egen IMAP-klient om imapflow strular).
-- `mailbox.open('INBOX', { readOnly: true })` — vi vill inte markera lästa.
-- Hämta nya UIDs sedan `account.imap_last_uid` (eller senaste 14 dagarna om null, samma fönster som Outlook-vägen idag).
-- Begränsa batch till 50 meddelanden per körning för att hålla edge-function-timeout (~150 s).
-- Parsa varje rå MIME-payload med `npm:mailparser` → mappa till befintlig `ParsedMessage`-form (from, to, subject, date, message_id_header, in_reply_to, references, body_text/html, snippet).
-- Skicka in i befintliga `persistInbound()` (bounce-detektion, lead-matchning, paus av sekvens, allt återanvänds gratis).
-- Uppdatera `account.imap_last_uid` = max UID efter lyckad batch.
-- Skydd: timeout-wrapper på 90 s för hela IMAP-sessionen, alltid `client.logout()` i `finally`.
+### 2) Tydlig felhantering på mejlkontosidan
+Just nu visas tom-state även om frågan kan ha misslyckats. Jag lägger till ett riktigt felläge på `/email-accounts` så att en auth-/RLS-/view-fråga inte maskeras som “inga konton”.
 
-### 3. Felhantering + status
-- Auth-fel (lösenord ändrat, MFA aktiverat): sätt `email_accounts.status = 'error'` + `status_message`. UI visar redan en banner via befintlig status-kolumn.
-- TLS/anslutningsfel: räkna som tillfälligt, logga, returnera 200 i cron (annars blockerar ett konto hela batchen — befintlig cron-loop fångar redan errors per konto).
-- Gmail via app-lösenord och Outlook IMAP fungerar med samma `imapflow`-kod.
+### 3) Gör mejlkonto-queryn användarsäker
+Jag uppdaterar hooken för mejlkonton så att den är kopplad till aktuell användare och refetchas korrekt när session/användare ändras.
 
-### 4. UI-flagga "Mottagning aktiv"
-I `EmailAccountsPage`/listan: visa en liten indikator per konto baserat på `last_synced_at`. SMTP-konton som saknar IMAP får en varning "Vi kan inte detektera svar för det här kontot — lägg till IMAP under inställningar". Förhindrar att en användare lägger till bara SMTP utan att förstå risken.
+### 4) Separera public layout från app-layout
+Jag delar upp nuvarande `Layout`, eftersom den idag alltid renderar `Footer` och `CookieBanner`. Appsidorna får en egen layout utan footer, medan login/landing/legal kan fortsätta använda public layout.
 
-### 5. Onboardings-hård kravnivå
-I `ConnectEmailDialog`: gör IMAP-fälten **obligatoriska** för SMTP-typen (idag valfria). Befintlig auto-prefyll (`smtp.foo` → `imap.foo`) gör detta smärtfritt för de flesta. Om användaren explicit inte har IMAP (sällsynt) ska de få en uttrycklig varning med kryssruta "Jag förstår att inkommande svar inte upptäcks" innan kontot kan sparas.
+### 5) Verifiering
+Jag verifierar i preview att:
+- `/email-accounts` visar konton efter hård refresh
+- tom-lista bara visas när det faktiskt inte finns några konton
+- eventuella fetchfel visas som fel, inte som empty state
+- footern inte syns på `/email-accounts` eller andra inloggade vyer
+- footern fortfarande syns på publika sidor
 
 ## Tekniska detaljer
+- `src/context/AuthContext.tsx`: göra auth readiness tydligare och undvika att appen släpper igenom skyddade queries för tidigt.
+- `src/hooks/useEmailAccounts.ts`: användarspecifik `queryKey`, bättre `enabled`-villkor och korrekt re-fetch vid session byte.
+- `src/pages/EmailAccounts.tsx`: separat hantering för `isLoading`, `error`, `empty`.
+- `src/components/Layout.tsx` och berörda sidor: dela upp i t.ex. `PublicLayout` och `AppLayout` eller motsvarande enkel variant.
 
-- `imapflow` använder Node net/tls — Deno's `npm:`-loader polyfillar detta. Vi verifierar i en första boot. Om någon edge case dyker upp (sällsynt) finns plan B: en ~200-radig egen IMAP-klient som bara gör LOGIN → SELECT → UID SEARCH → UID FETCH och låter `mailparser` parsa rådatan.
-- Concurrency: cron-jobbets nuvarande `BATCH=5` parallella users behålls. Per user kör vi konton sekventiellt (oftast 1–2 konton/user) för att inte slå i memory-tak.
-- UID-tracking är per konto. Om en användare flyttar mailbox eller IMAP-servern återanvänder UIDs (sällsynt — UIDVALIDITY) detekterar vi det och nollställer `imap_last_uid` så vi börjar om från 14 dagar tillbaka.
-- Allt skrivs via samma `persistInbound`, så de skyddslager vi precis byggde (reply-detektion utan thread-headers, auto-reply-filter, `cancelled_reason`) gäller automatiskt också för IMAP.
-
-## Vad jag INTE bygger nu
-- IDLE/push (realtime IMAP) — kräver långlivad worker, inte edge-function-vänligt. Cron var 10:e min räcker för v1.
-- Stöd för IMAP-konton helt utan SMTP-sändning (vi har ingen användarflöde för det idag).
-
-## Resultat efter detta
-- Reply-stop fungerar för **alla** kontotyper i appen (Gmail OAuth, Outlook OAuth, SMTP+IMAP).
-- Sista P0-risken från förra genomgången är borta.
-- Vi kan slå på SMTP för riktiga användare med gott samvete.
-
-Vill du att jag bygger detta nu?
+## Förväntat resultat
+Efter detta ska du inte längre få “inga konton” när konton faktiskt finns, och mejlkontosidan ska kännas som en riktig appvy utan publikt footer-block.
