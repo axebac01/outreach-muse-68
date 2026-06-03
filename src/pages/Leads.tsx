@@ -415,11 +415,9 @@ export default function Leads() {
         MAX_BULK_SELECT,
         totalEntries
       );
-      if (target <= currentPagePeople.length) {
-        ids = currentPagePeople
-          .filter((p) => !revealedById[p.provider_id])
-          .slice(0, target)
-          .map((p) => p.provider_id);
+      const unrevealedOnPage = currentPagePeople.filter((p) => !revealedById[p.provider_id]);
+      if (unrevealedOnPage.length >= target) {
+        ids = unrevealedOnPage.slice(0, target).map((p) => p.provider_id);
       } else {
         setCollecting(true);
         try {
