@@ -61,12 +61,22 @@ function useCountUp(to: number, dec = 0, run = false) {
 
 function Mark({ size = 36 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 72 72" fill="none">
-      <rect x="2" y="2" width="68" height="68" rx="18" fill="#221F1A" />
-      <rect x="15" y="26" width="42" height="28" rx="5.5" fill="none" stroke="#F6F1E8" strokeWidth="3" />
-      <path d="M18 29.5 L36 41 L54 29.5" fill="none" stroke="#F6F1E8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M36 41 L36 16" stroke="#E0512B" strokeWidth="4.6" strokeLinecap="round" />
-      <path d="M28 23.5 L36 15 L44 23.5" fill="none" stroke="#E0512B" strokeWidth="4.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={size} height={size} viewBox="0 0 72 72" fill="none" role="img" aria-label="MailLead">
+      <defs>
+        <linearGradient id="ml-tile-h" x1="6" y1="4" x2="66" y2="68" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#2C281F" />
+          <stop offset="1" stopColor="#1B1813" />
+        </linearGradient>
+        <linearGradient id="ml-ember-h" x1="50" y1="11" x2="60" y2="30" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#F4801F" />
+          <stop offset="1" stopColor="#E0512B" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="68" height="68" rx="19" fill="url(#ml-tile-h)" />
+      <path d="M15 54 L15 28 L36 45 L57 28" fill="none" stroke="#F6F1E8" strokeWidth="6.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M57 54 L57 28" fill="none" stroke="#F6F1E8" strokeWidth="6.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M57 26 L57 13" stroke="url(#ml-ember-h)" strokeWidth="6.2" strokeLinecap="round" />
+      <path d="M51.5 18.5 L57 12.5 L62.5 18.5" fill="none" stroke="url(#ml-ember-h)" strokeWidth="6.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
