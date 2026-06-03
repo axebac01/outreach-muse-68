@@ -234,17 +234,18 @@ export default function Leads() {
   const applyRecent = (r: { filters: any }) => {
     const f = r.filters || {};
     setTitles(f.titles ?? "");
-    setRole(f.role ?? "");
-    setIndustry(f.industry ?? "");
+    setRoles(toArr(f.roles ?? f.role));
+    setIndustries(toArr(f.industries ?? f.industry));
     setLocations(f.locations ?? "Sweden");
     setKeywords(f.keywords ?? "");
-    setSeniority(f.seniority ?? "");
-    setEmployees(f.employees ?? "");
+    setSeniorities(toArr(f.seniorities ?? f.seniority));
+    setEmployeesRanges(toArr(f.employeesRanges ?? f.employees));
     setPage(1);
     setSelected(new Set());
     setSearchTriggered(true);
     setRecentOpen(false);
   };
+
 
   const deleteRecent = async (id: string) => {
     await supabase.from("lead_searches").delete().eq("id", id);
