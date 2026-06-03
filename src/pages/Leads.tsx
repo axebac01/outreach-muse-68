@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { toast } from "sonner";
-import { Search, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock } from "lucide-react";
+import { Search, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock, CheckCircle2, Linkedin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
