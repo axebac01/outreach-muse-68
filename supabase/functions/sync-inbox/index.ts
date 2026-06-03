@@ -327,8 +327,8 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
   // lead replied: stopping sends to people who answered is a safety floor,
   // not a preference. Auto-reply detection (Auto-Submitted header) prevents
   // OOO mails from triggering this — see check below.
-  const isAutoReply = /auto[-_]?(submitted|generated|replied)|out[-_ ]?of[-_ ]?office|x[-_]?autoreply/i.test(
-    (p.headers || "") + " " + (p.subject || ""),
+  const isAutoReply = /\b(out[- ]?of[- ]?office|auto[- ]?reply|automatic reply|frånvarande|automatiskt svar|semestermeddelande)\b/i.test(
+    (p.subject || "") + " " + (p.snippet || ""),
   );
   if (!isAutoReply) {
     if (sequenceId) {
