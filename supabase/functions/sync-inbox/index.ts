@@ -195,7 +195,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
       .update({ status: "bounced" })
       .eq("user_id", account.user_id)
       .ilike("email", bounce.bouncedEmail);
-    await cancelScheduledForLead(admin, null, null, account.user_id, bounce.bouncedEmail);
+    await cancelScheduledForLead(admin, null, null, account.user_id, bounce.bouncedEmail, "bounce");
     // still record the bounce email in messages for visibility
   }
   let priorThreadKey: string | null = null;
