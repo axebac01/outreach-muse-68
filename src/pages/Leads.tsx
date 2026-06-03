@@ -632,86 +632,63 @@ export default function Leads() {
             <Card>
               <CardContent className="pt-6 space-y-4">
                 <div>
-                  <Label htmlFor="role">Roll</Label>
-                  <Select value={role} onValueChange={(v) => setRole(v === "any" ? "" : v)}>
-                    <SelectTrigger id="role">
-                      <SelectValue placeholder="Alla roller" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Alla roller</SelectItem>
-                      {ROLES.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
-                          {r.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Roller</Label>
+                  <MultiSelectFilter
+                    label="Roller"
+                    placeholder="Alla roller"
+                    options={ROLES.map((r) => ({ value: r.value, label: r.label }))}
+                    value={roles}
+                    onChange={setRoles}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="industry">Bransch</Label>
-                  <Select value={industry} onValueChange={(v) => setIndustry(v === "any" ? "" : v)}>
-                    <SelectTrigger id="industry">
-                      <SelectValue placeholder="Alla branscher" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Alla branscher</SelectItem>
-                      {INDUSTRIES.map((i) => (
-                        <SelectItem key={i.value} value={i.value}>
-                          {i.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Bransch</Label>
+                  <MultiSelectFilter
+                    label="Bransch"
+                    placeholder="Alla branscher"
+                    options={INDUSTRIES}
+                    value={industries}
+                    onChange={setIndustries}
+                    searchable
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="titles">Egna titlar (kommaseparerade)</Label>
-                  <Input
+                  <Label htmlFor="titles">Egna titlar</Label>
+                  <ChipInput
                     id="titles"
-                    placeholder="t.ex. Head of Growth"
                     value={titles}
-                    onChange={(e) => setTitles(e.target.value)}
+                    onChange={setTitles}
+                    placeholder="t.ex. Head of Growth (Enter)"
                   />
                 </div>
                 <div>
                   <Label htmlFor="locations">Land/stad</Label>
-                  <Input
+                  <ChipInput
                     id="locations"
-                    placeholder="Sweden, Stockholm"
                     value={locations}
-                    onChange={(e) => setLocations(e.target.value)}
+                    onChange={setLocations}
+                    placeholder="Sweden, Stockholm (Enter)"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="seniority">Senioritet</Label>
-                  <Select value={seniority} onValueChange={(v) => setSeniority(v === "any" ? "" : v)}>
-                    <SelectTrigger id="seniority">
-                      <SelectValue placeholder="Alla" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Alla</SelectItem>
-                      {SENIORITIES.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Senioritet</Label>
+                  <MultiSelectFilter
+                    label="Senioritet"
+                    placeholder="Alla"
+                    options={SENIORITIES}
+                    value={seniorities}
+                    onChange={setSeniorities}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="employees">Företagsstorlek</Label>
-                  <Select value={employees} onValueChange={(v) => setEmployees(v === "any" ? "" : v)}>
-                    <SelectTrigger id="employees">
-                      <SelectValue placeholder="Alla" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Alla</SelectItem>
-                      {EMPLOYEE_RANGES.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
-                          {r.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Företagsstorlek</Label>
+                  <MultiSelectFilter
+                    label="Företagsstorlek"
+                    placeholder="Alla"
+                    options={EMPLOYEE_RANGES}
+                    value={employeesRanges}
+                    onChange={setEmployeesRanges}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="keywords">Sökord</Label>
