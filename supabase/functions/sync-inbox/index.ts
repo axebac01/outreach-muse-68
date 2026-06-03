@@ -148,17 +148,29 @@ function detectBounce(p: ParsedMessage, fromEmail: string): { isBounce: boolean;
   return { isBounce: true, bouncedEmail, reason: reasonMatch ? reasonMatch[0].slice(0, 500) : subject };
 }
 
-async function cancelScheduledForLead(admin: any, sequenceId: string | null, leadId: string | null, userId: string, email?: string) {
+async function cancelScheduledForLead(
+  admin: any,
+  sequenceId: string | null,
+  leadId: string | null,
+  userId: string,
+  email?: string,
+  reason: string = "reply_detected",
+) {
   if (leadId && sequenceId) {
     await admin.from("scheduled_sends")
-      .update({ status: "cancelled" })
+      .update({ status: "cancelled", cancelled_reason: reason })
       .eq("sequence_id", sequenceId).eq("lead_id", leadId).eq("status", "scheduled");
+  } else if (leadId) {
+    // Cancel across any sequence this lead is in
+    await admin.from("scheduled_sends")
+      .update({ status: "cancelled", cancelled_reason: reason })
+      .eq("lead_id", leadId).eq("status", "scheduled");
   } else if (email) {
     const { data: sLeads } = await admin.from("sequence_leads")
       .select("id, sequence_id").eq("user_id", userId).ilike("email", email);
     for (const sl of sLeads || []) {
       await admin.from("scheduled_sends")
-        .update({ status: "cancelled" })
+        .update({ status: "cancelled", cancelled_reason: reason })
         .eq("sequence_id", sl.sequence_id).eq("lead_id", sl.id).eq("status", "scheduled");
     }
   }
