@@ -27,9 +27,9 @@ Deno.serve(async (req) => {
       a.auth_type === "oauth" || (a.auth_type === "smtp" && a.imap_host)
     );
 
-    const userIds = Array.from(new Set((accounts ?? []).map((a: any) => a.user_id)));
+    const userIds = Array.from(new Set(eligible.map((a: any) => a.user_id)));
     result.users = userIds.length;
-    result.accounts = accounts?.length ?? 0;
+    result.accounts = eligible.length;
 
     // Process users in parallel but bounded to avoid blowing the function timeout.
     const BATCH = 5;
