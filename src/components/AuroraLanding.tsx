@@ -219,7 +219,7 @@ export default function AuroraLanding() {
         </div></section>
 
         {/* FEATURES */}
-        <section className="section"><div className="wrap">
+        <section className="section" id="features"><div className="wrap">
           <p className="eyebrow reveal">Funktioner</p>
           <h2 className="sec-h reveal">Hela outbound-flödet på ett ställe</h2>
           <p className="sec-sub reveal">Från leadimport till svar — utan att lämna MailLead.</p>
