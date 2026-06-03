@@ -1,43 +1,52 @@
-## Två förbättringar på Leads-sidan
+## Multi-select på alla filter
 
-### 1. Bugg: "Markera 25" markerar bara 23 om några är köpta
-**Orsak:** I `applyBulkSelect` (count-läge) tar vi `currentPagePeople.slice(0, target)` *efter* filtrering bort av redan avslöjade. Resultatet blir färre än önskat.
+### Vad ändras
+Konvertera dessa fält från single-select till multi-select med chip/badge-UI (likt screenshotten):
+- **Roller** (preset-roller — VD, Säljchef, …)
+- **Senioritet** (Owner, C-suite, VP, …)
+- **Bransch** (SaaS, IT-tjänster, …)
+- **Antal anställda** (1–10, 11–50, …)
+- **Locations** är redan komma-separerad text → behålls men visas som chips för konsekvens
+- **Titlar (fritext)** är redan komma-separerad → visas som chips, ny rad läggs till med Enter eller komma
 
-**Fix:** I count-läge — om antalet ofiltrerade nya på sidan är < target, anropa alltid `collectProviderIds(target)` så vi hämtar fler från nästa sida tills vi har exakt `target` *nya* (eller når totalen / 500-cappen).
+### UI-mönster
+För varje filter en knapp som öppnar en `Popover` med en checkbox-lista (eller `Command` med sökruta för långa listor som bransch). I knappen visas en räknare `× N` när val finns, precis som i screenshotten ("Job Titles × 9"). Under fältet renderas valda chips med en X-knapp för att ta bort enskilt.
 
-Konkret ändring i `applyBulkSelect`:
-```ts
-const unrevealedOnPage = currentPagePeople.filter(p => !revealedById[p.provider_id]);
-if (unrevealedOnPage.length >= target) {
-  ids = unrevealedOnPage.slice(0, target).map(p => p.provider_id);
-} else {
-  ids = await collectProviderIds(target); // paginerar tills target nådd
-}
-```
-`collectProviderIds` hoppar redan över redan-avslöjade, så ingen ändring behövs där.
+### State-modell (i `Leads.tsx`)
+- `role: string` → `roles: string[]`
+- `seniority: string` → `seniorities: string[]`
+- `industry: string` → `industries: string[]`
+- `employees: string` → `employeesRanges: string[]`
+- `titles` (string) blir kvar internt men renderas/redigeras som chips
+- `locations` (string) blir kvar internt men renderas/redigeras som chips
 
-### 2. Tre visningslägen ovanför träfflistan (Apollo-stil)
-Tabbar ovanför listan, precis som screenshotten: **Total · Nya · Sparade**.
+### Backend-anrop (`leads-search` body)
+Bygg `mergedTitles` från fritext-chips + alla valda rollers `titles[]` (union, deduplicerad). Skicka:
+- `person_titles: mergedTitles`
+- `person_seniorities: seniorities`
+- `organization_industry_tag_ids: industries`
+- `organization_num_employees_ranges: employeesRanges`
+- `organization_locations: locations.split(",")`
 
-- **Total** — visar allt i nuvarande sökresultat (default, samma som idag).
-- **Nya** — visar bara leads i nuvarande sida som *inte* finns i `marketplace_leads`.
-- **Sparade** — visar bara leads i nuvarande sida som finns i `marketplace_leads` (med fullt namn/mejl direkt synligt).
+Allt skickas som arrays. Tomma fält utelämnas.
 
-**Räknare i tabbarna:**
-- *Total*: `pagination.total_entries` (globalt för sökningen — samma siffra vi visar redan).
-- *Sparade*: antal avslöjade på nuvarande sida (`Object.keys(revealedById).filter(id => pageIds.includes(id)).length`). Räknaren visar alltså "X av 25 på denna sida". Vi lägger en liten tooltip som förklarar.
-- *Nya*: `pagination.total_entries − sparade-på-sidan` är missvisande globalt, så vi visar i stället antal nya på sidan. Konsekvent med "Sparade".
+### Persistens & senaste sökningar
+- `FILTERS_KEY` (localStorage) — utöka schemat med arrays. Lägg in en migrering: om gamla single-fält finns, läs in dem som 1-elements arrays vid mount.
+- `lead_searches.filters` (DB) — `jsonb`, behöver inget schema-byte. `filters_hash` baseras på normaliserade arrays (sorterade) så samma uppsättning ger samma hash.
+- `summarizeFilters` uppdateras: visar t.ex. "VD, Säljchef · C-suite, VP · Sweden · SaaS, IT".
 
-> Notering: Apollo har globala räknare för Net New / Saved eftersom de indexerar hela kontot. Vi har inte den datan globalt per sökning utan dyra extra-anrop, så vi håller räknarna sidoscopade och tydliga.
+### Återanvändbar komponent
+Ny `src/components/leads/MultiSelectFilter.tsx`:
+- Props: `label`, `options: {value, label}[]`, `value: string[]`, `onChange`, `searchable?: boolean`.
+- Knapp visar `label` + räknare. Popover med checkbox-lista (Command-baserad om `searchable`).
+- Används för Roller, Senioritet, Bransch, Anställda.
 
-**Implementation:**
-- Ny state `viewMode: "total" | "new" | "saved"`, default `"total"`. Sparas inte i URL/localStorage (sidlokal).
-- Filtrera `search.data.people` i render utifrån `viewMode` och `revealedById` innan map.
-- Tabb-UI: använd befintlig shadcn `Tabs` komponent, placerad direkt över "markera alla"-raden.
-- Markera alla-checkboxen scopas till den filtrerade vyn (markerar bara de synliga, redan exklusive sparade).
-- Bulk-popovern (25/sida/alla) är oförändrad — den arbetar alltid mot nya.
+Och en mindre `ChipInput.tsx` för fritextfälten (titlar, locations) — Enter/komma lägger till chip, X tar bort.
 
 ### Filer som ändras
-- `src/pages/Leads.tsx` — bulk-fix + tabbar + filtrerad rendering.
+- `src/pages/Leads.tsx` — state, body-bygge, persistens, summarizeFilters, render.
+- `src/components/leads/MultiSelectFilter.tsx` — ny.
+- `src/components/leads/ChipInput.tsx` — ny.
 
-Inget annat berörs (databas, edge functions, credits-logik).
+### Inget annat berörs
+Edge function `leads-search` är oförändrad (den tar redan arrays). Credits-logik, reveal-flöde, tabbar och senaste sökningar fungerar som idag.
