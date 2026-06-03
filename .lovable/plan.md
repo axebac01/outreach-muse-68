@@ -1,36 +1,43 @@
-## Mål
-Spara senaste sökningarna per användare i databasen så de finns kvar över sessioner och enheter.
+## Två förbättringar på Leads-sidan
 
-## Databas (ny migration)
-Ny tabell `public.lead_searches`:
+### 1. Bugg: "Markera 25" markerar bara 23 om några är köpta
+**Orsak:** I `applyBulkSelect` (count-läge) tar vi `currentPagePeople.slice(0, target)` *efter* filtrering bort av redan avslöjade. Resultatet blir färre än önskat.
+
+**Fix:** I count-läge — om antalet ofiltrerade nya på sidan är < target, anropa alltid `collectProviderIds(target)` så vi hämtar fler från nästa sida tills vi har exakt `target` *nya* (eller når totalen / 500-cappen).
+
+Konkret ändring i `applyBulkSelect`:
+```ts
+const unrevealedOnPage = currentPagePeople.filter(p => !revealedById[p.provider_id]);
+if (unrevealedOnPage.length >= target) {
+  ids = unrevealedOnPage.slice(0, target).map(p => p.provider_id);
+} else {
+  ids = await collectProviderIds(target); // paginerar tills target nådd
+}
 ```
-id              uuid pk default gen_random_uuid()
-user_id         uuid not null  -- auth.uid()
-filters         jsonb not null -- { titles, role, industry, locations, keywords, seniority, employees }
-total_results   integer
-filters_hash    text not null  -- md5 av normaliserad filters, för dedupe
-created_at      timestamptz not null default now()
-updated_at      timestamptz not null default now()
-unique (user_id, filters_hash)
-index (user_id, updated_at desc)
-```
-GRANT SELECT/INSERT/UPDATE/DELETE till `authenticated`, ALL till `service_role`. RLS på, policies: `auth.uid() = user_id` för alla fyra kommandon. Trigger `set_updated_at` (finns redan).
+`collectProviderIds` hoppar redan över redan-avslöjade, så ingen ändring behövs där.
 
-## Frontend (`src/pages/Leads.tsx`)
-- **Spara**: när `search.isSuccess`, anropa en `upsertRecentSearch(filters, totalResults)`:
-  - Beräkna `filters_hash` (md5/sha av sorterad JSON) i klienten.
-  - `upsert` på `(user_id, filters_hash)` → sätter `updated_at = now()` + `total_results`.
-  - Hoppa över om alla filterfält är tomma.
-- **Hämta**: React Query `["recent-searches"]` → `select * from lead_searches where user_id = auth.uid() order by updated_at desc limit 10`.
-- **UI**: ny knapp **"Senaste sökningar"** (`History`-ikon) bredvid "Sök"/"Rensa". Öppnar `Popover` med listan:
-  - Sammanfattning (t.ex. "VD · Sweden · SaaS"), antal träffar, relativ tid ("för 5 min sedan").
-  - X-knapp per rad (delete-row), "Rensa historik" längst ner (delete-all-for-user).
-- **Återställ**: klick → sätter alla filter-states, `page=1`, `searchTriggered=true`, stänger popover. React Query cachen återanvänds om färsk.
+### 2. Tre visningslägen ovanför träfflistan (Apollo-stil)
+Tabbar ovanför listan, precis som screenshotten: **Total · Nya · Sparade**.
 
-## Hjälpare
-- `summarizeFilters(f)` → kort sträng.
-- `formatRelative(ts)` → "nyss", "för X min sedan", "i går", "YYYY-MM-DD".
-- `hashFilters(f)` → stabil hash av normaliserad/trimmad JSON.
+- **Total** — visar allt i nuvarande sökresultat (default, samma som idag).
+- **Nya** — visar bara leads i nuvarande sida som *inte* finns i `marketplace_leads`.
+- **Sparade** — visar bara leads i nuvarande sida som finns i `marketplace_leads` (med fullt namn/mejl direkt synligt).
 
-## Inget annat ändras
-Befintlig localStorage-baserad filter-persistens (`leads:filters:v1`) behålls för att återställa pågående session direkt. Bulk-select och credit-logik rörs inte.
+**Räknare i tabbarna:**
+- *Total*: `pagination.total_entries` (globalt för sökningen — samma siffra vi visar redan).
+- *Sparade*: antal avslöjade på nuvarande sida (`Object.keys(revealedById).filter(id => pageIds.includes(id)).length`). Räknaren visar alltså "X av 25 på denna sida". Vi lägger en liten tooltip som förklarar.
+- *Nya*: `pagination.total_entries − sparade-på-sidan` är missvisande globalt, så vi visar i stället antal nya på sidan. Konsekvent med "Sparade".
+
+> Notering: Apollo har globala räknare för Net New / Saved eftersom de indexerar hela kontot. Vi har inte den datan globalt per sökning utan dyra extra-anrop, så vi håller räknarna sidoscopade och tydliga.
+
+**Implementation:**
+- Ny state `viewMode: "total" | "new" | "saved"`, default `"total"`. Sparas inte i URL/localStorage (sidlokal).
+- Filtrera `search.data.people` i render utifrån `viewMode` och `revealedById` innan map.
+- Tabb-UI: använd befintlig shadcn `Tabs` komponent, placerad direkt över "markera alla"-raden.
+- Markera alla-checkboxen scopas till den filtrerade vyn (markerar bara de synliga, redan exklusive sparade).
+- Bulk-popovern (25/sida/alla) är oförändrad — den arbetar alltid mot nya.
+
+### Filer som ändras
+- `src/pages/Leads.tsx` — bulk-fix + tabbar + filtrerad rendering.
+
+Inget annat berörs (databas, edge functions, credits-logik).

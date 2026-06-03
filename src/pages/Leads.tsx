@@ -349,6 +349,7 @@ export default function Leads() {
   const [bulkMode, setBulkMode] = useState<"count" | "page" | "all">("count");
   const [bulkCount, setBulkCount] = useState<number>(25);
   const [collecting, setCollecting] = useState(false);
+  const [viewMode, setViewMode] = useState<"total" | "new" | "saved">("total");
 
   const buildSearchBody = (pageNum: number) => {
     const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
@@ -415,11 +416,9 @@ export default function Leads() {
         MAX_BULK_SELECT,
         totalEntries
       );
-      if (target <= currentPagePeople.length) {
-        ids = currentPagePeople
-          .filter((p) => !revealedById[p.provider_id])
-          .slice(0, target)
-          .map((p) => p.provider_id);
+      const unrevealedOnPage = currentPagePeople.filter((p) => !revealedById[p.provider_id]);
+      if (unrevealedOnPage.length >= target) {
+        ids = unrevealedOnPage.slice(0, target).map((p) => p.provider_id);
       } else {
         setCollecting(true);
         try {
@@ -545,8 +544,15 @@ export default function Leads() {
     setSearchTriggered(true);
   };
 
+  const visiblePeople = (() => {
+    const people = search.data?.people ?? [];
+    if (viewMode === "new") return people.filter((p) => !revealedById[p.provider_id]);
+    if (viewMode === "saved") return people.filter((p) => !!revealedById[p.provider_id]);
+    return people;
+  })();
+
   const toggleAll = () => {
-    const people = (search.data?.people ?? []).filter((p) => !revealedById[p.provider_id]);
+    const people = visiblePeople.filter((p) => !revealedById[p.provider_id]);
     if (people.every((p) => selected.has(p.provider_id)) && people.length > 0) setSelected(new Set());
     else setSelected(new Set(people.map((p) => p.provider_id)));
   };
@@ -863,18 +869,41 @@ export default function Leads() {
 
             {search.data && search.data.people.length > 0 && (
               <>
+                {(() => {
+                  const pageSavedCount = search.data.people.filter((p) => !!revealedById[p.provider_id]).length;
+                  const pageNewCount = search.data.people.length - pageSavedCount;
+                  return (
+                    <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
+                      <TabsList className="h-9">
+                        <TabsTrigger value="total" className="gap-2">
+                          Total
+                          <span className="text-xs text-muted-foreground">
+                            {search.data!.pagination.total_entries.toLocaleString("sv-SE")}
+                          </span>
+                        </TabsTrigger>
+                        <TabsTrigger value="new" className="gap-2">
+                          Nya
+                          <span className="text-xs text-muted-foreground">{pageNewCount}</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="saved" className="gap-2">
+                          Sparade
+                          <span className="text-xs text-muted-foreground">{pageSavedCount}</span>
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  );
+                })()}
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-2">
                     <div className="flex items-center rounded-md border bg-background">
                       <div className="pl-2 pr-1 flex items-center">
                         <Checkbox
-                          checked={
-                            search.data.people.length > 0 &&
-                            search.data.people
-                              .filter((p) => !revealedById[p.provider_id])
-                              .every((p) => selected.has(p.provider_id))
-                          }
+                          checked={(() => {
+                            const selectable = visiblePeople.filter((p) => !revealedById[p.provider_id]);
+                            return selectable.length > 0 && selectable.every((p) => selected.has(p.provider_id));
+                          })()}
                           onCheckedChange={toggleAll}
+                          disabled={visiblePeople.filter((p) => !revealedById[p.provider_id]).length === 0}
                         />
                       </div>
                       <Popover open={bulkOpen} onOpenChange={setBulkOpen}>
@@ -970,7 +999,16 @@ export default function Leads() {
                 </div>
 
 
-                {search.data.people.map((p) => {
+                {visiblePeople.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-10 text-center text-muted-foreground text-sm">
+                      {viewMode === "new"
+                        ? "Inga nya leads på denna sida — alla är redan sparade."
+                        : "Inga sparade leads på denna sida."}
+                    </CardContent>
+                  </Card>
+                ) : null}
+                {visiblePeople.map((p) => {
                   const revealed = revealedById[p.provider_id];
                   const isRevealed = !!revealed;
                   return (
