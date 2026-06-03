@@ -1,37 +1,39 @@
 # Plan
 
-## Mål
-Fixa två buggar:
-1. Anslutna mejlkonton ska visas korrekt efter refresh / utloggning / inloggning.
-2. Footern ska inte visas inne i den inloggade appen, bara på publika sidor.
+## Problem
+Det nya felet är inte längre en cache/auth-race i frontend utan ett rent behörighetsfel i backend.
 
-## Det jag kommer bygga
+Jag har verifierat att:
+- sidan för **Mejlkonton** läser från `email_accounts_safe` i frontend
+- vyn `email_accounts_safe` i databasen fortfarande läser från `email_accounts`
+- felet som visas är `permission denied for table email_accounts`
+- nuvarande policy på `email_accounts` tillåter ägar-läsning, men det saknas explicita Data API-rättigheter på själva tabellen
 
-### 1) Stabil auth-gate för data som kräver inloggning
-Jag säkrar att sidor som läser användarspecifik data inte frågar databasen innan sessionen verkligen är återställd. Det ska stoppa läget där kontolistan råkar hämta med `auth.uid() = null` och därför ser tom ut trots att konton finns.
+Det betyder att vyn finns, men databasen blockerar läsningen innan raden kan returneras.
 
-### 2) Tydlig felhantering på mejlkontosidan
-Just nu visas tom-state även om frågan kan ha misslyckats. Jag lägger till ett riktigt felläge på `/email-accounts` så att en auth-/RLS-/view-fråga inte maskeras som “inga konton”.
+## Det jag kommer att göra
+1. **Laga databasrättigheterna för mejlkonton**
+   - lägga till explicita rättigheter på `public.email_accounts` för inloggade användare och backendrollen
+   - behålla radskydd så att användare bara kan se sina egna konton
 
-### 3) Gör mejlkonto-queryn användarsäker
-Jag uppdaterar hooken för mejlkonton så att den är kopplad till aktuell användare och refetchas korrekt när session/användare ändras.
+2. **Verifiera den säkra vyn**
+   - säkerställa att `email_accounts_safe` bara exponerar ofarliga kolumner
+   - kontrollera att appen fortsätter läsa från vyn och inte från bastabellen
 
-### 4) Separera public layout från app-layout
-Jag delar upp nuvarande `Layout`, eftersom den idag alltid renderar `Footer` och `CookieBanner`. Appsidorna får en egen layout utan footer, medan login/landing/legal kan fortsätta använda public layout.
-
-### 5) Verifiering
-Jag verifierar i preview att:
-- `/email-accounts` visar konton efter hård refresh
-- tom-lista bara visas när det faktiskt inte finns några konton
-- eventuella fetchfel visas som fel, inte som empty state
-- footern inte syns på `/email-accounts` eller andra inloggade vyer
-- footern fortfarande syns på publika sidor
+3. **Validera kedjan end-to-end**
+   - kontrollera att den inloggade användaren faktiskt kan läsa sina rader igen
+   - bekräfta att sidan visar kontona i stället för felkortet
 
 ## Tekniska detaljer
-- `src/context/AuthContext.tsx`: göra auth readiness tydligare och undvika att appen släpper igenom skyddade queries för tidigt.
-- `src/hooks/useEmailAccounts.ts`: användarspecifik `queryKey`, bättre `enabled`-villkor och korrekt re-fetch vid session byte.
-- `src/pages/EmailAccounts.tsx`: separat hantering för `isLoading`, `error`, `empty`.
-- `src/components/Layout.tsx` och berörda sidor: dela upp i t.ex. `PublicLayout` och `AppLayout` eller motsvarande enkel variant.
+- Trolig fix är en migration som ger:
+  - `authenticated`: läsrätt på `public.email_accounts`
+  - `service_role`: full rättighet på `public.email_accounts`
+- RLS-regeln `auth.uid() = user_id` ska ligga kvar så att ingen kan läsa någon annans konton.
+- Frontendkoden i `useEmailAccounts.ts` ser redan ut att fråga rätt resurs (`email_accounts_safe`), så detta bör inte kräva någon större UI-ändring.
 
 ## Förväntat resultat
-Efter detta ska du inte längre få “inga konton” när konton faktiskt finns, och mejlkontosidan ska kännas som en riktig appvy utan publikt footer-block.
+- dina tidigare anslutna konton blir synliga igen
+- felrutan `permission denied for table email_accounts` försvinner
+- sidan fortsätter bara exponera säkra fält, inte tokenkolumner
+
+När du godkänner planen gör jag fixen direkt.
