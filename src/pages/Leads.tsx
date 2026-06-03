@@ -503,61 +503,125 @@ export default function Leads() {
                   </div>
                 </div>
 
-                {search.data.people.map((p) => (
+                {search.data.people.map((p) => {
+                  const revealed = revealedById[p.provider_id];
+                  const isRevealed = !!revealed;
+                  return (
                   <Card
                     key={p.provider_id}
                     className={`transition-colors ${
-                      selected.has(p.provider_id) ? "border-primary/50 bg-primary/[0.02]" : ""
+                      isRevealed
+                        ? "border-emerald-500/40 bg-emerald-500/[0.03] animate-in fade-in duration-300"
+                        : selected.has(p.provider_id)
+                        ? "border-primary/50 bg-primary/[0.02]"
+                        : ""
                     }`}
                   >
                     <CardContent className="py-4 flex items-start gap-3">
-                      <Checkbox
-                        className="mt-1"
-                        checked={selected.has(p.provider_id)}
-                        onCheckedChange={(checked) => {
-                          const next = new Set(selected);
-                          if (checked) next.add(p.provider_id);
-                          else next.delete(p.provider_id);
-                          setSelected(next);
-                        }}
-                      />
+                      {isRevealed ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                      ) : (
+                        <Checkbox
+                          className="mt-1"
+                          checked={selected.has(p.provider_id)}
+                          onCheckedChange={(checked) => {
+                            const next = new Set(selected);
+                            if (checked) next.add(p.provider_id);
+                            else next.delete(p.provider_id);
+                            setSelected(next);
+                          }}
+                        />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium">
-                            {p.name || `${p.first_name ?? ""} ${p.last_name_obfuscated ?? ""}`.trim() || "—"}
+                            {isRevealed
+                              ? revealed.full_name ||
+                                `${revealed.first_name ?? ""} ${revealed.last_name ?? ""}`.trim() ||
+                                "—"
+                              : p.name ||
+                                `${p.first_name ?? ""} ${p.last_name_obfuscated ?? ""}`.trim() ||
+                                "—"}
                           </span>
-                          <Badge variant="outline" className="text-[10px] font-normal gap-1">
-                            <Lock className="h-2.5 w-2.5" /> Lås upp för fullt namn
-                          </Badge>
+                          {isRevealed ? (
+                            <Badge className="text-[10px] font-normal gap-1 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 border-emerald-500/30">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Avslöjad
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                              <Lock className="h-2.5 w-2.5" /> Lås upp för fullt namn
+                            </Badge>
+                          )}
+                          {isRevealed && revealed.linkedin_url && (
+                            <a
+                              href={revealed.linkedin_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-foreground"
+                              aria-label="LinkedIn"
+                            >
+                              <Linkedin className="h-3.5 w-3.5" />
+                            </a>
+                          )}
                         </div>
                         <div className="text-sm text-muted-foreground mt-0.5">
-                          {p.title}
-                          {p.company && <> · <span className="text-foreground/80">{p.company}</span></>}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          {p.has_email && (
-                            <Badge variant="secondary" className="text-[10px] font-normal gap-1">
-                              <Mail className="h-2.5 w-2.5" /> Email
-                            </Badge>
-                          )}
-                          {p.has_direct_phone && (
-                            <Badge variant="secondary" className="text-[10px] font-normal gap-1">
-                              <Phone className="h-2.5 w-2.5" /> Direktnr
-                            </Badge>
-                          )}
-                          {p.has_location && (
-                            <Badge variant="outline" className="text-[10px] font-normal gap-1">
-                              <MapPin className="h-2.5 w-2.5" /> Plats
-                            </Badge>
-                          )}
-                          {p.has_industry && (
-                            <Badge variant="outline" className="text-[10px] font-normal gap-1">
-                              <Building2 className="h-2.5 w-2.5" /> Bransch
-                            </Badge>
+                          {isRevealed ? revealed.title ?? p.title : p.title}
+                          {(isRevealed ? revealed.company : p.company) && (
+                            <>
+                              {" "}
+                              ·{" "}
+                              <span className="text-foreground/80">
+                                {isRevealed ? revealed.company : p.company}
+                              </span>
+                            </>
                           )}
                         </div>
+                        {isRevealed ? (
+                          <div className="flex items-center gap-3 mt-2 flex-wrap text-sm">
+                            {revealed.email && (
+                              <a
+                                href={`mailto:${revealed.email}`}
+                                className="inline-flex items-center gap-1.5 text-foreground hover:text-primary font-medium"
+                              >
+                                <Mail className="h-3.5 w-3.5" /> {revealed.email}
+                              </a>
+                            )}
+                            {revealed.phone && (
+                              <a
+                                href={`tel:${revealed.phone}`}
+                                className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                              >
+                                <Phone className="h-3.5 w-3.5" /> {revealed.phone}
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {p.has_email && (
+                              <Badge variant="secondary" className="text-[10px] font-normal gap-1">
+                                <Mail className="h-2.5 w-2.5" /> Email
+                              </Badge>
+                            )}
+                            {p.has_direct_phone && (
+                              <Badge variant="secondary" className="text-[10px] font-normal gap-1">
+                                <Phone className="h-2.5 w-2.5" /> Direktnr
+                              </Badge>
+                            )}
+                            {p.has_location && (
+                              <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                                <MapPin className="h-2.5 w-2.5" /> Plats
+                              </Badge>
+                            )}
+                            {p.has_industry && (
+                              <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                                <Building2 className="h-2.5 w-2.5" /> Bransch
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </CardContent>
+
                   </Card>
                 ))}
 
