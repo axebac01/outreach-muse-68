@@ -1,34 +1,33 @@
-## Plan: Fixa interna länkar på startsidan (/)
+## Plan: Lås in krypterade tokens i email_accounts
 
-### Problem
-Komponenten `AuroraLanding.tsx` (som utgör hela `/`) har en egen navbar, CTA-knappar och footer där **alla länkar är döda**: antingen `<a href="#">` eller `<button>` utan navigation. Det betyder att Google inte kan följa länkarna till Priser, Legal-sidor, Login eller Signup — och besökare fastnar.
+### Bakgrund
+- Vyn `public.email_accounts_safe` finns redan och exponerar bara icke-känsliga kolumner (ingen `*_token_enc` eller `*_password_enc`).
+- Klient-koden läser redan från `email_accounts_safe` i `useEmailAccounts.ts`.
+- **Problem 1:** SELECT-policyn på `public.email_accounts` släpper fortfarande in inloggad ägare på hela raden (inkl. ciphertext) via PostgREST.
+- **Problem 2:** `src/pages/Inbox.tsx` läser fortfarande `from("email_accounts")` (bara `id, email, status` — men ändå råtabellen).
+- Edge functions använder `service_role` och påverkas inte alls (`service_role` bypassar RLS och har full grant).
 
 ### Ändringar
 
-1. **Navbar i AuroraLanding**
-   - `Funktioner` → scroll till funktions-sektionen (lägger till `id="features"` på sektionen, länk blir `<a href="#features">`)
-   - `Priser` → `<Link to="/pricing">`
-   - `Kunder` → **tas bort** (finns ingen sida, bara ett enskilt quote)
-   - `Logga in` → `<Link to="/login">` (ersätter `<button>`)
-   - `Prova gratis` → `<Link to="/signup">` (ersätter `<button>`)
+**1. Migration — låsa SELECT på råtabellen för klienten**
+```sql
+-- Ta bort klient-SELECT på råtabellen
+DROP POLICY IF EXISTS "Users can view own email accounts (safe cols via view)"
+  ON public.email_accounts;
+REVOKE SELECT ON public.email_accounts FROM authenticated, anon;
 
-2. **Hero-CTA**
-   - `Skapa ditt första mejl – gratis` → `<Link to="/signup">`
-   - `Boka demo` → `mailto:`-länk till kontaktadress
+-- Säkerställ att vyn är åtkomlig
+GRANT SELECT ON public.email_accounts_safe TO authenticated;
+```
+- INSERT/UPDATE/DELETE-policyerna på `email_accounts` lämnas orörda — de behövs för Connect/Update/Delete från klienten och kräver ingen SELECT-rättighet.
+- `service_role` behåller full access → alla edge functions (OAuth-callback, send, sync, IMAP/SMTP, Gmail/Outlook m.fl.) fortsätter fungera oförändrat.
 
-3. **Pricing-kort**
-   - Båda CTA-knapparna → `<Link to="/signup">` (”Kom igång” och ”Lås upp obegränsade utskick”)
+**2. `src/pages/Inbox.tsx`**
+- Byt `.from("email_accounts").select("id, email, status")` → `.from("email_accounts_safe").select("id, email, status")`.
 
-4. **Footer**
-   - `Integritet` → `<Link to="/legal/privacy">`
-   - `Villkor` → `<Link to="/legal/terms">`
-   - `Cookies` → `<Link to="/legal/cookies">`
+### Verifiering efter migration
+- Inloggning, Connect Gmail/Outlook, IMAP-inställningar, skicka mejl, sync, inbox-listan, signatur-redigering, radera konto.
+- Säkerhetsskanner: markera findingen som fixad.
 
-5. **Avslutande CTA-sektion**
-   - `Prova gratis – inget kreditkort` → `<Link to="/signup">`
-
-### Tekniskt
-Importerar `Link` från `react-router-dom`. Knappar som ska navigera byts till `<Link>` med samma Tailwind-klasser så styling behålls. Inga designändringar.
-
-### Fil som ändras
-- `src/components/AuroraLanding.tsx`
+### Risk
+Mycket låg. Vi byter bara läsväg för klienten; all skriv- och edge-function-logik är intakt eftersom service_role bypassar RLS.
