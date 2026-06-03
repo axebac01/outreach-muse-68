@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { toast } from "sonner";
-import { Search, Linkedin, Sparkles, Coins, Loader2, ExternalLink } from "lucide-react";
+import { Search, Linkedin, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
@@ -30,16 +30,16 @@ const CREDITS_PER_REVEAL = 2;
 interface LeadPreview {
   provider_id: string;
   first_name?: string;
-  last_name?: string;
+  last_name_obfuscated?: string;
   name?: string;
-  title?: string;
-  linkedin_url?: string;
-  city?: string;
-  country?: string;
+  title?: string | null;
   company?: string;
-  company_domain?: string;
-  industry?: string;
-  company_size?: number;
+  has_email?: boolean;
+  has_direct_phone?: boolean;
+  has_location?: boolean;
+  has_industry?: boolean;
+  has_employee_count?: boolean;
+  last_refreshed_at?: string | null;
 }
 
 const EMPLOYEE_RANGES = [
