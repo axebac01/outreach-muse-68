@@ -869,18 +869,41 @@ export default function Leads() {
 
             {search.data && search.data.people.length > 0 && (
               <>
+                {(() => {
+                  const pageSavedCount = search.data.people.filter((p) => !!revealedById[p.provider_id]).length;
+                  const pageNewCount = search.data.people.length - pageSavedCount;
+                  return (
+                    <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
+                      <TabsList className="h-9">
+                        <TabsTrigger value="total" className="gap-2">
+                          Total
+                          <span className="text-xs text-muted-foreground">
+                            {search.data!.pagination.total_entries.toLocaleString("sv-SE")}
+                          </span>
+                        </TabsTrigger>
+                        <TabsTrigger value="new" className="gap-2">
+                          Nya
+                          <span className="text-xs text-muted-foreground">{pageNewCount}</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="saved" className="gap-2">
+                          Sparade
+                          <span className="text-xs text-muted-foreground">{pageSavedCount}</span>
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  );
+                })()}
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-2">
                     <div className="flex items-center rounded-md border bg-background">
                       <div className="pl-2 pr-1 flex items-center">
                         <Checkbox
-                          checked={
-                            search.data.people.length > 0 &&
-                            search.data.people
-                              .filter((p) => !revealedById[p.provider_id])
-                              .every((p) => selected.has(p.provider_id))
-                          }
+                          checked={(() => {
+                            const selectable = visiblePeople.filter((p) => !revealedById[p.provider_id]);
+                            return selectable.length > 0 && selectable.every((p) => selected.has(p.provider_id));
+                          })()}
                           onCheckedChange={toggleAll}
+                          disabled={visiblePeople.filter((p) => !revealedById[p.provider_id]).length === 0}
                         />
                       </div>
                       <Popover open={bulkOpen} onOpenChange={setBulkOpen}>
