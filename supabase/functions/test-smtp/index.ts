@@ -57,6 +57,64 @@ function jsonError(
   });
 }
 
+function isPrivateIPv4(ip: string): boolean {
+  const m = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return false;
+  const [a, b] = [Number(m[1]), Number(m[2])];
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 0) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  if (a >= 224) return true; // multicast / reserved
+  return false;
+}
+
+function isPrivateIPv6(ip: string): boolean {
+  const lc = ip.toLowerCase();
+  if (lc === "::1" || lc === "::") return true;
+  if (lc.startsWith("fc") || lc.startsWith("fd")) return true; // ULA
+  if (lc.startsWith("fe80")) return true; // link-local
+  if (lc.startsWith("::ffff:")) {
+    const v4 = lc.slice(7);
+    return isPrivateIPv4(v4);
+  }
+  return false;
+}
+
+async function assertPublicHost(host: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const h = String(host).trim().toLowerCase();
+  if (!h) return { ok: false, reason: "empty host" };
+  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal") || h.endsWith(".local")) {
+    return { ok: false, reason: "reserved hostname" };
+  }
+  // If already an IP literal
+  if (/^[\d.]+$/.test(h) && isPrivateIPv4(h)) return { ok: false, reason: "private IPv4" };
+  if (h.includes(":") && isPrivateIPv6(h)) return { ok: false, reason: "private IPv6" };
+
+  try {
+    const [a, aaaa] = await Promise.allSettled([
+      Deno.resolveDns(h, "A"),
+      Deno.resolveDns(h, "AAAA"),
+    ]);
+    const ips: string[] = [];
+    if (a.status === "fulfilled") ips.push(...a.value);
+    if (aaaa.status === "fulfilled") ips.push(...aaaa.value);
+    if (ips.length === 0) return { ok: false, reason: "host did not resolve" };
+    for (const ip of ips) {
+      if (ip.includes(":") ? isPrivateIPv6(ip) : isPrivateIPv4(ip)) {
+        return { ok: false, reason: "resolves to private address" };
+      }
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: "dns resolution failed" };
+  }
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
