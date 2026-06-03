@@ -272,6 +272,20 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // send-email may return 200 + { skipped: true } when last-mile safety
+      // (lead status, sequence paused, bounce, unsubscribe) blocked the send.
+      // Treat that as a cancel, not a successful send.
+      const sendJson = await sendRes.json().catch(() => ({} as any));
+      if (sendJson?.skipped) {
+        await admin.from("scheduled_sends").update({
+          status: "cancelled",
+          cancelled_reason: sendJson?.reason || "skipped_last_mile",
+          error_message: sendJson?.error?.slice?.(0, 500) ?? null,
+        }).eq("id", row.id);
+        result.cancelled++;
+        continue;
+      }
+
       await admin.from("scheduled_sends").update({ status: "sent" }).eq("id", row.id);
       result.sent++;
       sentTodayCache.set(row.email_account_id, (sentToday || 0) + 1);
