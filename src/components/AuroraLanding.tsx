@@ -148,14 +148,14 @@ export default function AuroraLanding() {
 
       <div className="page">
         <nav className="nav"><div className="nav-in">
-          <span className="lock"><Mark /><span className="wm">Mail<span className="l">Lead</span><span className="t">.ai</span></span></span>
-          <div className="nav-links"><a href="#">Funktioner</a><a href="#">Priser</a><a href="#">Kunder</a></div>
+          <Link to="/" className="lock"><Mark /><span className="wm">Mail<span className="l">Lead</span><span className="t">.ai</span></span></Link>
+          <div className="nav-links"><a href="#features">Funktioner</a><Link to="/pricing">Priser</Link></div>
           <div className="nav-r">
             <button className="theme-btn" aria-label="Byt tema" onClick={() => setTheme(isDark ? "light" : "dark")}>
               {mounted ? (isDark ? <Sun size={18} /> : <Moon size={18} />) : null}
             </button>
-            <button className="btn btn-ghost">Logga in</button>
-            <button className="btn btn-glass">Prova gratis</button>
+            <Link to="/login" className="btn btn-ghost">Logga in</Link>
+            <Link to="/signup" className="btn btn-glass">Prova gratis</Link>
           </div>
         </div></nav>
 
@@ -165,10 +165,11 @@ export default function AuroraLanding() {
           <h1 className="hh">Outbound som känns <span className="em">skriven för hand</span></h1>
           <p className="hsub">MailLead.ai genererar personliga kalla mejl och uppföljningar för varje lead — och samlar svaren i en inkorg.</p>
           <div className="hcta">
-            <button className="btn btn-pri btn-lg magnet">Skapa ditt första mejl – gratis</button>
-            <button className="btn btn-glass btn-lg">Boka demo</button>
+            <Link to="/signup" className="btn btn-pri btn-lg magnet">Skapa ditt första mejl – gratis</Link>
+            <a href={`mailto:${LEGAL.contactEmail}?subject=Boka%20demo%20av%20MailLead.ai`} className="btn btn-glass btn-lg">Boka demo</a>
           </div>
           <p className="hnote">Inget kreditkort krävs · Gratis upp till 10 leads</p>
+
 
           <div className="stage reveal"><div className="glass" ref={glassRef}>
             <div className="g-head">
