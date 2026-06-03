@@ -269,13 +269,14 @@ export default function Leads() {
   };
 
   const toggleAll = () => {
-    const people = search.data?.people ?? [];
-    if (selected.size === people.length) setSelected(new Set());
+    const people = (search.data?.people ?? []).filter((p) => !revealedById[p.provider_id]);
+    if (people.every((p) => selected.has(p.provider_id)) && people.length > 0) setSelected(new Set());
     else setSelected(new Set(people.map((p) => p.provider_id)));
   };
 
   const totalCost = selected.size * CREDITS_PER_REVEAL;
   const canAfford = (balance ?? 0) >= totalCost;
+
 
   return (
     <Layout>
