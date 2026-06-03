@@ -207,10 +207,23 @@ export default function Leads() {
       return data as { revealed: any[]; errors: any[]; balance: number };
     },
     onSuccess: async (data) => {
-      toast.success(`Avslöjade ${data.revealed.length} leads`);
+      // Merge revealed leads into local lookup so they show unmasked instantly in results
+      if (data.revealed.length > 0) {
+        setJustRevealed((prev) => {
+          const next = { ...prev };
+          for (const lead of data.revealed) next[lead.provider_id] = lead;
+          return next;
+        });
+      }
+      toast.success(
+        data.revealed.length === 1
+          ? "1 lead avslöjad — namn och mejl visas nu i listan"
+          : `${data.revealed.length} leads avslöjade — namn och mejl visas nu i listan`
+      );
       if (data.errors.length > 0) {
         toast.warning(`${data.errors.length} kunde inte hämtas (refunderade)`);
       }
+
       // If a sequence is selected, import them right away
       if (sequenceId && data.revealed.length > 0) {
         const { data: importRes, error: importErr } = await supabase.functions.invoke("leads-import", {
