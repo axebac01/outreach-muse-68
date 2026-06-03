@@ -170,6 +170,30 @@ export default function Leads() {
     retry: false,
   });
 
+  // Track which provider_ids in the current search page are already revealed
+  const pageProviderIds = (search.data?.people ?? []).map((p) => p.provider_id);
+  const revealedQuery = useQuery({
+    queryKey: ["revealed-lookup", user?.id, pageProviderIds.sort().join(",")],
+    enabled: !!user && pageProviderIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("marketplace_leads")
+        .select("provider_id, full_name, first_name, last_name, email, title, company, phone, linkedin_url")
+        .eq("user_id", user!.id)
+        .eq("provider", "apollo")
+        .in("provider_id", pageProviderIds);
+      const map: Record<string, any> = {};
+      for (const row of data ?? []) map[row.provider_id] = row;
+      return map;
+    },
+  });
+
+  // Locally revealed in this session (added immediately by mutation) — overrides DB lookup
+  const [justRevealed, setJustRevealed] = useState<Record<string, any>>({});
+  const revealedById: Record<string, any> = { ...(revealedQuery.data ?? {}), ...justRevealed };
+
+
+
   const revealMutation = useMutation({
     mutationFn: async () => {
       const provider_ids = Array.from(selected);
