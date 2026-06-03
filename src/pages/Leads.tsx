@@ -201,30 +201,6 @@ export default function Leads() {
     },
   });
 
-  // Spara sökning när sökresultat kommit
-  useEffect(() => {
-    if (!user || !search.isSuccess || !search.data) return;
-    const snap: FilterSnapshot = { titles, role, industry, locations, keywords, seniority, employees };
-    if (filtersAreEmpty(snap)) return;
-    const filters_hash = hashFilters(snap);
-    const total_results = search.data.pagination?.total_entries ?? null;
-    (async () => {
-      await supabase
-        .from("lead_searches")
-        .upsert(
-          {
-            user_id: user.id,
-            filters: normalizeFilters(snap) as any,
-            filters_hash,
-            total_results,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,filters_hash" }
-        );
-      queryClient.invalidateQueries({ queryKey: ["recent-searches", user.id] });
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.isSuccess, search.dataUpdatedAt]);
 
   const applyRecent = (r: { filters: any }) => {
     const f = r.filters || {};
