@@ -228,16 +228,44 @@ export default function Leads() {
 
   const revealMutation = useMutation({
     mutationFn: async () => {
-      const provider_ids = Array.from(selected);
-      const { data, error } = await supabase.functions.invoke("leads-reveal", {
-        body: { provider_ids },
-      });
-      if (error) throw error;
-      if (data?.error === "insufficient_credits") {
-        throw new Error("Du har inte tillräckligt med credits. Köp fler för att fortsätta.");
+      const allIds = Array.from(selected).filter((id) => !revealedById[id]);
+      if (allIds.length === 0) {
+        return { revealed: [], errors: [], balance: balance ?? 0 } as { revealed: any[]; errors: any[]; balance: number };
       }
-      return data as { revealed: any[]; errors: any[]; balance: number };
+      const BATCH = 50;
+      const aggregated: { revealed: any[]; errors: any[]; balance: number } = {
+        revealed: [],
+        errors: [],
+        balance: balance ?? 0,
+      };
+      const toastId = allIds.length > BATCH ? toast.loading(`Avslöjar 0 / ${allIds.length}…`) : undefined;
+      try {
+        for (let i = 0; i < allIds.length; i += BATCH) {
+          const chunk = allIds.slice(i, i + BATCH);
+          const { data, error } = await supabase.functions.invoke("leads-reveal", {
+            body: { provider_ids: chunk },
+          });
+          if (error) throw error;
+          if (data?.error === "insufficient_credits") {
+            aggregated.errors.push(...chunk.map((id) => ({ provider_id: id, error: "insufficient_credits" })));
+            aggregated.balance = data.balance ?? aggregated.balance;
+            if (toastId) toast.dismiss(toastId);
+            toast.error("Slut på credits — avbröt resterande. Köp fler och försök igen.");
+            break;
+          }
+          aggregated.revealed.push(...(data.revealed ?? []));
+          aggregated.errors.push(...(data.errors ?? []));
+          aggregated.balance = data.balance ?? aggregated.balance;
+          if (toastId) {
+            toast.loading(`Avslöjar ${Math.min(i + BATCH, allIds.length)} / ${allIds.length}…`, { id: toastId });
+          }
+        }
+      } finally {
+        if (toastId) toast.dismiss(toastId);
+      }
+      return aggregated;
     },
+
     onSuccess: async (data) => {
       // Merge revealed leads into local lookup so they show unmasked instantly in results
       if (data.revealed.length > 0) {
