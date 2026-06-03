@@ -544,8 +544,15 @@ export default function Leads() {
     setSearchTriggered(true);
   };
 
+  const visiblePeople = (() => {
+    const people = search.data?.people ?? [];
+    if (viewMode === "new") return people.filter((p) => !revealedById[p.provider_id]);
+    if (viewMode === "saved") return people.filter((p) => !!revealedById[p.provider_id]);
+    return people;
+  })();
+
   const toggleAll = () => {
-    const people = (search.data?.people ?? []).filter((p) => !revealedById[p.provider_id]);
+    const people = visiblePeople.filter((p) => !revealedById[p.provider_id]);
     if (people.every((p) => selected.has(p.provider_id)) && people.length > 0) setSelected(new Set());
     else setSelected(new Set(people.map((p) => p.provider_id)));
   };
