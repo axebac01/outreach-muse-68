@@ -1138,6 +1138,18 @@ export default function Leads() {
                           </div>
                         )}
                       </div>
+                      {isRevealed && (
+                        <div className="ml-2 shrink-0">
+                          <ImportLeadToCampaignButton
+                            marketplaceLeadId={revealed.id}
+                            sequences={sequences as any}
+                            imported={importedByLeadId[revealed.id] ?? null}
+                            onImported={(info) =>
+                              setImportedByLeadId((prev) => ({ ...prev, [revealed.id]: info }))
+                            }
+                          />
+                        </div>
+                      )}
                     </CardContent>
 
                   </Card>
