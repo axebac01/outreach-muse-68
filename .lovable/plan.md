@@ -1,94 +1,52 @@
-# Kritisk riskgenomgång: "Stoppa sekvens när lead svarar"
+# Bygg IMAP-sync så svar fångas för SMTP-konton
 
-## Hur flödet fungerar idag
+## Kort svar
+Det går. Allt utom själva pull-koden finns redan: vi krypterar och lagrar IMAP-lösenord i `email_accounts.imap_password_enc`, har `imap_host/port/secure/username` och en `imap_last_uid`-kolumn för progress. Edge functions kör Deno som kan öppna TLS-sockets (`Deno.connectTls`) och köra Node-IMAP-bibliotek via `npm:`-specifier. Vi behöver inte byta arkitektur — bara lägga till en `syncImap()`-väg i befintliga `sync-inbox` och släppa filtret i cron-jobbet.
 
+## Vad som ändras
+
+### 1. `sync-inbox-cron`
+Idag: `auth_type IN ('oauth')`. Ändra till att inkludera SMTP-konton som har IMAP konfigurerat:
 ```text
-Inkommande mejl
-   └─ sync-inbox (per user, OAuth)            ← körs via sync-inbox-cron var 10:e min
-        └─ persistInbound()
-             ├─ matcha lead via In-Reply-To/References → sequence_leads
-             ├─ fallback: matcha via from-adress
-             └─ om sequenceId hittas OCH sequences.pause_on_reply = true:
-                  ├─ sequence_leads.status = 'replied'
-                  └─ cancelScheduledForLead() → scheduled_sends.status = 'cancelled'
-
-process-scheduled-sends (var minut, batch 50)
-   └─ för varje "due" rad:
-        └─ läser sequence_leads.status; om replied/unsubscribed/bounced/completed
-           → cancelled (sista skyddet innan send-email anropas)
+status = 'active' AND (auth_type = 'oauth' OR (auth_type = 'smtp' AND imap_host IS NOT NULL))
 ```
 
-Det finns alltså **två lager**: sync-inbox cancellar proaktivt, process-scheduled-sends har en sista check. Bra grund — men flera tysta felägen finns.
+### 2. `sync-inbox` — ny `syncImap(admin, account)`
+- Dekryptera `imap_password_enc` via befintlig `decryptToken` (samma som send-email använder).
+- Koppla med `npm:imapflow` (Node-kompatibel, fungerar i Deno edge runtime — vi kollar i implementationen och faller tillbaka till en minimal egen IMAP-klient om imapflow strular).
+- `mailbox.open('INBOX', { readOnly: true })` — vi vill inte markera lästa.
+- Hämta nya UIDs sedan `account.imap_last_uid` (eller senaste 14 dagarna om null, samma fönster som Outlook-vägen idag).
+- Begränsa batch till 50 meddelanden per körning för att hålla edge-function-timeout (~150 s).
+- Parsa varje rå MIME-payload med `npm:mailparser` → mappa till befintlig `ParsedMessage`-form (from, to, subject, date, message_id_header, in_reply_to, references, body_text/html, snippet).
+- Skicka in i befintliga `persistInbound()` (bounce-detektion, lead-matchning, paus av sekvens, allt återanvänds gratis).
+- Uppdatera `account.imap_last_uid` = max UID efter lyckad batch.
+- Skydd: timeout-wrapper på 90 s för hela IMAP-sessionen, alltid `client.logout()` i `finally`.
 
-## Identifierade risker (prioriterat)
+### 3. Felhantering + status
+- Auth-fel (lösenord ändrat, MFA aktiverat): sätt `email_accounts.status = 'error'` + `status_message`. UI visar redan en banner via befintlig status-kolumn.
+- TLS/anslutningsfel: räkna som tillfälligt, logga, returnera 200 i cron (annars blockerar ett konto hela batchen — befintlig cron-loop fångar redan errors per konto).
+- Gmail via app-lösenord och Outlook IMAP fungerar med samma `imapflow`-kod.
 
-### P0 — kan leda till att mejl skickas efter svar
+### 4. UI-flagga "Mottagning aktiv"
+I `EmailAccountsPage`/listan: visa en liten indikator per konto baserat på `last_synced_at`. SMTP-konton som saknar IMAP får en varning "Vi kan inte detektera svar för det här kontot — lägg till IMAP under inställningar". Förhindrar att en användare lägger till bara SMTP utan att förstå risken.
 
-1. **IMAP/SMTP-konton synkas inte alls.** `sync-inbox-cron` filtrerar `auth_type IN ('oauth')` och `sync-inbox` läser bara Gmail/Outlook API. Lead som svarar till ett SMTP/IMAP-konto upptäcks aldrig → uppföljningsmejl fortsätter skickas. Katastrofläge om vi släpper SMTP till riktiga användare.
+### 5. Onboardings-hård kravnivå
+I `ConnectEmailDialog`: gör IMAP-fälten **obligatoriska** för SMTP-typen (idag valfria). Befintlig auto-prefyll (`smtp.foo` → `imap.foo`) gör detta smärtfritt för de flesta. Om användaren explicit inte har IMAP (sällsynt) ska de få en uttrycklig varning med kryssruta "Jag förstår att inkommande svar inte upptäcks" innan kontot kan sparas.
 
-2. **Reply-matchningen kräver att vi hittar `sequenceId`.** Pause körs bara i `if (sequenceId)`-blocket. Om mottagaren svarar:
-   - från **annan adress** än den vi mejlade till (vanligt: alias, vidarebefordran, "reply-to" på annat konto), OCH
-   - utan korrekt `In-Reply-To`/`References`-header (Outlook-trådning, mobilappar som bryter headers),
-   
-   då sätts varken `leadId` eller `sequenceId`, och pausen körs inte. `sequence_leads.status = 'replied'` skrivs heller inte → process-scheduled-sends fortsätter skicka.
+## Tekniska detaljer
 
-3. **Cron-fönster på 10 min + Gmail historyId.** Om sync-inbox-cron failar eller hoppar över ett konto (fel i refresh-token, 429, timeout) hinner nästa uppföljning gå ut innan svaret syns. Vi har inte automatisk re-try eller alerting på misslyckade syncar idag.
+- `imapflow` använder Node net/tls — Deno's `npm:`-loader polyfillar detta. Vi verifierar i en första boot. Om någon edge case dyker upp (sällsynt) finns plan B: en ~200-radig egen IMAP-klient som bara gör LOGIN → SELECT → UID SEARCH → UID FETCH och låter `mailparser` parsa rådatan.
+- Concurrency: cron-jobbets nuvarande `BATCH=5` parallella users behålls. Per user kör vi konton sekventiellt (oftast 1–2 konton/user) för att inte slå i memory-tak.
+- UID-tracking är per konto. Om en användare flyttar mailbox eller IMAP-servern återanvänder UIDs (sällsynt — UIDVALIDITY) detekterar vi det och nollställer `imap_last_uid` så vi börjar om från 14 dagar tillbaka.
+- Allt skrivs via samma `persistInbound`, så de skyddslager vi precis byggde (reply-detektion utan thread-headers, auto-reply-filter, `cancelled_reason`) gäller automatiskt också för IMAP.
 
-4. **Race condition mellan sync-inbox och process-scheduled-sends.** Båda kan köra samtidigt. process-scheduled-sends läser `sequence_leads.status` i början av varje rad-iteration — om svaret landar i samma sekund som send-email anropas kan vi skicka.
-   - Mildring: send-email-callet är sista steget, men det finns inget lås på `scheduled_sends`-raden mellan check och send → samma rad kan teoretiskt plockas två gånger om en framtida andra worker startas.
+## Vad jag INTE bygger nu
+- IDLE/push (realtime IMAP) — kräver långlivad worker, inte edge-function-vänligt. Cron var 10:e min räcker för v1.
+- Stöd för IMAP-konton helt utan SMTP-sändning (vi har ingen användarflöde för det idag).
 
-5. **`pause_on_reply` är en användarinställning som default = true, men kan stängas av.** Om en användare oavsiktligt avmarkerar den slutar reply-stopp fungera helt. Inget UI-skydd / varning.
+## Resultat efter detta
+- Reply-stop fungerar för **alla** kontotyper i appen (Gmail OAuth, Outlook OAuth, SMTP+IMAP).
+- Sista P0-risken från förra genomgången är borta.
+- Vi kan slå på SMTP för riktiga användare med gott samvete.
 
-6. **Lead-matchning på email är `ilike`** — bra. Men om leadens adress lagras med whitespace eller `+tag` så missar matchningen. Vi normaliserar inte `email` i `sequence_leads`/`marketplace_leads` vid insert.
-
-### P1 — degradering, inte direkt skada
-
-7. **Auto-reply / OOO-mejl ("Jag är på semester") räknas som svar** och pausar sekvensen permanent. Symmetrisk risk: att vi *inte* skickar när vi borde. Användaren tror leadet är engagerat.
-
-8. **Bounce-detektion är heuristik på subject/from.** Soft bounces, ovanliga MTA-format eller icke-engelska bounce-mejl missas → mejl fortsätter mot död adress (skadar deliverability, inte direkt reply-buggen, men samma cancel-väg).
-
-9. **Ingen synlig "varför pausades detta"-logg.** Om något går fel finns inget audit-spår per scheduled_sends-rad (vi har bara `status` + `error_message`). Svårt att felsöka i produktion.
-
-10. **`scheduled_sends` har ingen `cancelled_reason`-kolumn.** Vi kan inte i efterhand bevisa varför ett mejl inte skickades — viktigt för supportärenden ("varför fick min lead 3 mejl efter att hen svarat?").
-
-### P2 — operativ risk
-
-11. **Inga health-checks/alerts.** Vi vet inte om sync-inbox-cron slutat köra, om en användares OAuth-token gått ut, eller om `pause_on_reply` orsakat 0 cancels på en aktiv sekvens.
-
-12. **Inga tester.** Inget integrationstest som verifierar "svar → uppföljning skickas ej".
-
-## Förslag på skyddsåtgärder (innan launch)
-
-Jag föreslår vi gör dessa i ordning. Vi behöver inte allt, men P0-listan är skarp:
-
-**Måste (P0):**
-- **A. IMAP-sync för SMTP-konton.** Antingen bygg IMAP-puller i sync-inbox, eller blockera launch för SMTP-konton tills det finns. Minst: visa tydlig varning vid SMTP-onboarding "vi kan inte detektera svar än".
-- **B. Stärk reply-matchning.** Lägg till tredje fallback: matcha inbound `from`-adress mot *alla* aktiva `sequence_leads` (oavsett om vi hittade sequenceId via headers). Om träff → pausa den specifika sekvensen för det leadet.
-- **C. Lås `pause_on_reply` till alltid `true`** för v1, eller gör inställningen till en advanced-toggle med varning. Default ska skydda användaren.
-- **D. Sista-mils-skydd i `send-email`:** innan SMTP-anropet, gör en `select status from sequence_leads where id=$1` och avbryt om replied/unsubscribed/bounced. Eliminerar race i p4 helt.
-
-**Bör (P1):**
-- **E. Audit-kolumn:** `scheduled_sends.cancelled_reason` + skriv värde (`'reply_detected'`, `'bounce'`, `'unsubscribe'`, `'sequence_paused'`, `'lead_status'`). För felsökning.
-- **F. Auto-reply-detektion:** skippa pause om inbound har `Auto-Submitted: auto-replied` eller `X-Autoreply` header. Logga som "auto_reply_ignored".
-- **G. Normalisera email vid insert** (trim + lowercase) i `sequence_leads` + index på `lower(email)`.
-
-**Operativt (P2):**
-- **H. Heartbeat-tabell** för sync-inbox-cron: skriv last_run + per-konto last_success. UI som varnar användaren om deras inbox-sync inte körts på >30 min.
-- **I. Ett integrationstest** (Deno test eller liknande) som riggar en lead, ett scheduled_send och en inbound och verifierar att raden blir `cancelled`.
-
-## Teknisk detalj — minsta skarpa fix (om vi vill börja smalt)
-
-Om vi bara gör tre saker före launch:
-
-1. **D + E:** Sista-mils-check i `send-email` + `cancelled_reason`-kolumn. Liten kodändring, eliminerar race och ger oss spårbarhet.
-2. **B:** Utöka `persistInbound` så att om vi hittar `leadId` men inte `sequenceId`, hämta lead → hitta alla aktiva sekvenser där den finns → pausa.
-3. **A:** Block-knapp eller varningsbanner för SMTP-konton tills IMAP-sync finns.
-
-## Vad jag INTE föreslår nu
-
-- Realtime/webhook-baserad inbox-sync (Gmail watch, Graph subscriptions). Större bygge — kan komma post-launch.
-- Distribuerad lås på scheduled_sends. Inte behövd om vi bara har en cron-worker.
-
----
-
-Vill du att jag bygger någon delmängd av detta? Föreslår att starta med **D + E + B** i en första PR (snabbt, hög skyddseffekt), och separat ta beslut om SMTP-blockering/IMAP-sync (A) eftersom det påverkar produktscope.
+Vill du att jag bygger detta nu?
