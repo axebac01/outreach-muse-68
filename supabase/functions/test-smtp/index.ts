@@ -113,6 +113,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // SSRF guard: reject private, loopback, link-local, and other reserved targets.
+    const ssrfCheck = await assertPublicHost(smtp_host);
+    if (!ssrfCheck.ok) {
+      return jsonError(400, {
+        code: "smtp_host_not_allowed",
+        message: "SMTP host is not a publicly routable address.",
+        detail: ssrfCheck.reason,
+      });
+    }
+
     const client = new SMTPClient({
       connection: {
         hostname: smtp_host,
