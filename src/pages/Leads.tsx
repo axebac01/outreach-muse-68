@@ -383,19 +383,19 @@ export default function Leads() {
 
   const buildSearchBody = (pageNum: number) => {
     const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
-    const roleTitles = role ? ROLES.find((r) => r.value === role)?.titles ?? [] : [];
+    const roleTitles = roles.flatMap((rv) => ROLES.find((r) => r.value === rv)?.titles ?? []);
     const mergedTitles = Array.from(new Set([...freeTitles, ...roleTitles]));
     return {
       page: pageNum,
       per_page: 25,
       q_keywords: keywords || undefined,
       person_titles: mergedTitles.length ? mergedTitles : undefined,
-      person_seniorities: seniority ? [seniority] : undefined,
+      person_seniorities: seniorities.length ? seniorities : undefined,
       organization_locations: locations
         ? locations.split(",").map((s) => s.trim()).filter(Boolean)
         : undefined,
-      organization_num_employees_ranges: employees ? [employees] : undefined,
-      organization_industry_tag_ids: industry ? [industry] : undefined,
+      organization_num_employees_ranges: employeesRanges.length ? employeesRanges : undefined,
+      organization_industry_tag_ids: industries.length ? industries : undefined,
     };
   };
 
