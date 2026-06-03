@@ -671,14 +671,102 @@ export default function Leads() {
             {search.data && search.data.people.length > 0 && (
               <>
                 <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={
-                        search.data.people.length > 0 &&
-                        selected.size === search.data.people.length
-                      }
-                      onCheckedChange={toggleAll}
-                    />
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center rounded-md border bg-background">
+                      <div className="pl-2 pr-1 flex items-center">
+                        <Checkbox
+                          checked={
+                            search.data.people.length > 0 &&
+                            search.data.people
+                              .filter((p) => !revealedById[p.provider_id])
+                              .every((p) => selected.has(p.provider_id))
+                          }
+                          onCheckedChange={toggleAll}
+                        />
+                      </div>
+                      <Popover open={bulkOpen} onOpenChange={setBulkOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-1.5 gap-0.5"
+                            aria-label="Markera flera"
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-4" align="start">
+                          <RadioGroup
+                            value={bulkMode}
+                            onValueChange={(v) => setBulkMode(v as "count" | "page" | "all")}
+                            className="space-y-3"
+                          >
+                            <div className="flex items-start gap-2">
+                              <RadioGroupItem value="count" id="bulk-count" className="mt-1" />
+                              <div className="flex-1 space-y-2">
+                                <Label htmlFor="bulk-count" className="font-medium cursor-pointer">
+                                  Markera antal
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={Math.min(
+                                    MAX_BULK_SELECT,
+                                    search.data.pagination.total_entries
+                                  )}
+                                  value={bulkCount}
+                                  onChange={(e) => {
+                                    setBulkMode("count");
+                                    const n = parseInt(e.target.value, 10);
+                                    if (!isNaN(n)) setBulkCount(n);
+                                  }}
+                                  className="h-8"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="page" id="bulk-page" />
+                              <Label htmlFor="bulk-page" className="cursor-pointer flex-1">
+                                Markera denna sida{" "}
+                                <span className="text-muted-foreground">
+                                  {search.data.people.length}
+                                </span>
+                              </Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="all" id="bulk-all" />
+                              <Label htmlFor="bulk-all" className="cursor-pointer flex-1">
+                                Markera alla{" "}
+                                <span className="text-muted-foreground">
+                                  {Math.min(
+                                    MAX_BULK_SELECT,
+                                    search.data.pagination.total_entries
+                                  ).toLocaleString("sv-SE")}
+                                  {search.data.pagination.total_entries > MAX_BULK_SELECT &&
+                                    ` (max ${MAX_BULK_SELECT})`}
+                                </span>
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                          <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setBulkOpen(false)}
+                              disabled={collecting}
+                            >
+                              Avbryt
+                            </Button>
+                            <Button size="sm" onClick={applyBulkSelect} disabled={collecting}>
+                              {collecting ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                              ) : null}
+                              Tillämpa
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                     <span className="text-sm text-muted-foreground">
                       {search.data.pagination.total_entries.toLocaleString("sv-SE")} träffar
                     </span>
@@ -687,6 +775,7 @@ export default function Leads() {
                     Sida {page} / {Math.max(1, search.data.pagination.total_pages)}
                   </div>
                 </div>
+
 
                 {search.data.people.map((p) => {
                   const revealed = revealedById[p.provider_id];
