@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { toast } from "sonner";
-import { Search, Linkedin, Sparkles, Coins, Loader2, ExternalLink } from "lucide-react";
+import { Search, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
@@ -30,16 +30,16 @@ const CREDITS_PER_REVEAL = 2;
 interface LeadPreview {
   provider_id: string;
   first_name?: string;
-  last_name?: string;
+  last_name_obfuscated?: string;
   name?: string;
-  title?: string;
-  linkedin_url?: string;
-  city?: string;
-  country?: string;
+  title?: string | null;
   company?: string;
-  company_domain?: string;
-  industry?: string;
-  company_size?: number;
+  has_email?: boolean;
+  has_direct_phone?: boolean;
+  has_location?: boolean;
+  has_industry?: boolean;
+  has_employee_count?: boolean;
+  last_refreshed_at?: string | null;
 }
 
 const EMPLOYEE_RANGES = [
@@ -480,47 +480,37 @@ export default function Leads() {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium">{p.name || `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim()}</span>
-                          {p.linkedin_url && (
-                            <a
-                              href={p.linkedin_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-foreground"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Linkedin className="h-3.5 w-3.5" />
-                            </a>
-                          )}
+                          <span className="font-medium">
+                            {p.name || `${p.first_name ?? ""} ${p.last_name_obfuscated ?? ""}`.trim() || "—"}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                            <Lock className="h-2.5 w-2.5" /> Lås upp för fullt namn
+                          </Badge>
                         </div>
                         <div className="text-sm text-muted-foreground mt-0.5">
                           {p.title}
                           {p.company && <> · <span className="text-foreground/80">{p.company}</span></>}
                         </div>
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          {p.industry && (
-                            <Badge variant="secondary" className="text-[10px] font-normal">{p.industry}</Badge>
-                          )}
-                          {p.company_size && (
-                            <Badge variant="outline" className="text-[10px] font-normal">
-                              {p.company_size} anställda
+                          {p.has_email && (
+                            <Badge variant="secondary" className="text-[10px] font-normal gap-1">
+                              <Mail className="h-2.5 w-2.5" /> Email
                             </Badge>
                           )}
-                          {(p.city || p.country) && (
-                            <span className="text-xs text-muted-foreground">
-                              {[p.city, p.country].filter(Boolean).join(", ")}
-                            </span>
+                          {p.has_direct_phone && (
+                            <Badge variant="secondary" className="text-[10px] font-normal gap-1">
+                              <Phone className="h-2.5 w-2.5" /> Direktnr
+                            </Badge>
                           )}
-                          {p.company_domain && (
-                            <a
-                              href={`https://${p.company_domain.replace(/^https?:\/\//, "")}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {p.company_domain.replace(/^https?:\/\//, "")} <ExternalLink className="h-3 w-3" />
-                            </a>
+                          {p.has_location && (
+                            <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                              <MapPin className="h-2.5 w-2.5" /> Plats
+                            </Badge>
+                          )}
+                          {p.has_industry && (
+                            <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                              <Building2 className="h-2.5 w-2.5" /> Bransch
+                            </Badge>
                           )}
                         </div>
                       </div>
