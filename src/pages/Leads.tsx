@@ -137,6 +137,123 @@ export default function Leads() {
     }
   }, [titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered]);
 
+  // ---------- Senaste sökningar (DB-persistens) ----------
+  type FilterSnapshot = {
+    titles: string; role: string; industry: string; locations: string;
+    keywords: string; seniority: string; employees: string;
+  };
+  const normalizeFilters = (f: FilterSnapshot): FilterSnapshot => ({
+    titles: f.titles.trim(), role: f.role.trim(), industry: f.industry.trim(),
+    locations: f.locations.trim(), keywords: f.keywords.trim(),
+    seniority: f.seniority.trim(), employees: f.employees.trim(),
+  });
+  const hashFilters = (f: FilterSnapshot): string => {
+    const n = normalizeFilters(f);
+    return [n.titles, n.role, n.industry, n.locations, n.keywords, n.seniority, n.employees]
+      .map((s) => s.toLowerCase())
+      .join("|");
+  };
+  const filtersAreEmpty = (f: FilterSnapshot): boolean => {
+    const n = normalizeFilters(f);
+    return !n.titles && !n.role && !n.industry && !n.keywords && !n.seniority && !n.employees
+      && (!n.locations || n.locations.toLowerCase() === "sweden");
+  };
+  const summarizeFilters = (f: FilterSnapshot): string => {
+    const parts: string[] = [];
+    const roleLabel = ROLES.find((r) => r.value === f.role)?.label;
+    if (roleLabel) parts.push(roleLabel);
+    if (f.titles.trim()) parts.push(f.titles.trim());
+    if (f.seniority) parts.push(SENIORITIES.find((s) => s.value === f.seniority)?.label ?? f.seniority);
+    const indLabel = INDUSTRIES.find((i) => i.value === f.industry)?.label;
+    if (indLabel) parts.push(indLabel);
+    if (f.employees) parts.push(EMPLOYEE_RANGES.find((e) => e.value === f.employees)?.label ?? f.employees);
+    if (f.locations.trim()) parts.push(f.locations.trim());
+    if (f.keywords.trim()) parts.push(`"${f.keywords.trim()}"`);
+    return parts.length ? parts.join(" · ") : "Sökning utan filter";
+  };
+  const formatRelative = (iso: string): string => {
+    const t = new Date(iso).getTime();
+    const diff = Date.now() - t;
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "nyss";
+    if (min < 60) return `för ${min} min sedan`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `för ${h} h sedan`;
+    const d = Math.floor(h / 24);
+    if (d === 1) return "i går";
+    if (d < 7) return `för ${d} dagar sedan`;
+    return new Date(iso).toLocaleDateString("sv-SE");
+  };
+
+  const [recentOpen, setRecentOpen] = useState(false);
+
+  const recentSearches = useQuery({
+    queryKey: ["recent-searches", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lead_searches")
+        .select("id, filters, total_results, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Spara sökning när sökresultat kommit
+  useEffect(() => {
+    if (!user || !search.isSuccess || !search.data) return;
+    const snap: FilterSnapshot = { titles, role, industry, locations, keywords, seniority, employees };
+    if (filtersAreEmpty(snap)) return;
+    const filters_hash = hashFilters(snap);
+    const total_results = search.data.pagination?.total_entries ?? null;
+    (async () => {
+      await supabase
+        .from("lead_searches")
+        .upsert(
+          {
+            user_id: user.id,
+            filters: normalizeFilters(snap) as any,
+            filters_hash,
+            total_results,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,filters_hash" }
+        );
+      queryClient.invalidateQueries({ queryKey: ["recent-searches", user.id] });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.isSuccess, search.dataUpdatedAt]);
+
+  const applyRecent = (r: { filters: any }) => {
+    const f = r.filters || {};
+    setTitles(f.titles ?? "");
+    setRole(f.role ?? "");
+    setIndustry(f.industry ?? "");
+    setLocations(f.locations ?? "Sweden");
+    setKeywords(f.keywords ?? "");
+    setSeniority(f.seniority ?? "");
+    setEmployees(f.employees ?? "");
+    setPage(1);
+    setSelected(new Set());
+    setSearchTriggered(true);
+    setRecentOpen(false);
+  };
+
+  const deleteRecent = async (id: string) => {
+    await supabase.from("lead_searches").delete().eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["recent-searches", user?.id] });
+  };
+
+  const clearAllRecent = async () => {
+    if (!user) return;
+    await supabase.from("lead_searches").delete().eq("user_id", user.id);
+    queryClient.invalidateQueries({ queryKey: ["recent-searches", user.id] });
+  };
+
+
+
 
 
   const { data: sequences = [] } = useQuery({
