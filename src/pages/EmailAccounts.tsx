@@ -19,7 +19,7 @@ import { toUserMessage } from "@/lib/errorMessages";
 
 const EmailAccounts = () => {
   const { t } = useTranslation();
-  const { data: accounts, isLoading } = useEmailAccounts();
+  const { data: accounts, isLoading, error, refetch, isFetching } = useEmailAccounts();
   const { data: limits = [] } = useSendingLimits();
   const { data: sentToday = {} } = useSentToday();
   const updateLimit = useUpdateSendingLimit();
@@ -79,6 +79,21 @@ const EmailAccounts = () => {
                   className="h-20 rounded-xl border bg-muted/30 animate-pulse"
                 />
               ))}
+            </div>
+          )
+          : error
+          ? (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-6 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 mb-4">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <h3 className="font-semibold mb-1">Kunde inte ladda dina konton</h3>
+              <p className="text-sm text-muted-foreground mb-4 break-words">
+                {(error as Error)?.message || "Okänt fel vid hämtning."}
+              </p>
+              <Button onClick={() => refetch()} disabled={isFetching} className="gap-1.5">
+                <RefreshCw className="h-4 w-4" /> Försök igen
+              </Button>
             </div>
           )
           : !accounts || accounts.length === 0
