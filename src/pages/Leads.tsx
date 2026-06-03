@@ -123,6 +123,10 @@ export default function Leads() {
     enabled: !!user,
   });
 
+  // Lookup of already-revealed leads keyed by provider_id, for current search page
+  const searchProviderIds = (search_data_placeholder => [] as string[])(null);
+
+
   const search = useQuery({
     queryKey: ["leads-search", { titles, role, industry, locations, keywords, seniority, employees, page }],
     queryFn: async () => {
