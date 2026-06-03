@@ -55,21 +55,28 @@ Deno.serve(async (req) => {
         : undefined,
     });
 
-    // Mask out anything sensitive — we only return preview data.
-    const previews = result.people.map((p) => ({
-      provider_id: p.id,
-      first_name: p.first_name,
-      last_name: p.last_name,
-      name: p.name,
-      title: p.title,
-      linkedin_url: p.linkedin_url,
-      city: p.city,
-      country: p.country,
-      company: p.organization?.name,
-      company_domain: p.organization?.primary_domain || p.organization?.website_url,
-      industry: p.organization?.industry,
-      company_size: p.organization?.estimated_num_employees,
-    }));
+    // Apollo's mixed_people/api_search returns intentionally limited preview
+    // data: only first_name, obfuscated last_name, title, company name, and
+    // boolean "has_*" flags. Full data (email, full name, location, domain,
+    // industry, size) requires a separate /people/match enrichment call.
+    const previews = result.people.map((p) => {
+      const obfuscated = p.last_name_obfuscated ?? "";
+      const displayName = [p.first_name, obfuscated].filter(Boolean).join(" ").trim();
+      return {
+        provider_id: p.id,
+        first_name: p.first_name,
+        last_name_obfuscated: obfuscated,
+        name: displayName,
+        title: p.title ?? null,
+        company: p.organization?.name,
+        has_email: !!p.has_email,
+        has_direct_phone: p.has_direct_phone === "Yes",
+        has_location: !!(p.has_city || p.has_state || p.has_country),
+        has_industry: !!p.organization?.has_industry,
+        has_employee_count: !!p.organization?.has_employee_count,
+        last_refreshed_at: p.last_refreshed_at ?? null,
+      };
+    });
 
     return new Response(
       JSON.stringify({ people: previews, pagination: result.pagination }),
