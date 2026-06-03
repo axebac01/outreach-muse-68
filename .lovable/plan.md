@@ -1,22 +1,35 @@
-## Plan: SEK-priser på svenska versionen
+## Plan: Uppdatera logo och favicon
 
-Growth-planens pris ska visas i svenska kronor (SEK) när användaren har svenska som språk, och fortsätta visas i euro (EUR) för engelska.
+Du har laddat upp nya filer direkt i chatten — jag använder dem istället för att vänta på GitHub-synk.
 
-### Ändringar
+### Filer som byts/läggs till
 
-1. **Översättningsfiler**
-   - `src/i18n/locales/sv.json` — uppdatera nycklarna under `pricing`:
-     - `growthPrice`: `"€99"` → `"990"`
-     - `growthPeriod`: `"/månad"` → `" kr/månad"`
-   - `src/i18n/locales/en.json` — oförändrad (behåller `€99` och `/month`).
+**Logo (mörk, för ljus bakgrund — används i Navbar):**
+- `src/assets/logo.svg` ← `maillead-mark.svg` (med mörk tile-bakgrund + orange "ember"-pil)
 
-2. **Landing page (AuroraLanding)**
-   - `src/components/AuroraLanding.tsx` — just nu hårdkodat `"€99"` och `"/månad"` i prisdelen.
-   - Byt ut mot dynamisk rendering via `useTranslation()` från `react-i18next`:
-     - Hämta aktuellt språk (`i18n.language`) och rendera antingen `"990 kr/månad"` (svenska) eller `"€99/månad"` (engelska/övrigt).
+**Favicon-set (i `public/`):**
+- `favicon.svg` ← uppladdad `favicon.svg` (32×32 med tile + ember)
+- `favicon-32.png` ← uppladdad
+- `favicon-16.png` ← uppladdad
+- `apple-touch-icon.png` ← uppladdad
+- Behåller inte den gamla `favicon.png` (ersätts av de nya storlekarna)
 
-### Tekniska detaljer
-- AuroraLanding använder idag inte `react-i18next`. Vi lägger till `useTranslation`-import och hämtar språket.
-- Svenska varianten: prisnummer + " kr/månad" (motsvarar 990 kr/mån).
-- Engelska varianten: oförändrat "€99/månad".
-- Ingen påverkan på databas, backend eller betalningsflöden — endast visningsvärden.
+### Kod-ändringar
+
+**`index.html`** — ersätt nuvarande favicon-rad med fullt set:
+```html
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+```
+
+**Navbar/Footer**: Ingen ändring behövs — Navbar importerar redan `@/assets/logo.svg`. Footer använder ingen logo-bild.
+
+### Inte med i denna ändring
+- Den ljusa varianten `maillead-mark-light.svg` (för mörk bakgrund) — lägger inte till den eftersom inget i appen renderar logo på mörk bakgrund just nu. Säg till om du vill att jag förbereder den för framtida dark mode.
+- Schibsted Grotesk-fonten för ordmärket är **redan importerad** i `src/index.css` och används av Navbar (`font-display`). Inget behöver göras där.
+- `src/assets/maillead-logo.png` (gammal PNG) — lämnas orörd om den inte används; kan rensas senare om du vill.
+
+### Verifiering
+Efter ändringen kollar jag att Navbar fortfarande renderar och att `index.html` är ren.

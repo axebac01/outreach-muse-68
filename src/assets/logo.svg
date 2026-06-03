@@ -1,7 +1,17 @@
-<svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MailLead mark">
-  <rect x="2" y="2" width="68" height="68" rx="18" fill="#221F1A"></rect>
-  <rect x="15" y="26" width="42" height="28" rx="5.5" fill="none" stroke="#F6F1E8" stroke-width="3"></rect>
-  <path d="M18 29.5 L36 41 L54 29.5" fill="none" stroke="#F6F1E8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
-  <path d="M36 41 L36 16" stroke="#E0512B" stroke-width="4.6" stroke-linecap="round"></path>
-  <path d="M28 23.5 L36 15 L44 23.5" fill="none" stroke="#E0512B" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"></path>
+<svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MailLead">
+  <defs>
+    <linearGradient id="ml-tile" x1="6" y1="4" x2="66" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2C281F"></stop>
+      <stop offset="1" stop-color="#1B1813"></stop>
+    </linearGradient>
+    <linearGradient id="ml-ember" x1="50" y1="11" x2="60" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4801F"></stop>
+      <stop offset="1" stop-color="#E0512B"></stop>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="68" height="68" rx="19" fill="url(#ml-tile)"></rect>
+  <path d="M15 54 L15 28 L36 45 L57 28" fill="none" stroke="#F6F1E8" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round"></path>
+  <path d="M57 54 L57 28" fill="none" stroke="#F6F1E8" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round"></path>
+  <path d="M57 26 L57 13" stroke="url(#ml-ember)" stroke-width="6.2" stroke-linecap="round"></path>
+  <path d="M51.5 18.5 L57 12.5 L62.5 18.5" fill="none" stroke="url(#ml-ember)" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round"></path>
 </svg>
