@@ -28,6 +28,7 @@ import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
 import MyLeadsTab from "@/components/leads/MyLeadsTab";
 import MultiSelectFilter from "@/components/leads/MultiSelectFilter";
 import ChipInput from "@/components/leads/ChipInput";
+import ImportLeadToCampaignButton from "@/components/leads/ImportLeadToCampaignButton";
 
 const MAX_BULK_SELECT = 500;
 
@@ -382,6 +383,9 @@ export default function Leads() {
   const [bulkCount, setBulkCount] = useState<number>(25);
   const [collecting, setCollecting] = useState(false);
   const [viewMode, setViewMode] = useState<"total" | "new" | "saved">("total");
+  const [importedByLeadId, setImportedByLeadId] = useState<
+    Record<string, { sequenceId: string; campaignId?: string | null; name: string }>
+  >({});
 
   const buildSearchBody = (pageNum: number) => {
     const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
@@ -1134,6 +1138,18 @@ export default function Leads() {
                           </div>
                         )}
                       </div>
+                      {isRevealed && (
+                        <div className="ml-2 shrink-0">
+                          <ImportLeadToCampaignButton
+                            marketplaceLeadId={revealed.id}
+                            sequences={sequences as any}
+                            imported={importedByLeadId[revealed.id] ?? null}
+                            onImported={(info) =>
+                              setImportedByLeadId((prev) => ({ ...prev, [revealed.id]: info }))
+                            }
+                          />
+                        </div>
+                      )}
                     </CardContent>
 
                   </Card>
