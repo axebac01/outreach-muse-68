@@ -192,7 +192,10 @@ export default function Leads() {
     },
     enabled: searchTriggered,
     retry: false,
+    staleTime: 10 * 60 * 1000, // 10 min — samma sökning refetchar inte direkt vid återbesök
+    gcTime: 60 * 60 * 1000, // 1h — behåll cachen länge
   });
+
 
   // Track which provider_ids in the current search page are already revealed
   const pageProviderIds = (search.data?.people ?? []).map((p) => p.provider_id);
