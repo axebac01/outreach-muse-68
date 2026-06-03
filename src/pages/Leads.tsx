@@ -19,11 +19,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { toast } from "sonner";
-import { Search, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock, CheckCircle2, Linkedin } from "lucide-react";
+import { Search, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock, CheckCircle2, Linkedin, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
 import MyLeadsTab from "@/components/leads/MyLeadsTab";
+
+const MAX_BULK_SELECT = 500;
+
 
 const CREDITS_PER_REVEAL = 2;
 
@@ -219,20 +224,145 @@ export default function Leads() {
   const [justRevealed, setJustRevealed] = useState<Record<string, any>>({});
   const revealedById: Record<string, any> = { ...(revealedQuery.data ?? {}), ...justRevealed };
 
+  // Cross-page bulk selection
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState<"count" | "page" | "all">("count");
+  const [bulkCount, setBulkCount] = useState<number>(25);
+  const [collecting, setCollecting] = useState(false);
+
+  const buildSearchBody = (pageNum: number) => {
+    const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const roleTitles = role ? ROLES.find((r) => r.value === role)?.titles ?? [] : [];
+    const mergedTitles = Array.from(new Set([...freeTitles, ...roleTitles]));
+    return {
+      page: pageNum,
+      per_page: 25,
+      q_keywords: keywords || undefined,
+      person_titles: mergedTitles.length ? mergedTitles : undefined,
+      person_seniorities: seniority ? [seniority] : undefined,
+      organization_locations: locations
+        ? locations.split(",").map((s) => s.trim()).filter(Boolean)
+        : undefined,
+      organization_num_employees_ranges: employees ? [employees] : undefined,
+      organization_industry_tag_ids: industry ? [industry] : undefined,
+    };
+  };
+
+  const collectProviderIds = async (targetCount: number): Promise<string[]> => {
+    // Start with current page already in cache
+    const collected: string[] = [];
+    const seen = new Set<string>();
+    const addFrom = (people: LeadPreview[]) => {
+      for (const p of people) {
+        if (revealedById[p.provider_id]) continue;
+        if (seen.has(p.provider_id)) continue;
+        seen.add(p.provider_id);
+        collected.push(p.provider_id);
+        if (collected.length >= targetCount) return true;
+      }
+      return false;
+    };
+    if (search.data) {
+      if (addFrom(search.data.people)) return collected;
+    }
+    const totalPages = search.data?.pagination.total_pages ?? 1;
+    // Fetch other pages sequentially (skip current page)
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === page) continue;
+      const { data, error } = await supabase.functions.invoke("leads-search", {
+        body: buildSearchBody(p),
+      });
+      if (error) break;
+      const people = (data?.people ?? []) as LeadPreview[];
+      if (addFrom(people)) return collected;
+      if (people.length === 0) break;
+    }
+    return collected;
+  };
+
+  const applyBulkSelect = async () => {
+    const totalEntries = search.data?.pagination.total_entries ?? 0;
+    const currentPagePeople = search.data?.people ?? [];
+
+    let ids: string[] = [];
+    if (bulkMode === "page") {
+      ids = currentPagePeople
+        .filter((p) => !revealedById[p.provider_id])
+        .map((p) => p.provider_id);
+    } else {
+      const target = Math.min(
+        bulkMode === "all" ? totalEntries : bulkCount,
+        MAX_BULK_SELECT,
+        totalEntries
+      );
+      if (target <= currentPagePeople.length) {
+        ids = currentPagePeople
+          .filter((p) => !revealedById[p.provider_id])
+          .slice(0, target)
+          .map((p) => p.provider_id);
+      } else {
+        setCollecting(true);
+        try {
+          ids = await collectProviderIds(target);
+        } finally {
+          setCollecting(false);
+        }
+      }
+    }
+
+    setSelected(new Set(ids));
+    setBulkOpen(false);
+    if (ids.length === MAX_BULK_SELECT && bulkMode !== "page") {
+      toast.warning(`Max ${MAX_BULK_SELECT} leads per markering — kapade där.`);
+    } else if (ids.length > 0) {
+      toast.success(`${ids.length} leads markerade`);
+    }
+  };
+
+
+
 
 
   const revealMutation = useMutation({
     mutationFn: async () => {
-      const provider_ids = Array.from(selected);
-      const { data, error } = await supabase.functions.invoke("leads-reveal", {
-        body: { provider_ids },
-      });
-      if (error) throw error;
-      if (data?.error === "insufficient_credits") {
-        throw new Error("Du har inte tillräckligt med credits. Köp fler för att fortsätta.");
+      const allIds = Array.from(selected).filter((id) => !revealedById[id]);
+      if (allIds.length === 0) {
+        return { revealed: [], errors: [], balance: balance ?? 0 } as { revealed: any[]; errors: any[]; balance: number };
       }
-      return data as { revealed: any[]; errors: any[]; balance: number };
+      const BATCH = 50;
+      const aggregated: { revealed: any[]; errors: any[]; balance: number } = {
+        revealed: [],
+        errors: [],
+        balance: balance ?? 0,
+      };
+      const toastId = allIds.length > BATCH ? toast.loading(`Avslöjar 0 / ${allIds.length}…`) : undefined;
+      try {
+        for (let i = 0; i < allIds.length; i += BATCH) {
+          const chunk = allIds.slice(i, i + BATCH);
+          const { data, error } = await supabase.functions.invoke("leads-reveal", {
+            body: { provider_ids: chunk },
+          });
+          if (error) throw error;
+          if (data?.error === "insufficient_credits") {
+            aggregated.errors.push(...chunk.map((id) => ({ provider_id: id, error: "insufficient_credits" })));
+            aggregated.balance = data.balance ?? aggregated.balance;
+            if (toastId) toast.dismiss(toastId);
+            toast.error("Slut på credits — avbröt resterande. Köp fler och försök igen.");
+            break;
+          }
+          aggregated.revealed.push(...(data.revealed ?? []));
+          aggregated.errors.push(...(data.errors ?? []));
+          aggregated.balance = data.balance ?? aggregated.balance;
+          if (toastId) {
+            toast.loading(`Avslöjar ${Math.min(i + BATCH, allIds.length)} / ${allIds.length}…`, { id: toastId });
+          }
+        }
+      } finally {
+        if (toastId) toast.dismiss(toastId);
+      }
+      return aggregated;
     },
+
     onSuccess: async (data) => {
       // Merge revealed leads into local lookup so they show unmasked instantly in results
       if (data.revealed.length > 0) {
@@ -541,14 +671,102 @@ export default function Leads() {
             {search.data && search.data.people.length > 0 && (
               <>
                 <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={
-                        search.data.people.length > 0 &&
-                        selected.size === search.data.people.length
-                      }
-                      onCheckedChange={toggleAll}
-                    />
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center rounded-md border bg-background">
+                      <div className="pl-2 pr-1 flex items-center">
+                        <Checkbox
+                          checked={
+                            search.data.people.length > 0 &&
+                            search.data.people
+                              .filter((p) => !revealedById[p.provider_id])
+                              .every((p) => selected.has(p.provider_id))
+                          }
+                          onCheckedChange={toggleAll}
+                        />
+                      </div>
+                      <Popover open={bulkOpen} onOpenChange={setBulkOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-1.5 gap-0.5"
+                            aria-label="Markera flera"
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-4" align="start">
+                          <RadioGroup
+                            value={bulkMode}
+                            onValueChange={(v) => setBulkMode(v as "count" | "page" | "all")}
+                            className="space-y-3"
+                          >
+                            <div className="flex items-start gap-2">
+                              <RadioGroupItem value="count" id="bulk-count" className="mt-1" />
+                              <div className="flex-1 space-y-2">
+                                <Label htmlFor="bulk-count" className="font-medium cursor-pointer">
+                                  Markera antal
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={Math.min(
+                                    MAX_BULK_SELECT,
+                                    search.data.pagination.total_entries
+                                  )}
+                                  value={bulkCount}
+                                  onChange={(e) => {
+                                    setBulkMode("count");
+                                    const n = parseInt(e.target.value, 10);
+                                    if (!isNaN(n)) setBulkCount(n);
+                                  }}
+                                  className="h-8"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="page" id="bulk-page" />
+                              <Label htmlFor="bulk-page" className="cursor-pointer flex-1">
+                                Markera denna sida{" "}
+                                <span className="text-muted-foreground">
+                                  {search.data.people.length}
+                                </span>
+                              </Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="all" id="bulk-all" />
+                              <Label htmlFor="bulk-all" className="cursor-pointer flex-1">
+                                Markera alla{" "}
+                                <span className="text-muted-foreground">
+                                  {Math.min(
+                                    MAX_BULK_SELECT,
+                                    search.data.pagination.total_entries
+                                  ).toLocaleString("sv-SE")}
+                                  {search.data.pagination.total_entries > MAX_BULK_SELECT &&
+                                    ` (max ${MAX_BULK_SELECT})`}
+                                </span>
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                          <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setBulkOpen(false)}
+                              disabled={collecting}
+                            >
+                              Avbryt
+                            </Button>
+                            <Button size="sm" onClick={applyBulkSelect} disabled={collecting}>
+                              {collecting ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                              ) : null}
+                              Tillämpa
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                     <span className="text-sm text-muted-foreground">
                       {search.data.pagination.total_entries.toLocaleString("sv-SE")} träffar
                     </span>
@@ -557,6 +775,7 @@ export default function Leads() {
                     Sida {page} / {Math.max(1, search.data.pagination.total_pages)}
                   </div>
                 </div>
+
 
                 {search.data.people.map((p) => {
                   const revealed = revealedById[p.provider_id];
