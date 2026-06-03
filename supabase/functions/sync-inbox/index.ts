@@ -579,7 +579,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: accounts } = await admin
       .from("email_accounts")
-      .select("id, user_id, email, provider, auth_type, access_token_enc, refresh_token_enc, token_expires_at, status, history_id, imap_last_uid")
+      .select("id, user_id, email, provider, auth_type, access_token_enc, refresh_token_enc, token_expires_at, status, history_id, imap_last_uid, imap_host, imap_port, imap_secure, imap_username, imap_password_enc")
       .eq("user_id", userId)
       .eq("status", "active");
 
@@ -591,8 +591,10 @@ Deno.serve(async (req) => {
           totalNew += await syncGmail(admin, acc);
         } else if (acc.auth_type === "oauth" && acc.provider === "outlook") {
           totalNew += await syncOutlook(admin, acc);
+        } else if (acc.auth_type === "smtp" && acc.imap_host) {
+          totalNew += await syncImap(admin, acc);
         } else {
-          // IMAP path not yet implemented in this iteration
+          // SMTP without IMAP — no inbound sync possible
           continue;
         }
       } catch (e: any) {
