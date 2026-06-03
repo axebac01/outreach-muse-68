@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { toast } from "sonner";
-import { Search, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock } from "lucide-react";
+import { Search, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock, CheckCircle2, Linkedin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
@@ -123,6 +123,8 @@ export default function Leads() {
     enabled: !!user,
   });
 
+
+
   const search = useQuery({
     queryKey: ["leads-search", { titles, role, industry, locations, keywords, seniority, employees, page }],
     queryFn: async () => {
@@ -168,6 +170,30 @@ export default function Leads() {
     retry: false,
   });
 
+  // Track which provider_ids in the current search page are already revealed
+  const pageProviderIds = (search.data?.people ?? []).map((p) => p.provider_id);
+  const revealedQuery = useQuery({
+    queryKey: ["revealed-lookup", user?.id, pageProviderIds.sort().join(",")],
+    enabled: !!user && pageProviderIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("marketplace_leads")
+        .select("provider_id, full_name, first_name, last_name, email, title, company, phone, linkedin_url")
+        .eq("user_id", user!.id)
+        .eq("provider", "apollo")
+        .in("provider_id", pageProviderIds);
+      const map: Record<string, any> = {};
+      for (const row of data ?? []) map[row.provider_id] = row;
+      return map;
+    },
+  });
+
+  // Locally revealed in this session (added immediately by mutation) — overrides DB lookup
+  const [justRevealed, setJustRevealed] = useState<Record<string, any>>({});
+  const revealedById: Record<string, any> = { ...(revealedQuery.data ?? {}), ...justRevealed };
+
+
+
   const revealMutation = useMutation({
     mutationFn: async () => {
       const provider_ids = Array.from(selected);
@@ -181,10 +207,23 @@ export default function Leads() {
       return data as { revealed: any[]; errors: any[]; balance: number };
     },
     onSuccess: async (data) => {
-      toast.success(`Avslöjade ${data.revealed.length} leads`);
+      // Merge revealed leads into local lookup so they show unmasked instantly in results
+      if (data.revealed.length > 0) {
+        setJustRevealed((prev) => {
+          const next = { ...prev };
+          for (const lead of data.revealed) next[lead.provider_id] = lead;
+          return next;
+        });
+      }
+      toast.success(
+        data.revealed.length === 1
+          ? "1 lead avslöjad — namn och mejl visas nu i listan"
+          : `${data.revealed.length} leads avslöjade — namn och mejl visas nu i listan`
+      );
       if (data.errors.length > 0) {
         toast.warning(`${data.errors.length} kunde inte hämtas (refunderade)`);
       }
+
       // If a sequence is selected, import them right away
       if (sequenceId && data.revealed.length > 0) {
         const { data: importRes, error: importErr } = await supabase.functions.invoke("leads-import", {
@@ -230,13 +269,14 @@ export default function Leads() {
   };
 
   const toggleAll = () => {
-    const people = search.data?.people ?? [];
-    if (selected.size === people.length) setSelected(new Set());
+    const people = (search.data?.people ?? []).filter((p) => !revealedById[p.provider_id]);
+    if (people.every((p) => selected.has(p.provider_id)) && people.length > 0) setSelected(new Set());
     else setSelected(new Set(people.map((p) => p.provider_id)));
   };
 
   const totalCost = selected.size * CREDITS_PER_REVEAL;
   const canAfford = (balance ?? 0) >= totalCost;
+
 
   return (
     <Layout>
@@ -463,63 +503,129 @@ export default function Leads() {
                   </div>
                 </div>
 
-                {search.data.people.map((p) => (
+                {search.data.people.map((p) => {
+                  const revealed = revealedById[p.provider_id];
+                  const isRevealed = !!revealed;
+                  return (
                   <Card
                     key={p.provider_id}
                     className={`transition-colors ${
-                      selected.has(p.provider_id) ? "border-primary/50 bg-primary/[0.02]" : ""
+                      isRevealed
+                        ? "border-emerald-500/40 bg-emerald-500/[0.03] animate-in fade-in duration-300"
+                        : selected.has(p.provider_id)
+                        ? "border-primary/50 bg-primary/[0.02]"
+                        : ""
                     }`}
                   >
                     <CardContent className="py-4 flex items-start gap-3">
-                      <Checkbox
-                        className="mt-1"
-                        checked={selected.has(p.provider_id)}
-                        onCheckedChange={(checked) => {
-                          const next = new Set(selected);
-                          if (checked) next.add(p.provider_id);
-                          else next.delete(p.provider_id);
-                          setSelected(next);
-                        }}
-                      />
+                      {isRevealed ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                      ) : (
+                        <Checkbox
+                          className="mt-1"
+                          checked={selected.has(p.provider_id)}
+                          onCheckedChange={(checked) => {
+                            const next = new Set(selected);
+                            if (checked) next.add(p.provider_id);
+                            else next.delete(p.provider_id);
+                            setSelected(next);
+                          }}
+                        />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium">
-                            {p.name || `${p.first_name ?? ""} ${p.last_name_obfuscated ?? ""}`.trim() || "—"}
+                            {isRevealed
+                              ? revealed.full_name ||
+                                `${revealed.first_name ?? ""} ${revealed.last_name ?? ""}`.trim() ||
+                                "—"
+                              : p.name ||
+                                `${p.first_name ?? ""} ${p.last_name_obfuscated ?? ""}`.trim() ||
+                                "—"}
                           </span>
-                          <Badge variant="outline" className="text-[10px] font-normal gap-1">
-                            <Lock className="h-2.5 w-2.5" /> Lås upp för fullt namn
-                          </Badge>
+                          {isRevealed ? (
+                            <Badge className="text-[10px] font-normal gap-1 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 border-emerald-500/30">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Avslöjad
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                              <Lock className="h-2.5 w-2.5" /> Lås upp för fullt namn
+                            </Badge>
+                          )}
+                          {isRevealed && revealed.linkedin_url && (
+                            <a
+                              href={revealed.linkedin_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-foreground"
+                              aria-label="LinkedIn"
+                            >
+                              <Linkedin className="h-3.5 w-3.5" />
+                            </a>
+                          )}
                         </div>
                         <div className="text-sm text-muted-foreground mt-0.5">
-                          {p.title}
-                          {p.company && <> · <span className="text-foreground/80">{p.company}</span></>}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          {p.has_email && (
-                            <Badge variant="secondary" className="text-[10px] font-normal gap-1">
-                              <Mail className="h-2.5 w-2.5" /> Email
-                            </Badge>
-                          )}
-                          {p.has_direct_phone && (
-                            <Badge variant="secondary" className="text-[10px] font-normal gap-1">
-                              <Phone className="h-2.5 w-2.5" /> Direktnr
-                            </Badge>
-                          )}
-                          {p.has_location && (
-                            <Badge variant="outline" className="text-[10px] font-normal gap-1">
-                              <MapPin className="h-2.5 w-2.5" /> Plats
-                            </Badge>
-                          )}
-                          {p.has_industry && (
-                            <Badge variant="outline" className="text-[10px] font-normal gap-1">
-                              <Building2 className="h-2.5 w-2.5" /> Bransch
-                            </Badge>
+                          {isRevealed ? revealed.title ?? p.title : p.title}
+                          {(isRevealed ? revealed.company : p.company) && (
+                            <>
+                              {" "}
+                              ·{" "}
+                              <span className="text-foreground/80">
+                                {isRevealed ? revealed.company : p.company}
+                              </span>
+                            </>
                           )}
                         </div>
+                        {isRevealed ? (
+                          <div className="flex items-center gap-3 mt-2 flex-wrap text-sm">
+                            {revealed.email && (
+                              <a
+                                href={`mailto:${revealed.email}`}
+                                className="inline-flex items-center gap-1.5 text-foreground hover:text-primary font-medium"
+                              >
+                                <Mail className="h-3.5 w-3.5" /> {revealed.email}
+                              </a>
+                            )}
+                            {revealed.phone && (
+                              <a
+                                href={`tel:${revealed.phone}`}
+                                className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                              >
+                                <Phone className="h-3.5 w-3.5" /> {revealed.phone}
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {p.has_email && (
+                              <Badge variant="secondary" className="text-[10px] font-normal gap-1">
+                                <Mail className="h-2.5 w-2.5" /> Email
+                              </Badge>
+                            )}
+                            {p.has_direct_phone && (
+                              <Badge variant="secondary" className="text-[10px] font-normal gap-1">
+                                <Phone className="h-2.5 w-2.5" /> Direktnr
+                              </Badge>
+                            )}
+                            {p.has_location && (
+                              <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                                <MapPin className="h-2.5 w-2.5" /> Plats
+                              </Badge>
+                            )}
+                            {p.has_industry && (
+                              <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                                <Building2 className="h-2.5 w-2.5" /> Bransch
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </CardContent>
+
                   </Card>
-                ))}
+                  );
+                })}
+
 
                 <div className="flex items-center justify-between pt-2">
                   <Button
