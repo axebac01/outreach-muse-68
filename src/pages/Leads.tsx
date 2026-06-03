@@ -436,14 +436,42 @@ export default function Leads() {
                     onChange={(e) => setKeywords(e.target.value)}
                   />
                 </div>
-                <Button type="submit" className="w-full gap-2" disabled={search.isFetching}>
-                  {search.isFetching ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
+                <div className="flex gap-2">
+                  <Button type="submit" className="flex-1 gap-2" disabled={search.isFetching}>
+                    {search.isFetching ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    Sök
+                  </Button>
+                  {searchTriggered && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setTitles("");
+                        setRole("");
+                        setIndustry("");
+                        setLocations("Sweden");
+                        setKeywords("");
+                        setSeniority("");
+                        setEmployees("");
+                        setPage(1);
+                        setSearchTriggered(false);
+                        setSelected(new Set());
+                        try {
+                          localStorage.removeItem(FILTERS_KEY);
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                    >
+                      Rensa
+                    </Button>
                   )}
-                  Sök
-                </Button>
+                </div>
+
               </CardContent>
             </Card>
           </form>
