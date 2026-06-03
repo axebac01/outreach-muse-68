@@ -720,7 +720,80 @@ export default function Leads() {
                       Rensa
                     </Button>
                   )}
+                  <Popover open={recentOpen} onOpenChange={setRecentOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        title="Senaste sökningar"
+                        aria-label="Senaste sökningar"
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-96 p-0" align="end">
+                      <div className="px-3 py-2 border-b flex items-center justify-between">
+                        <span className="text-sm font-medium">Senaste sökningar</span>
+                        {(recentSearches.data?.length ?? 0) > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-destructive"
+                            onClick={clearAllRecent}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Rensa alla
+                          </Button>
+                        )}
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {recentSearches.isLoading ? (
+                          <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                            Laddar…
+                          </div>
+                        ) : (recentSearches.data?.length ?? 0) === 0 ? (
+                          <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                            Inga sparade sökningar än. Gör en sökning så sparas den här.
+                          </div>
+                        ) : (
+                          recentSearches.data!.map((r: any) => (
+                            <div
+                              key={r.id}
+                              className="group flex items-start gap-2 px-3 py-2 hover:bg-muted/60 border-b last:border-b-0"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => applyRecent(r)}
+                                className="flex-1 text-left min-w-0"
+                              >
+                                <div className="text-sm font-medium truncate">
+                                  {summarizeFilters(r.filters as FilterSnapshot)}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  {typeof r.total_results === "number"
+                                    ? `${r.total_results.toLocaleString("sv-SE")} träffar · `
+                                    : ""}
+                                  {formatRelative(r.updated_at)}
+                                </div>
+                              </button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0"
+                                onClick={() => deleteRecent(r.id)}
+                                aria-label="Ta bort"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
+
 
               </CardContent>
             </Card>
