@@ -112,13 +112,20 @@ export default function Leads() {
     }
   })();
 
+  // Helper för migrering: gammalt single-value (string) -> array
+  const toArr = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x);
+    if (typeof v === "string" && v) return [v];
+    return [];
+  };
+
   const [titles, setTitles] = useState<string>(initialFilters?.titles ?? "");
-  const [role, setRole] = useState<string>(initialFilters?.role ?? "");
-  const [industry, setIndustry] = useState<string>(initialFilters?.industry ?? "");
+  const [roles, setRoles] = useState<string[]>(toArr(initialFilters?.roles ?? initialFilters?.role));
+  const [industries, setIndustries] = useState<string[]>(toArr(initialFilters?.industries ?? initialFilters?.industry));
   const [locations, setLocations] = useState<string>(initialFilters?.locations ?? "Sweden");
   const [keywords, setKeywords] = useState<string>(initialFilters?.keywords ?? "");
-  const [seniority, setSeniority] = useState<string>(initialFilters?.seniority ?? "");
-  const [employees, setEmployees] = useState<string>(initialFilters?.employees ?? "");
+  const [seniorities, setSeniorities] = useState<string[]>(toArr(initialFilters?.seniorities ?? initialFilters?.seniority));
+  const [employeesRanges, setEmployeesRanges] = useState<string[]>(toArr(initialFilters?.employeesRanges ?? initialFilters?.employees));
   const [page, setPage] = useState<number>(initialFilters?.page ?? 1);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -130,12 +137,14 @@ export default function Leads() {
     try {
       localStorage.setItem(
         FILTERS_KEY,
-        JSON.stringify({ titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered })
+        JSON.stringify({ titles, roles, industries, locations, keywords, seniorities, employeesRanges, page, searchTriggered })
       );
     } catch {
       // ignore storage errors (quota, private mode)
     }
-  }, [titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered]);
+  }, [titles, roles, industries, locations, keywords, seniorities, employeesRanges, page, searchTriggered]);
+
+
 
   // ---------- Senaste sökningar (DB-persistens) ----------
   type FilterSnapshot = {
