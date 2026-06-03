@@ -7,6 +7,7 @@
 // Requires the "Nordic Signal" fonts from index.css (see HANDOFF.md).
 // ============================================================
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,6 +15,7 @@ import {
   Send, Zap, Target, Inbox, Shield,
 } from "lucide-react";
 import { LANDING_FAQS } from "@/data/landingFaqs";
+import { LEGAL } from "@/config/legal";
 
 const TYPE_TEXT =
   "Hej Sara,\n\nsåg att Kavalan växer snabbt — grattis! Hur hanterar ni outbound i dag? Värt ett kort samtal nästa vecka?\n\n/ Alex";
