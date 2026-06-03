@@ -224,6 +224,103 @@ export default function Leads() {
   const [justRevealed, setJustRevealed] = useState<Record<string, any>>({});
   const revealedById: Record<string, any> = { ...(revealedQuery.data ?? {}), ...justRevealed };
 
+  // Cross-page bulk selection
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState<"count" | "page" | "all">("count");
+  const [bulkCount, setBulkCount] = useState<number>(25);
+  const [collecting, setCollecting] = useState(false);
+
+  const buildSearchBody = (pageNum: number) => {
+    const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const roleTitles = role ? ROLES.find((r) => r.value === role)?.titles ?? [] : [];
+    const mergedTitles = Array.from(new Set([...freeTitles, ...roleTitles]));
+    return {
+      page: pageNum,
+      per_page: 25,
+      q_keywords: keywords || undefined,
+      person_titles: mergedTitles.length ? mergedTitles : undefined,
+      person_seniorities: seniority ? [seniority] : undefined,
+      organization_locations: locations
+        ? locations.split(",").map((s) => s.trim()).filter(Boolean)
+        : undefined,
+      organization_num_employees_ranges: employees ? [employees] : undefined,
+      organization_industry_tag_ids: industry ? [industry] : undefined,
+    };
+  };
+
+  const collectProviderIds = async (targetCount: number): Promise<string[]> => {
+    // Start with current page already in cache
+    const collected: string[] = [];
+    const seen = new Set<string>();
+    const addFrom = (people: LeadPreview[]) => {
+      for (const p of people) {
+        if (revealedById[p.provider_id]) continue;
+        if (seen.has(p.provider_id)) continue;
+        seen.add(p.provider_id);
+        collected.push(p.provider_id);
+        if (collected.length >= targetCount) return true;
+      }
+      return false;
+    };
+    if (search.data) {
+      if (addFrom(search.data.people)) return collected;
+    }
+    const totalPages = search.data?.pagination.total_pages ?? 1;
+    // Fetch other pages sequentially (skip current page)
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === page) continue;
+      const { data, error } = await supabase.functions.invoke("leads-search", {
+        body: buildSearchBody(p),
+      });
+      if (error) break;
+      const people = (data?.people ?? []) as LeadPreview[];
+      if (addFrom(people)) return collected;
+      if (people.length === 0) break;
+    }
+    return collected;
+  };
+
+  const applyBulkSelect = async () => {
+    const totalEntries = search.data?.pagination.total_entries ?? 0;
+    const currentPagePeople = search.data?.people ?? [];
+
+    let ids: string[] = [];
+    if (bulkMode === "page") {
+      ids = currentPagePeople
+        .filter((p) => !revealedById[p.provider_id])
+        .map((p) => p.provider_id);
+    } else {
+      const target = Math.min(
+        bulkMode === "all" ? totalEntries : bulkCount,
+        MAX_BULK_SELECT,
+        totalEntries
+      );
+      if (target <= currentPagePeople.length) {
+        ids = currentPagePeople
+          .filter((p) => !revealedById[p.provider_id])
+          .slice(0, target)
+          .map((p) => p.provider_id);
+      } else {
+        setCollecting(true);
+        try {
+          ids = await collectProviderIds(target);
+        } finally {
+          setCollecting(false);
+        }
+      }
+    }
+
+    setSelected(new Set(ids));
+    setBulkOpen(false);
+    if (ids.length === MAX_BULK_SELECT && bulkMode !== "page") {
+      toast.warning(`Max ${MAX_BULK_SELECT} leads per markering — kapade där.`);
+    } else if (ids.length > 0) {
+      toast.success(`${ids.length} leads markerade`);
+    }
+  };
+
+
+
 
 
   const revealMutation = useMutation({
