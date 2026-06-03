@@ -28,6 +28,7 @@ import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
 import MyLeadsTab from "@/components/leads/MyLeadsTab";
 import MultiSelectFilter from "@/components/leads/MultiSelectFilter";
 import ChipInput from "@/components/leads/ChipInput";
+import ImportLeadToCampaignButton from "@/components/leads/ImportLeadToCampaignButton";
 
 const MAX_BULK_SELECT = 500;
 
