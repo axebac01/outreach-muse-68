@@ -1,35 +1,54 @@
-## Plan: Uppdatera logo och favicon
 
-Du har laddat upp nya filer direkt i chatten — jag använder dem istället för att vänta på GitHub-synk.
+# SEO-lyft på landningssidan
 
-### Filer som byts/läggs till
+Tre frontend-only ändringar för att stärka `/` inför launch. Inga nya routes, ingen backend, inget innehåll som behöver vara "Kommer snart".
 
-**Logo (mörk, för ljus bakgrund — används i Navbar):**
-- `src/assets/logo.svg` ← `maillead-mark.svg` (med mörk tile-bakgrund + orange "ember"-pil)
+## 1. Semantisk rubrikstruktur i `AuroraLanding.tsx`
 
-**Favicon-set (i `public/`):**
-- `favicon.svg` ← uppladdad `favicon.svg` (32×32 med tile + ember)
-- `favicon-32.png` ← uppladdad
-- `favicon-16.png` ← uppladdad
-- `apple-touch-icon.png` ← uppladdad
-- Behåller inte den gamla `favicon.png` (ersätts av de nya storlekarna)
+Idag är hero-rubriken en stylad `<div>`/`<p>` — Google ser ingen riktig `<h1>` på sidan, och sektionsrubriker är inte konsekventa `<h2>`.
 
-### Kod-ändringar
+- Konvertera hero-rubriken ("Personliga utskick som faktiskt får svar" eller motsvarande) till en riktig `<h1>` med behållna Tailwind-klasser
+- Säkra att varje sektion (Steg, Features, Priser, FAQ) har en `<h2>` som visuellt redan finns — bara byt taggen
+- Ingen visuell förändring, endast semantik
 
-**`index.html`** — ersätt nuvarande favicon-rad med fullt set:
-```html
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+## 2. Synlig FAQ-sektion på `/`
+
+`Landing.tsx` har redan 4 frågor i `FAQPage` JSON-LD, men de renderas aldrig synligt. Google vill se båda; användare gillar det också.
+
+- Lägg en ny `<section id="faq">` i `AuroraLanding.tsx` ovanför footer/CTA med en `<h2>"Vanliga frågor"</h2>` och en accordion (kan återanvända samma stil som FAQ-sektionen i `Pricing.tsx`)
+- Utöka från 4 → 7 frågor. Två listor (en i `Landing.tsx` JSON-LD, en i `AuroraLanding.tsx` UI) hålls i synk via en delad konstant i `src/data/landingFaqs.ts`
+- Nya frågor täcker söktermer som dyker upp i Semrush long-tail:
+  - "Funkar MailLead med Gmail och Outlook?"
+  - "Är kalla mejl tillåtet enligt GDPR i Sverige?"
+  - "Hur skiljer sig MailLead från Lemlist och Instantly?"
+- Importera den delade listan både i `Landing.tsx` (för JSON-LD) och i den nya FAQ-sektionen
+
+## 3. `SoftwareApplication`-schema i `Landing.tsx`
+
+Lägga till ett tredje JSON-LD-objekt vid sidan av `WebSite` och `FAQPage`. Ger Google strukturerad info om pris och produktkategori — kan visa pris/recensioner direkt i sökresultatet senare.
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "MailLead",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "offers": [
+    { "@type": "Offer", "name": "Starter", "price": "0", "priceCurrency": "SEK" },
+    { "@type": "Offer", "name": "Growth", "price": "990", "priceCurrency": "SEK" }
+  ]
+}
 ```
 
-**Navbar/Footer**: Ingen ändring behövs — Navbar importerar redan `@/assets/logo.svg`. Footer använder ingen logo-bild.
+## Filer som ändras
 
-### Inte med i denna ändring
-- Den ljusa varianten `maillead-mark-light.svg` (för mörk bakgrund) — lägger inte till den eftersom inget i appen renderar logo på mörk bakgrund just nu. Säg till om du vill att jag förbereder den för framtida dark mode.
-- Schibsted Grotesk-fonten för ordmärket är **redan importerad** i `src/index.css` och används av Navbar (`font-display`). Inget behöver göras där.
-- `src/assets/maillead-logo.png` (gammal PNG) — lämnas orörd om den inte används; kan rensas senare om du vill.
+- `src/components/AuroraLanding.tsx` — hero blir `<h1>`, sektionsrubriker blir `<h2>`, ny `<section id="faq">` med accordion
+- `src/data/landingFaqs.ts` — ny fil, delad FAQ-lista (7 frågor)
+- `src/pages/Landing.tsx` — importera FAQ-listan, lägg till `SoftwareApplication` i `jsonLd`-arrayen
 
-### Verifiering
-Efter ändringen kollar jag att Navbar fortfarande renderar och att `index.html` är ren.
+## Utanför scope
+
+- og:image-fil (separat fråga — `index.html` refererar till `/og-image.jpg` som inte finns, men du valde att hoppa över det här)
+- Blogg / artikelkluster (post-launch)
+- Tekniska SEO-ändringar i `sitemap.xml` / `robots.txt` (inga nya routes)
