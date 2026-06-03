@@ -72,6 +72,13 @@ const CampaignDetails = () => {
               onChange={(e) => handleNameChange(e.target.value)}
               className="text-lg font-semibold border-none shadow-none px-2 focus-visible:ring-1 max-w-md"
             />
+            <div className="ml-auto">
+              <CampaignStatusActions
+                sequenceId={sequence.id}
+                status={sequence.status}
+                campaignId={campaign.id}
+              />
+            </div>
           </div>
           <Tabs value={activeTab} onValueChange={setTab}>
             <TabsList>
