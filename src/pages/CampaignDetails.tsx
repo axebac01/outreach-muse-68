@@ -12,6 +12,7 @@ import { LeadsTab } from "@/components/campaign/LeadsTab";
 import { SequenceTab } from "@/components/campaign/SequenceTab";
 import { ScheduleTab } from "@/components/campaign/ScheduleTab";
 import { SendersTab } from "@/components/campaign/SendersTab";
+import CampaignStatusActions from "@/components/campaign/CampaignStatusActions";
 
 const TABS = ["overview", "leads", "sequence", "schedule", "senders"] as const;
 
@@ -71,6 +72,13 @@ const CampaignDetails = () => {
               onChange={(e) => handleNameChange(e.target.value)}
               className="text-lg font-semibold border-none shadow-none px-2 focus-visible:ring-1 max-w-md"
             />
+            <div className="ml-auto">
+              <CampaignStatusActions
+                sequenceId={sequence.id}
+                status={sequence.status}
+                campaignId={campaign.id}
+              />
+            </div>
           </div>
           <Tabs value={activeTab} onValueChange={setTab}>
             <TabsList>

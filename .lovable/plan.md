@@ -1,32 +1,39 @@
-## Mål
-På varje **avslöjad** lead-kort i sökresultatet på `/leads` ska det finnas en tydlig knapp för att importera just den leaden till en kampanj (utan att gå omvägen via Mina leads).
+## Svar på frågan
+Det finns ingen knapp idag — statusen `paused`/`completed` finns i databasen men kan inte ändras från gränssnittet. Bakgrundsjobbet `process-scheduled-sends` respekterar redan `paused` (hoppar över schemalagda mejl), så själva mekaniken finns — bara UI saknas.
 
-## Vad som ändras
+## Vad jag föreslår att vi lägger till
 
-**Fil:** `src/pages/Leads.tsx` (endast UI + en återanvänd mutation — ingen backend-ändring)
+**Plats:** Headern på kampanjsidan (`src/pages/CampaignDetails.tsx`), till höger om namn-fältet. Synlig på alla flikar.
 
-1. **Ny knapp på avslöjade kort** (i höger sida av kortets header-rad, bredvid Avslöjad-badgen):
-   - Primärt utseende: `Button size="sm"` med ikon `Send` + text **"Importera till kampanj"**.
-   - Vid klick öppnas en `DropdownMenu` med:
-     - Lista över användarens kampanjer (samma `sequences`-data som redan finns i komponenten).
-     - Separator + **"+ Skapa ny kampanj…"** som öppnar befintlig `CreateCampaignInlineDialog`.
-   - När man väljer en kampanj körs en ny liten mutation `importSingleMutation` som anropar `supabase.functions.invoke("leads-import", { body: { sequence_id, marketplace_lead_ids: [revealed.id] } })`.
-   - Toast: "Importerad till {kampanjnamn}" med en sekundär "Visa kampanj"-action som navigerar till `/campaign/{campaignId}`.
+**Knappar beroende på status:**
+- `draft` → ingen extra knapp (start sker fortfarande via "Avsändare & start"-fliken).
+- `active` → **Pausa** (sekundär knapp, ikon `Pause`) + overflow-meny med **Avsluta kampanj**.
+- `paused` → **Återuppta** (primär knapp, ikon `Play`) + overflow med **Avsluta kampanj**.
+- `completed` → låst badge "Slutförd", ingen knapp.
 
-2. **Visa importstatus per lead:**
-   - Lokal `Set<string>` `importedLeadIds` håller koll på leads som importerats i sessionen.
-   - När en lead finns i setet byts knappen mot en disabled `Badge`/`Button` med `Check` + "Importerad" och en liten länk "Importera till annan kampanj" som öppnar dropdownen igen.
+**Beteende:**
+- **Pausa:** Sätter `sequences.status = 'paused'`. Redan schemalagda mejl ligger kvar men skickas inte (jobbet hoppar dem). Toast: "Kampanj pausad — inga nya mejl skickas".
+- **Återuppta:** Sätter `status = 'active'`. Toast: "Kampanj aktiv igen".
+- **Avsluta:** Bekräftelsedialog (`AlertDialog`) → sätter `status = 'completed'` OCH avbokar alla framtida `scheduled_sends` för sekvensen (`update scheduled_sends set status='cancelled' where sequence_id=? and status='scheduled'`). Irreversibelt i UI:t. Toast: "Kampanj avslutad".
 
-3. **Inga andra ändringar** — sticky footer, multi-select-flödet och övriga lägen lämnas orörda. Detta är ett komplement, inte en ersättning.
+## Teknisk implementation
 
-## Tekniska detaljer
+**Ny hook** `useSequenceStatus(sequenceId)` i `src/hooks/useSequence.ts` med tre mutationer: `pause()`, `resume()`, `complete()`. `complete()` kör båda updates (sequence-status + cancel scheduled). Invaliderar `["campaign_sequence", campaignId]` + `["sequence-leads"]` + `["sequence-send-stats"]`.
 
-- Återanvänder befintlig `useCampaigns`-data (redan importerad i Leads.tsx via `sequences`).
-- Återanvänder befintlig edge function `leads-import` (ingen ändring).
-- Återanvänder befintlig `CreateCampaignInlineDialog`.
-- Ny ikon: `Send` från `lucide-react` (redan tillgänglig).
-- Knappen visas endast när `isRevealed === true`.
+**Ny komponent** `src/components/campaign/CampaignStatusActions.tsx` som renderar rätt knappar utifrån status, inkl. AlertDialog för "Avsluta".
+
+**Integration** i `CampaignDetails.tsx`: rendera `<CampaignStatusActions sequence={sequence} campaignId={id} />` i headern bredvid namnet.
+
+**Status-badge** på `OverviewTab` uppdateras automatiskt via query-invalidering (ingen kodändring där).
+
+**RLS:** Inga ändringar — användare kan redan uppdatera sina egna `sequences` och `scheduled_sends` via befintliga policies.
+
+## Filer som ändras
+- `src/hooks/useSequence.ts` (ny hook)
+- `src/components/campaign/CampaignStatusActions.tsx` (ny)
+- `src/pages/CampaignDetails.tsx` (rendera knapparna i header)
 
 ## Out of scope
-- Bulk-import av flera redan-avslöjade leads från sökresultat (kan göras separat senare via fliken "Sparade" + checkbox).
-- Ändringar i `MyLeadsTab` eller backend.
+- Pausa per lead eller per step.
+- Schemaläggning av automatisk paus (t.ex. "pausa till nästa måndag").
+- Återstart av en `completed` kampanj.
