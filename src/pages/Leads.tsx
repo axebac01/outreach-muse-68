@@ -382,6 +382,9 @@ export default function Leads() {
   const [bulkCount, setBulkCount] = useState<number>(25);
   const [collecting, setCollecting] = useState(false);
   const [viewMode, setViewMode] = useState<"total" | "new" | "saved">("total");
+  const [importedByLeadId, setImportedByLeadId] = useState<
+    Record<string, { sequenceId: string; campaignId?: string | null; name: string }>
+  >({});
 
   const buildSearchBody = (pageNum: number) => {
     const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
