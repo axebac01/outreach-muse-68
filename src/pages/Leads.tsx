@@ -327,7 +327,7 @@ export default function Leads() {
   // Spara sökning i DB när nytt sökresultat kommit
   useEffect(() => {
     if (!user || !search.isSuccess || !search.data) return;
-    const snap: FilterSnapshot = { titles, role, industry, locations, keywords, seniority, employees };
+    const snap: FilterSnapshot = { titles, roles, industries, locations, keywords, seniorities, employeesRanges };
     if (filtersAreEmpty(snap)) return;
     const filters_hash = hashFilters(snap);
     const total_results = search.data.pagination?.total_entries ?? null;
