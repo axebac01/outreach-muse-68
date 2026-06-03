@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { toast } from "sonner";
-import { Search, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock, CheckCircle2, Linkedin, ChevronDown } from "lucide-react";
+import { Search, Sparkles, Coins, Loader2, ExternalLink, Mail, Phone, MapPin, Building2, Lock, CheckCircle2, Linkedin, ChevronDown, History, X, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -137,6 +137,99 @@ export default function Leads() {
     }
   }, [titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered]);
 
+  // ---------- Senaste sökningar (DB-persistens) ----------
+  type FilterSnapshot = {
+    titles: string; role: string; industry: string; locations: string;
+    keywords: string; seniority: string; employees: string;
+  };
+  const normalizeFilters = (f: FilterSnapshot): FilterSnapshot => ({
+    titles: f.titles.trim(), role: f.role.trim(), industry: f.industry.trim(),
+    locations: f.locations.trim(), keywords: f.keywords.trim(),
+    seniority: f.seniority.trim(), employees: f.employees.trim(),
+  });
+  const hashFilters = (f: FilterSnapshot): string => {
+    const n = normalizeFilters(f);
+    return [n.titles, n.role, n.industry, n.locations, n.keywords, n.seniority, n.employees]
+      .map((s) => s.toLowerCase())
+      .join("|");
+  };
+  const filtersAreEmpty = (f: FilterSnapshot): boolean => {
+    const n = normalizeFilters(f);
+    return !n.titles && !n.role && !n.industry && !n.keywords && !n.seniority && !n.employees
+      && (!n.locations || n.locations.toLowerCase() === "sweden");
+  };
+  const summarizeFilters = (f: FilterSnapshot): string => {
+    const parts: string[] = [];
+    const roleLabel = ROLES.find((r) => r.value === f.role)?.label;
+    if (roleLabel) parts.push(roleLabel);
+    if (f.titles.trim()) parts.push(f.titles.trim());
+    if (f.seniority) parts.push(SENIORITIES.find((s) => s.value === f.seniority)?.label ?? f.seniority);
+    const indLabel = INDUSTRIES.find((i) => i.value === f.industry)?.label;
+    if (indLabel) parts.push(indLabel);
+    if (f.employees) parts.push(EMPLOYEE_RANGES.find((e) => e.value === f.employees)?.label ?? f.employees);
+    if (f.locations.trim()) parts.push(f.locations.trim());
+    if (f.keywords.trim()) parts.push(`"${f.keywords.trim()}"`);
+    return parts.length ? parts.join(" · ") : "Sökning utan filter";
+  };
+  const formatRelative = (iso: string): string => {
+    const t = new Date(iso).getTime();
+    const diff = Date.now() - t;
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "nyss";
+    if (min < 60) return `för ${min} min sedan`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `för ${h} h sedan`;
+    const d = Math.floor(h / 24);
+    if (d === 1) return "i går";
+    if (d < 7) return `för ${d} dagar sedan`;
+    return new Date(iso).toLocaleDateString("sv-SE");
+  };
+
+  const [recentOpen, setRecentOpen] = useState(false);
+
+  const recentSearches = useQuery({
+    queryKey: ["recent-searches", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lead_searches")
+        .select("id, filters, total_results, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+
+  const applyRecent = (r: { filters: any }) => {
+    const f = r.filters || {};
+    setTitles(f.titles ?? "");
+    setRole(f.role ?? "");
+    setIndustry(f.industry ?? "");
+    setLocations(f.locations ?? "Sweden");
+    setKeywords(f.keywords ?? "");
+    setSeniority(f.seniority ?? "");
+    setEmployees(f.employees ?? "");
+    setPage(1);
+    setSelected(new Set());
+    setSearchTriggered(true);
+    setRecentOpen(false);
+  };
+
+  const deleteRecent = async (id: string) => {
+    await supabase.from("lead_searches").delete().eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["recent-searches", user?.id] });
+  };
+
+  const clearAllRecent = async () => {
+    if (!user) return;
+    await supabase.from("lead_searches").delete().eq("user_id", user.id);
+    queryClient.invalidateQueries({ queryKey: ["recent-searches", user.id] });
+  };
+
+
+
 
 
   const { data: sequences = [] } = useQuery({
@@ -200,6 +293,33 @@ export default function Leads() {
     staleTime: 10 * 60 * 1000, // 10 min — samma sökning refetchar inte direkt vid återbesök
     gcTime: 60 * 60 * 1000, // 1h — behåll cachen länge
   });
+
+  // Spara sökning i DB när nytt sökresultat kommit
+  useEffect(() => {
+    if (!user || !search.isSuccess || !search.data) return;
+    const snap: FilterSnapshot = { titles, role, industry, locations, keywords, seniority, employees };
+    if (filtersAreEmpty(snap)) return;
+    const filters_hash = hashFilters(snap);
+    const total_results = search.data.pagination?.total_entries ?? null;
+    (async () => {
+      await supabase
+        .from("lead_searches")
+        .upsert(
+          {
+            user_id: user.id,
+            filters: normalizeFilters(snap) as any,
+            filters_hash,
+            total_results,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,filters_hash" }
+        );
+      queryClient.invalidateQueries({ queryKey: ["recent-searches", user.id] });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.isSuccess, search.dataUpdatedAt]);
+
+
 
 
   // Track which provider_ids in the current search page are already revealed
@@ -600,7 +720,80 @@ export default function Leads() {
                       Rensa
                     </Button>
                   )}
+                  <Popover open={recentOpen} onOpenChange={setRecentOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        title="Senaste sökningar"
+                        aria-label="Senaste sökningar"
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-96 p-0" align="end">
+                      <div className="px-3 py-2 border-b flex items-center justify-between">
+                        <span className="text-sm font-medium">Senaste sökningar</span>
+                        {(recentSearches.data?.length ?? 0) > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-destructive"
+                            onClick={clearAllRecent}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Rensa alla
+                          </Button>
+                        )}
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {recentSearches.isLoading ? (
+                          <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                            Laddar…
+                          </div>
+                        ) : (recentSearches.data?.length ?? 0) === 0 ? (
+                          <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                            Inga sparade sökningar än. Gör en sökning så sparas den här.
+                          </div>
+                        ) : (
+                          recentSearches.data!.map((r: any) => (
+                            <div
+                              key={r.id}
+                              className="group flex items-start gap-2 px-3 py-2 hover:bg-muted/60 border-b last:border-b-0"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => applyRecent(r)}
+                                className="flex-1 text-left min-w-0"
+                              >
+                                <div className="text-sm font-medium truncate">
+                                  {summarizeFilters(r.filters as FilterSnapshot)}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  {typeof r.total_results === "number"
+                                    ? `${r.total_results.toLocaleString("sv-SE")} träffar · `
+                                    : ""}
+                                  {formatRelative(r.updated_at)}
+                                </div>
+                              </button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0"
+                                onClick={() => deleteRecent(r.id)}
+                                aria-label="Ta bort"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
+
 
               </CardContent>
             </Card>

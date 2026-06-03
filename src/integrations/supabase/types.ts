@@ -727,6 +727,36 @@ export type Database = {
           },
         ]
       }
+      lead_searches: {
+        Row: {
+          created_at: string
+          filters: Json
+          filters_hash: string
+          id: string
+          total_results: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filters: Json
+          filters_hash: string
+          id?: string
+          total_results?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          filters_hash?: string
+          id?: string
+          total_results?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       marketplace_leads: {
         Row: {
           city: string | null
