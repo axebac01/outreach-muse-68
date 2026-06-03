@@ -22,9 +22,9 @@ export type EmailAccount = {
 };
 
 export const useEmailAccounts = () => {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   return useQuery({
-    queryKey: ["email_accounts"],
+    queryKey: ["email_accounts", user?.id],
     queryFn: async (): Promise<EmailAccount[]> => {
       const { data, error } = await supabase
         .from("email_accounts_safe")
@@ -35,7 +35,7 @@ export const useEmailAccounts = () => {
       if (error) throw error;
       return (data ?? []) as EmailAccount[];
     },
-    enabled: !!user,
+    enabled: ready && !!user?.id,
   });
 };
 

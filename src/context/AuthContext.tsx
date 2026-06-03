@@ -6,6 +6,8 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  /** True once the initial session has been restored from storage. */
+  ready: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -13,6 +15,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
+  ready: false,
   signOut: async () => {},
 });
 
@@ -21,19 +24,17 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let prevUserId: string | null = null;
+
+    // Subscribe FIRST so we don't miss events.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setLoading(false);
         const newUserId = session?.user.id ?? null;
-        // Only log REAL transitions: anonymous→user (real sign-in) and
-        // user→anonymous (real sign-out). Skip INITIAL_SESSION and
-        // TOKEN_REFRESHED which also emit SIGNED_IN.
-        // Only log real sign-in here. Sign-out is logged in signOut() before
-        // the JWT is revoked, otherwise the edge function rejects the call.
         const realSignIn = event === "SIGNED_IN" && prevUserId === null && newUserId !== null;
         if (realSignIn) {
           setTimeout(() => {
@@ -46,17 +47,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
+    // Then restore from storage. Mark ready only after this resolves so
+    // queries that need auth.uid() don't fire before the JWT is attached.
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       prevUserId = session?.user.id ?? null;
       setLoading(false);
+      setReady(true);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
-    // Log BEFORE signOut so the JWT is still valid for the edge function.
     try {
       const { logAudit } = await import("@/lib/audit");
       await logAudit("auth.sign_out");
@@ -66,9 +69,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
-
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, ready, signOut }}>
       {children}
     </AuthContext.Provider>
   );
