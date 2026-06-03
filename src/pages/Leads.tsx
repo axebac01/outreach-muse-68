@@ -26,6 +26,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
 import MyLeadsTab from "@/components/leads/MyLeadsTab";
+import MultiSelectFilter from "@/components/leads/MultiSelectFilter";
+import ChipInput from "@/components/leads/ChipInput";
 
 const MAX_BULK_SELECT = 500;
 
