@@ -93,6 +93,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    // SSRF guard: reject private/loopback/link-local/CGNAT/multicast targets.
+    const ssrf = await assertPublicHost(String(smtp_host));
+    if (!ssrf.ok) {
+      return new Response(
+        JSON.stringify({ error: `SMTP host not allowed: ${ssrf.reason}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    if (imap_host) {
+      const ssrfImap = await assertPublicHost(String(imap_host));
+      if (!ssrfImap.ok) {
+        return new Response(
+          JSON.stringify({ error: `IMAP host not allowed: ${ssrfImap.reason}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
