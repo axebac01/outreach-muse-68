@@ -358,3 +358,51 @@ export const useToggleSender = (sequenceId: string) => {
     },
   }));
 };
+
+// ---------- Status actions (pause / resume / complete) ----------
+export const useSequenceStatusActions = (sequenceId: string, campaignId?: string) => {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["campaign_sequence", campaignId] });
+    qc.invalidateQueries({ queryKey: ["sequence", sequenceId] });
+    qc.invalidateQueries({ queryKey: ["sequences"] });
+    qc.invalidateQueries({ queryKey: ["sequence-send-stats", sequenceId] });
+    qc.invalidateQueries({ queryKey: ["campaigns"] });
+  };
+
+  const setStatus = async (status: "active" | "paused" | "completed") => {
+    const { error } = await supabase
+      .from("sequences")
+      .update({ status })
+      .eq("id", sequenceId);
+    if (error) throw error;
+  };
+
+  const pause = useMutation({
+    mutationFn: () => setStatus("paused"),
+    onSuccess: invalidate,
+  });
+
+  const resume = useMutation({
+    mutationFn: () => setStatus("active"),
+    onSuccess: invalidate,
+  });
+
+  const complete = useMutation({
+    mutationFn: async () => {
+      await setStatus("completed");
+      const { error } = await supabase
+        .from("scheduled_sends")
+        .update({ status: "cancelled" })
+        .eq("sequence_id", sequenceId)
+        .eq("user_id", user!.id)
+        .eq("status", "scheduled");
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { pause, resume, complete };
+};
