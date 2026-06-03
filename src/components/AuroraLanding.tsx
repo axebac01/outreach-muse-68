@@ -253,7 +253,7 @@ export default function AuroraLanding() {
                   <li key={f}><Check size={16} strokeWidth={2.5} /> {f}</li>
                 ))}
               </ul>
-              <button className="btn btn-glass">Kom igång – det är gratis</button>
+              <Link to="/signup" className="btn btn-glass">Kom igång – det är gratis</Link>
             </div>
             <div className="pcard pop reveal">
               <span className="pbadge">Populärast</span>
@@ -265,7 +265,7 @@ export default function AuroraLanding() {
                   <li key={f}><Check size={16} strokeWidth={2.5} /> {f}</li>
                 ))}
               </ul>
-              <button className="btn btn-pri">Lås upp obegränsade utskick</button>
+              <Link to="/signup" className="btn btn-pri">Lås upp obegränsade utskick</Link>
             </div>
           </div>
           <div className="guarantee reveal"><Shield size={15} /> 30 dagars pengarna-tillbaka-garanti · Inga frågor</div>
@@ -289,13 +289,13 @@ export default function AuroraLanding() {
         <section className="cta">
           <h2>Redo att fylla pipelinen?</h2>
           <p>Gå med i hundratals team som bokar fler möten med MailLead.ai.</p>
-          <button className="btn btn-pri btn-lg magnet">Prova gratis – inget kreditkort</button>
+          <Link to="/signup" className="btn btn-pri btn-lg magnet">Prova gratis – inget kreditkort</Link>
         </section>
 
         {/* FOOTER */}
         <footer className="footer"><div className="footer-in">
-          <span className="lock"><Mark size={32} /><span className="wm" style={{ fontSize: 18 }}>Mail<span className="l">Lead</span><span className="t">.ai</span></span></span>
-          <div className="footer-links"><a href="#">Integritet</a><a href="#">Villkor</a><a href="#">Cookies</a></div>
+          <Link to="/" className="lock"><Mark size={32} /><span className="wm" style={{ fontSize: 18 }}>Mail<span className="l">Lead</span><span className="t">.ai</span></span></Link>
+          <div className="footer-links"><Link to="/legal/privacy">Integritet</Link><Link to="/legal/terms">Villkor</Link><Link to="/legal/cookies">Cookies</Link></div>
           <p className="footer-copy">© 2026 MailLead.ai · CRMdata i Sverige AB</p>
         </div></footer>
       </div>
