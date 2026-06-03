@@ -148,36 +148,55 @@ export default function Leads() {
 
   // ---------- Senaste sökningar (DB-persistens) ----------
   type FilterSnapshot = {
-    titles: string; role: string; industry: string; locations: string;
-    keywords: string; seniority: string; employees: string;
+    titles: string;
+    roles: string[];
+    industries: string[];
+    locations: string;
+    keywords: string;
+    seniorities: string[];
+    employeesRanges: string[];
   };
+  const sortArr = (a: string[]) => [...a].map((s) => s.trim()).filter(Boolean).sort();
   const normalizeFilters = (f: FilterSnapshot): FilterSnapshot => ({
-    titles: f.titles.trim(), role: f.role.trim(), industry: f.industry.trim(),
-    locations: f.locations.trim(), keywords: f.keywords.trim(),
-    seniority: f.seniority.trim(), employees: f.employees.trim(),
+    titles: f.titles.trim(),
+    roles: sortArr(f.roles),
+    industries: sortArr(f.industries),
+    locations: f.locations.trim(),
+    keywords: f.keywords.trim(),
+    seniorities: sortArr(f.seniorities),
+    employeesRanges: sortArr(f.employeesRanges),
   });
   const hashFilters = (f: FilterSnapshot): string => {
     const n = normalizeFilters(f);
-    return [n.titles, n.role, n.industry, n.locations, n.keywords, n.seniority, n.employees]
-      .map((s) => s.toLowerCase())
-      .join("|");
+    return [
+      n.titles,
+      n.roles.join(","),
+      n.industries.join(","),
+      n.locations,
+      n.keywords,
+      n.seniorities.join(","),
+      n.employeesRanges.join(","),
+    ].map((s) => s.toLowerCase()).join("|");
   };
   const filtersAreEmpty = (f: FilterSnapshot): boolean => {
     const n = normalizeFilters(f);
-    return !n.titles && !n.role && !n.industry && !n.keywords && !n.seniority && !n.employees
+    return !n.titles && n.roles.length === 0 && n.industries.length === 0 && !n.keywords
+      && n.seniorities.length === 0 && n.employeesRanges.length === 0
       && (!n.locations || n.locations.toLowerCase() === "sweden");
   };
   const summarizeFilters = (f: FilterSnapshot): string => {
     const parts: string[] = [];
-    const roleLabel = ROLES.find((r) => r.value === f.role)?.label;
-    if (roleLabel) parts.push(roleLabel);
-    if (f.titles.trim()) parts.push(f.titles.trim());
-    if (f.seniority) parts.push(SENIORITIES.find((s) => s.value === f.seniority)?.label ?? f.seniority);
-    const indLabel = INDUSTRIES.find((i) => i.value === f.industry)?.label;
-    if (indLabel) parts.push(indLabel);
-    if (f.employees) parts.push(EMPLOYEE_RANGES.find((e) => e.value === f.employees)?.label ?? f.employees);
-    if (f.locations.trim()) parts.push(f.locations.trim());
-    if (f.keywords.trim()) parts.push(`"${f.keywords.trim()}"`);
+    const roleArr = Array.isArray(f.roles) ? f.roles : [];
+    const seniorityArr = Array.isArray(f.seniorities) ? f.seniorities : [];
+    const indArr = Array.isArray(f.industries) ? f.industries : [];
+    const empArr = Array.isArray(f.employeesRanges) ? f.employeesRanges : [];
+    if (roleArr.length) parts.push(roleArr.map((v) => ROLES.find((r) => r.value === v)?.label ?? v).join(", "));
+    if (f.titles?.trim()) parts.push(f.titles.trim());
+    if (seniorityArr.length) parts.push(seniorityArr.map((v) => SENIORITIES.find((s) => s.value === v)?.label ?? v).join(", "));
+    if (indArr.length) parts.push(indArr.map((v) => INDUSTRIES.find((i) => i.value === v)?.label ?? v).join(", "));
+    if (empArr.length) parts.push(empArr.map((v) => EMPLOYEE_RANGES.find((e) => e.value === v)?.label ?? v).join(", "));
+    if (f.locations?.trim()) parts.push(f.locations.trim());
+    if (f.keywords?.trim()) parts.push(`"${f.keywords.trim()}"`);
     return parts.length ? parts.join(" · ") : "Sökning utan filter";
   };
   const formatRelative = (iso: string): string => {
@@ -193,6 +212,7 @@ export default function Leads() {
     if (d < 7) return `för ${d} dagar sedan`;
     return new Date(iso).toLocaleDateString("sv-SE");
   };
+
 
   const [recentOpen, setRecentOpen] = useState(false);
 
