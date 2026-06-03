@@ -7,6 +7,7 @@
 // Requires the "Nordic Signal" fonts from index.css (see HANDOFF.md).
 // ============================================================
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,6 +15,7 @@ import {
   Send, Zap, Target, Inbox, Shield,
 } from "lucide-react";
 import { LANDING_FAQS } from "@/data/landingFaqs";
+import { LEGAL } from "@/config/legal";
 
 const TYPE_TEXT =
   "Hej Sara,\n\nsåg att Kavalan växer snabbt — grattis! Hur hanterar ni outbound i dag? Värt ett kort samtal nästa vecka?\n\n/ Alex";
@@ -146,14 +148,14 @@ export default function AuroraLanding() {
 
       <div className="page">
         <nav className="nav"><div className="nav-in">
-          <span className="lock"><Mark /><span className="wm">Mail<span className="l">Lead</span><span className="t">.ai</span></span></span>
-          <div className="nav-links"><a href="#">Funktioner</a><a href="#">Priser</a><a href="#">Kunder</a></div>
+          <Link to="/" className="lock"><Mark /><span className="wm">Mail<span className="l">Lead</span><span className="t">.ai</span></span></Link>
+          <div className="nav-links"><a href="#features">Funktioner</a><Link to="/pricing">Priser</Link></div>
           <div className="nav-r">
             <button className="theme-btn" aria-label="Byt tema" onClick={() => setTheme(isDark ? "light" : "dark")}>
               {mounted ? (isDark ? <Sun size={18} /> : <Moon size={18} />) : null}
             </button>
-            <button className="btn btn-ghost">Logga in</button>
-            <button className="btn btn-glass">Prova gratis</button>
+            <Link to="/login" className="btn btn-ghost">Logga in</Link>
+            <Link to="/signup" className="btn btn-glass">Prova gratis</Link>
           </div>
         </div></nav>
 
@@ -163,10 +165,11 @@ export default function AuroraLanding() {
           <h1 className="hh">Outbound som känns <span className="em">skriven för hand</span></h1>
           <p className="hsub">MailLead.ai genererar personliga kalla mejl och uppföljningar för varje lead — och samlar svaren i en inkorg.</p>
           <div className="hcta">
-            <button className="btn btn-pri btn-lg magnet">Skapa ditt första mejl – gratis</button>
-            <button className="btn btn-glass btn-lg">Boka demo</button>
+            <Link to="/signup" className="btn btn-pri btn-lg magnet">Skapa ditt första mejl – gratis</Link>
+            <a href={`mailto:${LEGAL.contactEmail}?subject=Boka%20demo%20av%20MailLead.ai`} className="btn btn-glass btn-lg">Boka demo</a>
           </div>
           <p className="hnote">Inget kreditkort krävs · Gratis upp till 10 leads</p>
+
 
           <div className="stage reveal"><div className="glass" ref={glassRef}>
             <div className="g-head">
@@ -216,7 +219,7 @@ export default function AuroraLanding() {
         </div></section>
 
         {/* FEATURES */}
-        <section className="section"><div className="wrap">
+        <section className="section" id="features"><div className="wrap">
           <p className="eyebrow reveal">Funktioner</p>
           <h2 className="sec-h reveal">Hela outbound-flödet på ett ställe</h2>
           <p className="sec-sub reveal">Från leadimport till svar — utan att lämna MailLead.</p>
@@ -250,7 +253,7 @@ export default function AuroraLanding() {
                   <li key={f}><Check size={16} strokeWidth={2.5} /> {f}</li>
                 ))}
               </ul>
-              <button className="btn btn-glass">Kom igång – det är gratis</button>
+              <Link to="/signup" className="btn btn-glass">Kom igång – det är gratis</Link>
             </div>
             <div className="pcard pop reveal">
               <span className="pbadge">Populärast</span>
@@ -262,7 +265,7 @@ export default function AuroraLanding() {
                   <li key={f}><Check size={16} strokeWidth={2.5} /> {f}</li>
                 ))}
               </ul>
-              <button className="btn btn-pri">Lås upp obegränsade utskick</button>
+              <Link to="/signup" className="btn btn-pri">Lås upp obegränsade utskick</Link>
             </div>
           </div>
           <div className="guarantee reveal"><Shield size={15} /> 30 dagars pengarna-tillbaka-garanti · Inga frågor</div>
@@ -286,13 +289,13 @@ export default function AuroraLanding() {
         <section className="cta">
           <h2>Redo att fylla pipelinen?</h2>
           <p>Gå med i hundratals team som bokar fler möten med MailLead.ai.</p>
-          <button className="btn btn-pri btn-lg magnet">Prova gratis – inget kreditkort</button>
+          <Link to="/signup" className="btn btn-pri btn-lg magnet">Prova gratis – inget kreditkort</Link>
         </section>
 
         {/* FOOTER */}
         <footer className="footer"><div className="footer-in">
-          <span className="lock"><Mark size={32} /><span className="wm" style={{ fontSize: 18 }}>Mail<span className="l">Lead</span><span className="t">.ai</span></span></span>
-          <div className="footer-links"><a href="#">Integritet</a><a href="#">Villkor</a><a href="#">Cookies</a></div>
+          <Link to="/" className="lock"><Mark size={32} /><span className="wm" style={{ fontSize: 18 }}>Mail<span className="l">Lead</span><span className="t">.ai</span></span></Link>
+          <div className="footer-links"><Link to="/legal/privacy">Integritet</Link><Link to="/legal/terms">Villkor</Link><Link to="/legal/cookies">Cookies</Link></div>
           <p className="footer-copy">© 2026 MailLead.ai · CRMdata i Sverige AB</p>
         </div></footer>
       </div>
