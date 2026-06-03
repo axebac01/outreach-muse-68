@@ -26,6 +26,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import ImportToSequencePicker from "@/components/leads/ImportToSequencePicker";
 import MyLeadsTab from "@/components/leads/MyLeadsTab";
+import MultiSelectFilter from "@/components/leads/MultiSelectFilter";
+import ChipInput from "@/components/leads/ChipInput";
 
 const MAX_BULK_SELECT = 500;
 
@@ -112,13 +114,20 @@ export default function Leads() {
     }
   })();
 
+  // Helper för migrering: gammalt single-value (string) -> array
+  const toArr = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string" && !!x);
+    if (typeof v === "string" && v) return [v];
+    return [];
+  };
+
   const [titles, setTitles] = useState<string>(initialFilters?.titles ?? "");
-  const [role, setRole] = useState<string>(initialFilters?.role ?? "");
-  const [industry, setIndustry] = useState<string>(initialFilters?.industry ?? "");
+  const [roles, setRoles] = useState<string[]>(toArr(initialFilters?.roles ?? initialFilters?.role));
+  const [industries, setIndustries] = useState<string[]>(toArr(initialFilters?.industries ?? initialFilters?.industry));
   const [locations, setLocations] = useState<string>(initialFilters?.locations ?? "Sweden");
   const [keywords, setKeywords] = useState<string>(initialFilters?.keywords ?? "");
-  const [seniority, setSeniority] = useState<string>(initialFilters?.seniority ?? "");
-  const [employees, setEmployees] = useState<string>(initialFilters?.employees ?? "");
+  const [seniorities, setSeniorities] = useState<string[]>(toArr(initialFilters?.seniorities ?? initialFilters?.seniority));
+  const [employeesRanges, setEmployeesRanges] = useState<string[]>(toArr(initialFilters?.employeesRanges ?? initialFilters?.employees));
   const [page, setPage] = useState<number>(initialFilters?.page ?? 1);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -130,45 +139,66 @@ export default function Leads() {
     try {
       localStorage.setItem(
         FILTERS_KEY,
-        JSON.stringify({ titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered })
+        JSON.stringify({ titles, roles, industries, locations, keywords, seniorities, employeesRanges, page, searchTriggered })
       );
     } catch {
       // ignore storage errors (quota, private mode)
     }
-  }, [titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered]);
+  }, [titles, roles, industries, locations, keywords, seniorities, employeesRanges, page, searchTriggered]);
+
+
 
   // ---------- Senaste sökningar (DB-persistens) ----------
   type FilterSnapshot = {
-    titles: string; role: string; industry: string; locations: string;
-    keywords: string; seniority: string; employees: string;
+    titles: string;
+    roles: string[];
+    industries: string[];
+    locations: string;
+    keywords: string;
+    seniorities: string[];
+    employeesRanges: string[];
   };
+  const sortArr = (a: string[]) => [...a].map((s) => s.trim()).filter(Boolean).sort();
   const normalizeFilters = (f: FilterSnapshot): FilterSnapshot => ({
-    titles: f.titles.trim(), role: f.role.trim(), industry: f.industry.trim(),
-    locations: f.locations.trim(), keywords: f.keywords.trim(),
-    seniority: f.seniority.trim(), employees: f.employees.trim(),
+    titles: f.titles.trim(),
+    roles: sortArr(f.roles),
+    industries: sortArr(f.industries),
+    locations: f.locations.trim(),
+    keywords: f.keywords.trim(),
+    seniorities: sortArr(f.seniorities),
+    employeesRanges: sortArr(f.employeesRanges),
   });
   const hashFilters = (f: FilterSnapshot): string => {
     const n = normalizeFilters(f);
-    return [n.titles, n.role, n.industry, n.locations, n.keywords, n.seniority, n.employees]
-      .map((s) => s.toLowerCase())
-      .join("|");
+    return [
+      n.titles,
+      n.roles.join(","),
+      n.industries.join(","),
+      n.locations,
+      n.keywords,
+      n.seniorities.join(","),
+      n.employeesRanges.join(","),
+    ].map((s) => s.toLowerCase()).join("|");
   };
   const filtersAreEmpty = (f: FilterSnapshot): boolean => {
     const n = normalizeFilters(f);
-    return !n.titles && !n.role && !n.industry && !n.keywords && !n.seniority && !n.employees
+    return !n.titles && n.roles.length === 0 && n.industries.length === 0 && !n.keywords
+      && n.seniorities.length === 0 && n.employeesRanges.length === 0
       && (!n.locations || n.locations.toLowerCase() === "sweden");
   };
   const summarizeFilters = (f: FilterSnapshot): string => {
     const parts: string[] = [];
-    const roleLabel = ROLES.find((r) => r.value === f.role)?.label;
-    if (roleLabel) parts.push(roleLabel);
-    if (f.titles.trim()) parts.push(f.titles.trim());
-    if (f.seniority) parts.push(SENIORITIES.find((s) => s.value === f.seniority)?.label ?? f.seniority);
-    const indLabel = INDUSTRIES.find((i) => i.value === f.industry)?.label;
-    if (indLabel) parts.push(indLabel);
-    if (f.employees) parts.push(EMPLOYEE_RANGES.find((e) => e.value === f.employees)?.label ?? f.employees);
-    if (f.locations.trim()) parts.push(f.locations.trim());
-    if (f.keywords.trim()) parts.push(`"${f.keywords.trim()}"`);
+    const roleArr = Array.isArray(f.roles) ? f.roles : [];
+    const seniorityArr = Array.isArray(f.seniorities) ? f.seniorities : [];
+    const indArr = Array.isArray(f.industries) ? f.industries : [];
+    const empArr = Array.isArray(f.employeesRanges) ? f.employeesRanges : [];
+    if (roleArr.length) parts.push(roleArr.map((v) => ROLES.find((r) => r.value === v)?.label ?? v).join(", "));
+    if (f.titles?.trim()) parts.push(f.titles.trim());
+    if (seniorityArr.length) parts.push(seniorityArr.map((v) => SENIORITIES.find((s) => s.value === v)?.label ?? v).join(", "));
+    if (indArr.length) parts.push(indArr.map((v) => INDUSTRIES.find((i) => i.value === v)?.label ?? v).join(", "));
+    if (empArr.length) parts.push(empArr.map((v) => EMPLOYEE_RANGES.find((e) => e.value === v)?.label ?? v).join(", "));
+    if (f.locations?.trim()) parts.push(f.locations.trim());
+    if (f.keywords?.trim()) parts.push(`"${f.keywords.trim()}"`);
     return parts.length ? parts.join(" · ") : "Sökning utan filter";
   };
   const formatRelative = (iso: string): string => {
@@ -184,6 +214,7 @@ export default function Leads() {
     if (d < 7) return `för ${d} dagar sedan`;
     return new Date(iso).toLocaleDateString("sv-SE");
   };
+
 
   const [recentOpen, setRecentOpen] = useState(false);
 
@@ -205,17 +236,18 @@ export default function Leads() {
   const applyRecent = (r: { filters: any }) => {
     const f = r.filters || {};
     setTitles(f.titles ?? "");
-    setRole(f.role ?? "");
-    setIndustry(f.industry ?? "");
+    setRoles(toArr(f.roles ?? f.role));
+    setIndustries(toArr(f.industries ?? f.industry));
     setLocations(f.locations ?? "Sweden");
     setKeywords(f.keywords ?? "");
-    setSeniority(f.seniority ?? "");
-    setEmployees(f.employees ?? "");
+    setSeniorities(toArr(f.seniorities ?? f.seniority));
+    setEmployeesRanges(toArr(f.employeesRanges ?? f.employees));
     setPage(1);
     setSelected(new Set());
     setSearchTriggered(true);
     setRecentOpen(false);
   };
+
 
   const deleteRecent = async (id: string) => {
     await supabase.from("lead_searches").delete().eq("id", id);
@@ -248,11 +280,11 @@ export default function Leads() {
 
 
   const search = useQuery({
-    queryKey: ["leads-search", { titles, role, industry, locations, keywords, seniority, employees, page }],
+    queryKey: ["leads-search", { titles, roles, industries, locations, keywords, seniorities, employeesRanges, page }],
     queryFn: async () => {
-      // Merge free-text titles with preset role titles
+      // Merge free-text titles with preset roles' titles
       const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
-      const roleTitles = role ? ROLES.find((r) => r.value === role)?.titles ?? [] : [];
+      const roleTitles = roles.flatMap((rv) => ROLES.find((r) => r.value === rv)?.titles ?? []);
       const mergedTitles = Array.from(new Set([...freeTitles, ...roleTitles]));
 
       const { data, error } = await supabase.functions.invoke("leads-search", {
@@ -261,12 +293,12 @@ export default function Leads() {
           per_page: 25,
           q_keywords: keywords || undefined,
           person_titles: mergedTitles.length ? mergedTitles : undefined,
-          person_seniorities: seniority ? [seniority] : undefined,
+          person_seniorities: seniorities.length ? seniorities : undefined,
           organization_locations: locations
             ? locations.split(",").map((s) => s.trim()).filter(Boolean)
             : undefined,
-          organization_num_employees_ranges: employees ? [employees] : undefined,
-          organization_industry_tag_ids: industry ? [industry] : undefined,
+          organization_num_employees_ranges: employeesRanges.length ? employeesRanges : undefined,
+          organization_industry_tag_ids: industries.length ? industries : undefined,
         },
       });
       if (error) {
@@ -297,7 +329,7 @@ export default function Leads() {
   // Spara sökning i DB när nytt sökresultat kommit
   useEffect(() => {
     if (!user || !search.isSuccess || !search.data) return;
-    const snap: FilterSnapshot = { titles, role, industry, locations, keywords, seniority, employees };
+    const snap: FilterSnapshot = { titles, roles, industries, locations, keywords, seniorities, employeesRanges };
     if (filtersAreEmpty(snap)) return;
     const filters_hash = hashFilters(snap);
     const total_results = search.data.pagination?.total_entries ?? null;
@@ -353,19 +385,19 @@ export default function Leads() {
 
   const buildSearchBody = (pageNum: number) => {
     const freeTitles = titles ? titles.split(",").map((s) => s.trim()).filter(Boolean) : [];
-    const roleTitles = role ? ROLES.find((r) => r.value === role)?.titles ?? [] : [];
+    const roleTitles = roles.flatMap((rv) => ROLES.find((r) => r.value === rv)?.titles ?? []);
     const mergedTitles = Array.from(new Set([...freeTitles, ...roleTitles]));
     return {
       page: pageNum,
       per_page: 25,
       q_keywords: keywords || undefined,
       person_titles: mergedTitles.length ? mergedTitles : undefined,
-      person_seniorities: seniority ? [seniority] : undefined,
+      person_seniorities: seniorities.length ? seniorities : undefined,
       organization_locations: locations
         ? locations.split(",").map((s) => s.trim()).filter(Boolean)
         : undefined,
-      organization_num_employees_ranges: employees ? [employees] : undefined,
-      organization_industry_tag_ids: industry ? [industry] : undefined,
+      organization_num_employees_ranges: employeesRanges.length ? employeesRanges : undefined,
+      organization_industry_tag_ids: industries.length ? industries : undefined,
     };
   };
 
@@ -602,86 +634,63 @@ export default function Leads() {
             <Card>
               <CardContent className="pt-6 space-y-4">
                 <div>
-                  <Label htmlFor="role">Roll</Label>
-                  <Select value={role} onValueChange={(v) => setRole(v === "any" ? "" : v)}>
-                    <SelectTrigger id="role">
-                      <SelectValue placeholder="Alla roller" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Alla roller</SelectItem>
-                      {ROLES.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
-                          {r.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Roller</Label>
+                  <MultiSelectFilter
+                    label="Roller"
+                    placeholder="Alla roller"
+                    options={ROLES.map((r) => ({ value: r.value, label: r.label }))}
+                    value={roles}
+                    onChange={setRoles}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="industry">Bransch</Label>
-                  <Select value={industry} onValueChange={(v) => setIndustry(v === "any" ? "" : v)}>
-                    <SelectTrigger id="industry">
-                      <SelectValue placeholder="Alla branscher" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Alla branscher</SelectItem>
-                      {INDUSTRIES.map((i) => (
-                        <SelectItem key={i.value} value={i.value}>
-                          {i.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Bransch</Label>
+                  <MultiSelectFilter
+                    label="Bransch"
+                    placeholder="Alla branscher"
+                    options={INDUSTRIES}
+                    value={industries}
+                    onChange={setIndustries}
+                    searchable
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="titles">Egna titlar (kommaseparerade)</Label>
-                  <Input
+                  <Label htmlFor="titles">Egna titlar</Label>
+                  <ChipInput
                     id="titles"
-                    placeholder="t.ex. Head of Growth"
                     value={titles}
-                    onChange={(e) => setTitles(e.target.value)}
+                    onChange={setTitles}
+                    placeholder="t.ex. Head of Growth (Enter)"
                   />
                 </div>
                 <div>
                   <Label htmlFor="locations">Land/stad</Label>
-                  <Input
+                  <ChipInput
                     id="locations"
-                    placeholder="Sweden, Stockholm"
                     value={locations}
-                    onChange={(e) => setLocations(e.target.value)}
+                    onChange={setLocations}
+                    placeholder="Sweden, Stockholm (Enter)"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="seniority">Senioritet</Label>
-                  <Select value={seniority} onValueChange={(v) => setSeniority(v === "any" ? "" : v)}>
-                    <SelectTrigger id="seniority">
-                      <SelectValue placeholder="Alla" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Alla</SelectItem>
-                      {SENIORITIES.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Senioritet</Label>
+                  <MultiSelectFilter
+                    label="Senioritet"
+                    placeholder="Alla"
+                    options={SENIORITIES}
+                    value={seniorities}
+                    onChange={setSeniorities}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="employees">Företagsstorlek</Label>
-                  <Select value={employees} onValueChange={(v) => setEmployees(v === "any" ? "" : v)}>
-                    <SelectTrigger id="employees">
-                      <SelectValue placeholder="Alla" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">Alla</SelectItem>
-                      {EMPLOYEE_RANGES.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
-                          {r.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Företagsstorlek</Label>
+                  <MultiSelectFilter
+                    label="Företagsstorlek"
+                    placeholder="Alla"
+                    options={EMPLOYEE_RANGES}
+                    value={employeesRanges}
+                    onChange={setEmployeesRanges}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="keywords">Sökord</Label>
@@ -707,12 +716,12 @@ export default function Leads() {
                       variant="outline"
                       onClick={() => {
                         setTitles("");
-                        setRole("");
-                        setIndustry("");
+                        setRoles([]);
+                        setIndustries([]);
                         setLocations("Sweden");
                         setKeywords("");
-                        setSeniority("");
-                        setEmployees("");
+                        setSeniorities([]);
+                        setEmployeesRanges([]);
                         setPage(1);
                         setSearchTriggered(false);
                         setSelected(new Set());
