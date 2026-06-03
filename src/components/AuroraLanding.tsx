@@ -13,6 +13,7 @@ import {
   Check, ChevronDown, Sun, Moon, Upload, Sparkles,
   Send, Zap, Target, Inbox, Shield,
 } from "lucide-react";
+import { LANDING_FAQS } from "@/data/landingFaqs";
 
 const TYPE_TEXT =
   "Hej Sara,\n\nsåg att Kavalan växer snabbt — grattis! Hur hanterar ni outbound i dag? Värt ett kort samtal nästa vecka?\n\n/ Alex";
@@ -36,12 +37,7 @@ const FEATURES = [
   [<Inbox size={20} key="i" />, "Unibox", "Alla svar från alla inkorgar samlade på ett ställe."],
 ];
 
-const FAQS = [
-  ["Kan jag avsluta när som helst?", "Ja – avsluta när som helst från inställningarna. Inga frågor. Är du på Growth har du tillgång till slutet av faktureringsperioden."],
-  ["Vad händer när jag når gratisgränsen?", "Du kan fortfarande se dina befintliga kampanjer och mejl. För att skapa fler utskick eller nya kampanjer uppgraderar du till Growth."],
-  ["Sparar ni mina leaddata?", "Ja, dina leads sparas säkert så att du kommer åt dina kampanjer när som helst. Vi delar eller säljer aldrig dina data."],
-  ["Kan jag testa Growth innan jag betalar?", "Starter-planen ger dig full tillgång till AI-motorn. Growth tar bara bort gränserna så att du kan skala."],
-];
+const FAQS: [string, string][] = LANDING_FAQS.map(({ q, a }) => [q, a]);
 
 function useCountUp(to: number, dec = 0, run = false) {
   const [v, setV] = useState(0);
