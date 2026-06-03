@@ -1,33 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
 export function useCreditBalance() {
   const { user } = useAuth();
-  const [balance, setBalance] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!user) {
-      setBalance(null);
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-
-    const load = async () => {
+  const { data, isLoading } = useQuery({
+    queryKey: ["credit-wallet", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
       const { data } = await supabase
         .from("credit_wallets")
         .select("balance")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .maybeSingle();
-      if (!cancelled) {
-        setBalance(data?.balance ?? 0);
-        setLoading(false);
-      }
-    };
-    load();
+      return { balance: data?.balance ?? 0 };
+    },
+  });
 
+  useEffect(() => {
+    if (!user) return;
     const channel = supabase
       .channel(`credit-wallet-${user.id}`)
       .on(
@@ -35,16 +29,18 @@ export function useCreditBalance() {
         { event: "*", schema: "public", table: "credit_wallets", filter: `user_id=eq.${user.id}` },
         (payload) => {
           const newBalance = (payload.new as any)?.balance;
-          if (typeof newBalance === "number") setBalance(newBalance);
+          if (typeof newBalance === "number") {
+            queryClient.setQueryData(["credit-wallet", user.id], { balance: newBalance });
+          } else {
+            queryClient.invalidateQueries({ queryKey: ["credit-wallet", user.id] });
+          }
         }
       )
       .subscribe();
-
     return () => {
-      cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, queryClient]);
 
-  return { balance, loading };
+  return { balance: data?.balance ?? null, loading: isLoading };
 }
