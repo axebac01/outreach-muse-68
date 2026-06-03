@@ -211,6 +211,9 @@ export default function Leads() {
         }
       }
       setSelected(new Set());
+      if (typeof data.balance === "number" && user) {
+        queryClient.setQueryData(["credit-wallet", user.id], { balance: data.balance });
+      }
       queryClient.invalidateQueries({ queryKey: ["credit-wallet"] });
       queryClient.invalidateQueries({ queryKey: ["marketplace-leads"] });
     },
