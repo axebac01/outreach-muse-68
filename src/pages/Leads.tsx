@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -96,19 +96,43 @@ export default function Leads() {
   const queryClient = useQueryClient();
   const { balance } = useCreditBalance();
 
-  const [titles, setTitles] = useState("");
-  const [role, setRole] = useState<string>("");
-  const [industry, setIndustry] = useState<string>("");
-  const [locations, setLocations] = useState("Sweden");
-  const [keywords, setKeywords] = useState("");
-  const [seniority, setSeniority] = useState<string>("");
-  const [employees, setEmployees] = useState<string>("");
-  const [page, setPage] = useState(1);
+  // Persisted filter state
+  const FILTERS_KEY = "leads:filters:v1";
+  const initialFilters = (() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(FILTERS_KEY) : null;
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const [titles, setTitles] = useState<string>(initialFilters?.titles ?? "");
+  const [role, setRole] = useState<string>(initialFilters?.role ?? "");
+  const [industry, setIndustry] = useState<string>(initialFilters?.industry ?? "");
+  const [locations, setLocations] = useState<string>(initialFilters?.locations ?? "Sweden");
+  const [keywords, setKeywords] = useState<string>(initialFilters?.keywords ?? "");
+  const [seniority, setSeniority] = useState<string>(initialFilters?.seniority ?? "");
+  const [employees, setEmployees] = useState<string>(initialFilters?.employees ?? "");
+  const [page, setPage] = useState<number>(initialFilters?.page ?? 1);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [searchTriggered, setSearchTriggered] = useState(false);
+  const [searchTriggered, setSearchTriggered] = useState<boolean>(initialFilters?.searchTriggered ?? false);
 
   const [sequenceId, setSequenceId] = useState<string>("");
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        FILTERS_KEY,
+        JSON.stringify({ titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered })
+      );
+    } catch {
+      // ignore storage errors (quota, private mode)
+    }
+  }, [titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered]);
+
+
 
   const { data: sequences = [] } = useQuery({
     queryKey: ["sequences-for-import", user?.id],
@@ -168,7 +192,10 @@ export default function Leads() {
     },
     enabled: searchTriggered,
     retry: false,
+    staleTime: 10 * 60 * 1000, // 10 min — samma sökning refetchar inte direkt vid återbesök
+    gcTime: 60 * 60 * 1000, // 1h — behåll cachen länge
   });
+
 
   // Track which provider_ids in the current search page are already revealed
   const pageProviderIds = (search.data?.people ?? []).map((p) => p.provider_id);
@@ -409,14 +436,42 @@ export default function Leads() {
                     onChange={(e) => setKeywords(e.target.value)}
                   />
                 </div>
-                <Button type="submit" className="w-full gap-2" disabled={search.isFetching}>
-                  {search.isFetching ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
+                <div className="flex gap-2">
+                  <Button type="submit" className="flex-1 gap-2" disabled={search.isFetching}>
+                    {search.isFetching ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    Sök
+                  </Button>
+                  {searchTriggered && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setTitles("");
+                        setRole("");
+                        setIndustry("");
+                        setLocations("Sweden");
+                        setKeywords("");
+                        setSeniority("");
+                        setEmployees("");
+                        setPage(1);
+                        setSearchTriggered(false);
+                        setSelected(new Set());
+                        try {
+                          localStorage.removeItem(FILTERS_KEY);
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                    >
+                      Rensa
+                    </Button>
                   )}
-                  Sök
-                </Button>
+                </div>
+
               </CardContent>
             </Card>
           </form>
