@@ -96,19 +96,43 @@ export default function Leads() {
   const queryClient = useQueryClient();
   const { balance } = useCreditBalance();
 
-  const [titles, setTitles] = useState("");
-  const [role, setRole] = useState<string>("");
-  const [industry, setIndustry] = useState<string>("");
-  const [locations, setLocations] = useState("Sweden");
-  const [keywords, setKeywords] = useState("");
-  const [seniority, setSeniority] = useState<string>("");
-  const [employees, setEmployees] = useState<string>("");
-  const [page, setPage] = useState(1);
+  // Persisted filter state
+  const FILTERS_KEY = "leads:filters:v1";
+  const initialFilters = (() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(FILTERS_KEY) : null;
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const [titles, setTitles] = useState<string>(initialFilters?.titles ?? "");
+  const [role, setRole] = useState<string>(initialFilters?.role ?? "");
+  const [industry, setIndustry] = useState<string>(initialFilters?.industry ?? "");
+  const [locations, setLocations] = useState<string>(initialFilters?.locations ?? "Sweden");
+  const [keywords, setKeywords] = useState<string>(initialFilters?.keywords ?? "");
+  const [seniority, setSeniority] = useState<string>(initialFilters?.seniority ?? "");
+  const [employees, setEmployees] = useState<string>(initialFilters?.employees ?? "");
+  const [page, setPage] = useState<number>(initialFilters?.page ?? 1);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [searchTriggered, setSearchTriggered] = useState(false);
+  const [searchTriggered, setSearchTriggered] = useState<boolean>(initialFilters?.searchTriggered ?? false);
 
   const [sequenceId, setSequenceId] = useState<string>("");
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        FILTERS_KEY,
+        JSON.stringify({ titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered })
+      );
+    } catch {
+      // ignore storage errors (quota, private mode)
+    }
+  }, [titles, role, industry, locations, keywords, seniority, employees, page, searchTriggered]);
+
+
 
   const { data: sequences = [] } = useQuery({
     queryKey: ["sequences-for-import", user?.id],
