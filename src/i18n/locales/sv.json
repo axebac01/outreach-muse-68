@@ -69,7 +69,7 @@
       "portStartTls": "587 — STARTTLS",
       "portPlain": "25 — okrypterat (avrådes)",
       "sameAsSmtpToggle": "Använd samma inställningar för IMAP",
-      "noImapWarning": "Utan IMAP kan vi bara skicka mejl — vi kan inte synka inkommande svar till inkorgen.",
+      "noImapWarning": "IMAP är obligatoriskt. Utan IMAP kan vi inte upptäcka när ett lead svarar — och då skulle vi fortsätta skicka uppföljningar efter svar. Fyll i IMAP-värden eller slå på \"Använd samma inställningar\".",
       "detectedProvider": "Det här ser ut som ett {{provider}}-konto. Vill du använda guiden istället?",
       "useGuide": "Använd {{provider}}-guiden"
     },

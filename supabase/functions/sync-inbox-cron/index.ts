@@ -21,13 +21,15 @@ Deno.serve(async (req) => {
   try {
     const { data: accounts } = await admin
       .from("email_accounts")
-      .select("user_id")
-      .eq("status", "active")
-      .in("auth_type", ["oauth"]);
+      .select("user_id, auth_type, imap_host")
+      .eq("status", "active");
+    const eligible = (accounts ?? []).filter((a: any) =>
+      a.auth_type === "oauth" || (a.auth_type === "smtp" && a.imap_host)
+    );
 
-    const userIds = Array.from(new Set((accounts ?? []).map((a: any) => a.user_id)));
+    const userIds = Array.from(new Set(eligible.map((a: any) => a.user_id)));
     result.users = userIds.length;
-    result.accounts = accounts?.length ?? 0;
+    result.accounts = eligible.length;
 
     // Process users in parallel but bounded to avoid blowing the function timeout.
     const BATCH = 5;

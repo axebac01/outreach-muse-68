@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { simpleParser } from "npm:mailparser@3.7.2";
 import { corsHeaders, decryptToken, getValidGoogleAccessToken, getValidMicrosoftAccessToken } from "../_shared/oauth.ts";
+import { ImapClient, ImapError } from "../_shared/imapClient.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -426,6 +428,131 @@ async function syncOutlook(admin: any, account: any) {
   return inserted;
 }
 
+async function syncImap(admin: any, account: any): Promise<number> {
+  if (!account.imap_host || !account.imap_port || !account.imap_username || !account.imap_password_enc) {
+    throw new Error("IMAP not configured for this account");
+  }
+  const password = await decryptToken(admin, account.imap_password_enc);
+  const client = new ImapClient({
+    host: account.imap_host,
+    port: Number(account.imap_port),
+    secure: account.imap_secure !== false,
+    username: account.imap_username,
+    password,
+  });
+
+  const MAX_MESSAGES = 50;
+  let inserted = 0;
+  let newHighestUid = account.imap_last_uid ?? 0;
+
+  try {
+    await client.connect();
+    try {
+      await client.login();
+    } catch (e: any) {
+      // Auth failures: mark account as needing reconnect.
+      await admin.from("email_accounts").update({
+        status: "error",
+        status_message: `IMAP login failed: ${(e?.message ?? "unknown").slice(0, 200)}`,
+      }).eq("id", account.id);
+      throw e;
+    }
+    const box = await client.selectInbox();
+
+    // Detect UIDVALIDITY shift — restart from a 14-day window if we have a
+    // last_uid but the mailbox got recreated/renumbered.
+    let uids: number[] = [];
+    const lastUid: number = account.imap_last_uid ?? 0;
+    if (lastUid > 0 && box.uidNext && lastUid < box.uidNext * 10) {
+      uids = await client.searchSinceUid(lastUid + 1);
+    } else {
+      const since = new Date(Date.now() - 14 * 24 * 3600 * 1000);
+      uids = await client.searchSince(since);
+    }
+
+    // Sort + cap
+    uids = uids.slice(-MAX_MESSAGES);
+
+    const accountEmailLower = String(account.email).toLowerCase();
+    for (const uid of uids) {
+      let msg;
+      try {
+        msg = await client.fetchRaw(uid);
+      } catch (e: any) {
+        console.warn(`IMAP fetch failed uid=${uid}:`, e?.message);
+        continue;
+      }
+      if (!msg) continue;
+
+      if (msg.uid > newHighestUid) newHighestUid = msg.uid;
+
+      // Dedupe: same UID may have been processed before
+      const providerId = `imap-${account.id}-${msg.uid}`;
+      const { data: existing } = await admin
+        .from("email_messages")
+        .select("id")
+        .eq("provider_message_id", providerId)
+        .eq("email_account_id", account.id)
+        .maybeSingle();
+      if (existing) continue;
+
+      // Parse MIME
+      let parsedMail: any;
+      try {
+        parsedMail = await simpleParser(msg.raw);
+      } catch (e: any) {
+        console.warn(`MIME parse failed uid=${msg.uid}:`, e?.message);
+        continue;
+      }
+
+      const fromAddr = parsedMail.from?.value?.[0]?.address ?? "";
+      if (!fromAddr) continue;
+      if (fromAddr.toLowerCase() === accountEmailLower) continue;
+
+      const fromName = parsedMail.from?.value?.[0]?.name;
+      const toArr: any[] = parsedMail.to?.value ?? [];
+      const toStr = toArr.map((t) => t.address).filter(Boolean).join(", ") || account.email;
+
+      const refsRaw: string = parsedMail.references ?? "";
+      const references: string[] = Array.isArray(parsedMail.references)
+        ? parsedMail.references
+        : (refsRaw ? refsRaw.split(/\s+/).filter(Boolean) : []);
+
+      const bodyText: string = parsedMail.text ?? "";
+      const bodyHtml: string | null = parsedMail.html || null;
+      const snippet = (parsedMail.text || (bodyHtml ? bodyHtml.replace(/<[^>]+>/g, " ") : "")).slice(0, 220);
+
+      const parsed: ParsedMessage = {
+        message_id_header: parsedMail.messageId ?? null,
+        in_reply_to: parsedMail.inReplyTo ?? null,
+        references,
+        thread_id: null,
+        from: fromName ? `${fromName} <${fromAddr}>` : fromAddr,
+        to: toStr,
+        subject: parsedMail.subject ?? "",
+        date: (parsedMail.date instanceof Date ? parsedMail.date : new Date()).toISOString(),
+        body_text: bodyText,
+        body_html: bodyHtml,
+        snippet,
+      };
+
+      await persistInbound(admin, account, parsed, providerId);
+      inserted++;
+    }
+  } finally {
+    try { await client.logout(); } catch (_) { /* noop */ }
+  }
+
+  // Persist progress + clear any error
+  await admin.from("email_accounts").update({
+    last_synced_at: new Date().toISOString(),
+    status_message: null,
+    imap_last_uid: newHighestUid > 0 ? newHighestUid : null,
+  }).eq("id", account.id);
+
+  return inserted;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -452,7 +579,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: accounts } = await admin
       .from("email_accounts")
-      .select("id, user_id, email, provider, auth_type, access_token_enc, refresh_token_enc, token_expires_at, status, history_id, imap_last_uid")
+      .select("id, user_id, email, provider, auth_type, access_token_enc, refresh_token_enc, token_expires_at, status, history_id, imap_last_uid, imap_host, imap_port, imap_secure, imap_username, imap_password_enc")
       .eq("user_id", userId)
       .eq("status", "active");
 
@@ -464,8 +591,10 @@ Deno.serve(async (req) => {
           totalNew += await syncGmail(admin, acc);
         } else if (acc.auth_type === "oauth" && acc.provider === "outlook") {
           totalNew += await syncOutlook(admin, acc);
+        } else if (acc.auth_type === "smtp" && acc.imap_host) {
+          totalNew += await syncImap(admin, acc);
         } else {
-          // IMAP path not yet implemented in this iteration
+          // SMTP without IMAP — no inbound sync possible
           continue;
         }
       } catch (e: any) {
