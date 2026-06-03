@@ -41,7 +41,7 @@ export async function apolloSearch(params: ApolloSearchParams): Promise<{
   people: ApolloPersonPreview[];
   pagination: { page: number; per_page: number; total_entries: number; total_pages: number };
 }> {
-  const res = await fetch(`${APOLLO_BASE}/mixed_people/search`, {
+  const res = await fetch(`${APOLLO_BASE}/mixed_people/api_search`, {
     method: "POST",
     headers: {
       "Cache-Control": "no-cache",
