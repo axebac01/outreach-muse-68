@@ -292,6 +292,51 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Last-mile safety: re-check lead status and sequence pause state right
+    // before sending. Eliminates the race where a reply lands between the
+    // scheduler's pre-check and the actual SMTP/API call.
+    if (lead_id) {
+      const { data: leadRow } = await admin
+        .from("sequence_leads")
+        .select("status")
+        .eq("id", lead_id)
+        .maybeSingle();
+      if (leadRow && ["replied", "unsubscribed", "bounced", "completed"].includes(leadRow.status)) {
+        return new Response(
+          JSON.stringify({ error: `Lead status is ${leadRow.status}`, skipped: true, reason: `lead_${leadRow.status}` }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+    if (sequence_id) {
+      const { data: seqRow } = await admin
+        .from("sequences")
+        .select("status")
+        .eq("id", sequence_id)
+        .maybeSingle();
+      if (seqRow && ["paused", "completed"].includes(seqRow.status)) {
+        return new Response(
+          JSON.stringify({ error: `Sequence is ${seqRow.status}`, skipped: true, reason: `sequence_${seqRow.status}` }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+    // Bounce check (one more time, in case sync detected a hard bounce since scheduling)
+    {
+      const { data: bounced } = await admin
+        .from("bounces")
+        .select("id")
+        .eq("user_id", userId)
+        .ilike("email", toLower)
+        .maybeSingle();
+      if (bounced) {
+        return new Response(
+          JSON.stringify({ error: "Recipient has bounced", skipped: true, reason: "bounce" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Build From with per-account sender_name override
     const fromName = account.sender_name || account.display_name;
     const fromAddr = fromName ? `${fromName} <${account.email}>` : account.email;

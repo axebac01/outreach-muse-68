@@ -106,8 +106,11 @@ Deno.serve(async (req) => {
         .eq("id", row.lead_id)
         .maybeSingle();
 
-      if (!lead || ["replied", "unsubscribed", "bounced", "completed"].includes(lead.status)) {
-        await admin.from("scheduled_sends").update({ status: "cancelled" }).eq("id", row.id);
+      if (!lead || ["replied", "unsubscribed", "bounced", "completed"].includes(lead?.status)) {
+        await admin.from("scheduled_sends").update({
+          status: "cancelled",
+          cancelled_reason: lead ? `lead_${lead.status}` : "lead_missing",
+        }).eq("id", row.id);
         result.cancelled++;
         continue;
       }
@@ -117,7 +120,10 @@ Deno.serve(async (req) => {
         .from("bounces")
         .select("id").eq("user_id", row.user_id).ilike("email", lead.email).maybeSingle();
       if (bounced) {
-        await admin.from("scheduled_sends").update({ status: "cancelled" }).eq("id", row.id);
+        await admin.from("scheduled_sends").update({
+          status: "cancelled",
+          cancelled_reason: "bounce",
+        }).eq("id", row.id);
         result.cancelled++;
         continue;
       }
@@ -129,8 +135,16 @@ Deno.serve(async (req) => {
         seq = data;
         sequenceCache.set(row.sequence_id, seq);
       }
-      if (!seq || seq.status === "paused") {
-        result.deferred++;
+      if (!seq || seq.status === "paused" || seq.status === "completed") {
+        if (seq?.status === "completed") {
+          await admin.from("scheduled_sends").update({
+            status: "cancelled",
+            cancelled_reason: "sequence_completed",
+          }).eq("id", row.id);
+          result.cancelled++;
+        } else {
+          result.deferred++;
+        }
         continue;
       }
 
@@ -255,6 +269,20 @@ Deno.serve(async (req) => {
           error_message: txt.slice(0, 500),
         }).eq("id", row.id);
         result.failed++;
+        continue;
+      }
+
+      // send-email may return 200 + { skipped: true } when last-mile safety
+      // (lead status, sequence paused, bounce, unsubscribe) blocked the send.
+      // Treat that as a cancel, not a successful send.
+      const sendJson = await sendRes.json().catch(() => ({} as any));
+      if (sendJson?.skipped) {
+        await admin.from("scheduled_sends").update({
+          status: "cancelled",
+          cancelled_reason: sendJson?.reason || "skipped_last_mile",
+          error_message: sendJson?.error?.slice?.(0, 500) ?? null,
+        }).eq("id", row.id);
+        result.cancelled++;
         continue;
       }
 

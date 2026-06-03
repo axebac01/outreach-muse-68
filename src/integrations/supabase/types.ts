@@ -900,6 +900,7 @@ export type Database = {
       }
       scheduled_sends: {
         Row: {
+          cancelled_reason: string | null
           created_at: string
           email_account_id: string
           error_message: string | null
@@ -914,6 +915,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cancelled_reason?: string | null
           created_at?: string
           email_account_id: string
           error_message?: string | null
@@ -928,6 +930,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cancelled_reason?: string | null
           created_at?: string
           email_account_id?: string
           error_message?: string | null

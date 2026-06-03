@@ -148,17 +148,29 @@ function detectBounce(p: ParsedMessage, fromEmail: string): { isBounce: boolean;
   return { isBounce: true, bouncedEmail, reason: reasonMatch ? reasonMatch[0].slice(0, 500) : subject };
 }
 
-async function cancelScheduledForLead(admin: any, sequenceId: string | null, leadId: string | null, userId: string, email?: string) {
+async function cancelScheduledForLead(
+  admin: any,
+  sequenceId: string | null,
+  leadId: string | null,
+  userId: string,
+  email?: string,
+  reason: string = "reply_detected",
+) {
   if (leadId && sequenceId) {
     await admin.from("scheduled_sends")
-      .update({ status: "cancelled" })
+      .update({ status: "cancelled", cancelled_reason: reason })
       .eq("sequence_id", sequenceId).eq("lead_id", leadId).eq("status", "scheduled");
+  } else if (leadId) {
+    // Cancel across any sequence this lead is in
+    await admin.from("scheduled_sends")
+      .update({ status: "cancelled", cancelled_reason: reason })
+      .eq("lead_id", leadId).eq("status", "scheduled");
   } else if (email) {
     const { data: sLeads } = await admin.from("sequence_leads")
       .select("id, sequence_id").eq("user_id", userId).ilike("email", email);
     for (const sl of sLeads || []) {
       await admin.from("scheduled_sends")
-        .update({ status: "cancelled" })
+        .update({ status: "cancelled", cancelled_reason: reason })
         .eq("sequence_id", sl.sequence_id).eq("lead_id", sl.id).eq("status", "scheduled");
     }
   }
@@ -183,7 +195,7 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
       .update({ status: "bounced" })
       .eq("user_id", account.user_id)
       .ilike("email", bounce.bouncedEmail);
-    await cancelScheduledForLead(admin, null, null, account.user_id, bounce.bouncedEmail);
+    await cancelScheduledForLead(admin, null, null, account.user_id, bounce.bouncedEmail, "bounce");
     // still record the bounce email in messages for visibility
   }
   let priorThreadKey: string | null = null;
@@ -306,16 +318,47 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
     });
   }
 
-  // Pause sequence on reply if configured + cancel scheduled
-  if (sequenceId) {
-    const { data: seq } = await admin.from("sequences")
-      .select("pause_on_reply").eq("id", sequenceId).maybeSingle();
-    if (seq?.pause_on_reply) {
+  // Pause sequence on reply. Two paths:
+  //  1) We matched a specific sequence via headers → pause that one.
+  //  2) We only matched a lead (header chain broken) → pause every active
+  //     sequence that lead is part of, so we never keep sending follow-ups
+  //     after a real reply even if threading headers were stripped.
+  // We intentionally ignore the per-sequence pause_on_reply toggle when the
+  // lead replied: stopping sends to people who answered is a safety floor,
+  // not a preference. Auto-reply detection (Auto-Submitted header) prevents
+  // OOO mails from triggering this — see check below.
+  const isAutoReply = /\b(out[- ]?of[- ]?office|auto[- ]?reply|automatic reply|frånvarande|automatiskt svar|semestermeddelande)\b/i.test(
+    (p.subject || "") + " " + (p.snippet || ""),
+  );
+  if (!isAutoReply) {
+    if (sequenceId) {
       await admin.from("sequence_leads")
         .update({ status: "replied" })
         .eq("sequence_id", sequenceId)
         .ilike("email", fromEmail);
-      await cancelScheduledForLead(admin, sequenceId, leadId, account.user_id, fromEmail);
+      await cancelScheduledForLead(admin, sequenceId, leadId, account.user_id, fromEmail, "reply_detected");
+    } else if (leadId) {
+      // No sequence match from headers, but we know the lead.
+      // Find ALL active sequences this lead belongs to and pause them.
+      const { data: leadRows } = await admin.from("sequence_leads")
+        .select("id, sequence_id, status")
+        .eq("user_id", account.user_id)
+        .ilike("email", fromEmail);
+      for (const lr of leadRows || []) {
+        if (["replied", "unsubscribed", "bounced", "completed"].includes(lr.status)) continue;
+        await admin.from("sequence_leads")
+          .update({ status: "replied" })
+          .eq("id", lr.id);
+        await cancelScheduledForLead(admin, lr.sequence_id, lr.id, account.user_id, fromEmail, "reply_detected_no_thread");
+      }
+    } else {
+      // Last-resort: match purely on from-address against any active sequence_lead
+      await cancelScheduledForLead(admin, null, null, account.user_id, fromEmail, "reply_detected_email_match");
+      await admin.from("sequence_leads")
+        .update({ status: "replied" })
+        .eq("user_id", account.user_id)
+        .ilike("email", fromEmail)
+        .in("status", ["pending", "active", "in_progress"]);
     }
   }
 }

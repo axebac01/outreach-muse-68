@@ -1,0 +1,1 @@
+ALTER TABLE public.scheduled_sends ADD COLUMN IF NOT EXISTS cancelled_reason text;
