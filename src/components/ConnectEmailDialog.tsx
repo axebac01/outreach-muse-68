@@ -530,7 +530,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={saving || testing || !form.smtp_host || !form.smtp_password || !form.email}
+                disabled={saving || testing || !form.smtp_host || !form.smtp_password || !form.email || !resolvedImap.host}
               >
                 {saving || (testing && !tested) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
