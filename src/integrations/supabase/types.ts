@@ -263,6 +263,7 @@ export type Database = {
           imap_port: number | null
           imap_secure: boolean | null
           imap_username: string | null
+          last_send_at: string | null
           last_synced_at: string | null
           oauth_scopes: string | null
           provider: string
@@ -296,6 +297,7 @@ export type Database = {
           imap_port?: number | null
           imap_secure?: boolean | null
           imap_username?: string | null
+          last_send_at?: string | null
           last_synced_at?: string | null
           oauth_scopes?: string | null
           provider: string
@@ -329,6 +331,7 @@ export type Database = {
           imap_port?: number | null
           imap_secure?: boolean | null
           imap_username?: string | null
+          last_send_at?: string | null
           last_synced_at?: string | null
           oauth_scopes?: string | null
           provider?: string
@@ -1490,6 +1493,13 @@ export type Database = {
       encrypt_secret: {
         Args: { key: string; plaintext: string }
         Returns: string
+      }
+      get_sent_today_by_account: {
+        Args: { account_ids: string[] }
+        Returns: {
+          email_account_id: string
+          sent_count: number
+        }[]
       }
       spend_credits: {
         Args: {
