@@ -307,7 +307,126 @@ function Step4({ p }: { p: number }) {
   );
 }
 
-const STEP_COMPS = [Step1, Step2, Step3, Step4];
+function Step5({ p }: { p: number }) {
+  // Chart geometry
+  const W = 460, H = 150, PAD_L = 28, PAD_R = 14, PAD_T = 12, PAD_B = 26;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+  const maxV = 1300;
+  const pts = CHART.map((d, i) => ({
+    x: PAD_L + (i / (CHART.length - 1)) * innerW,
+    y: PAD_T + innerH - (d.v / maxV) * innerH,
+    w: d.w, v: d.v,
+  }));
+  // Smooth-ish path
+  const linePath = pts.reduce((acc, pt, i) => {
+    if (i === 0) return `M ${pt.x} ${pt.y}`;
+    const prev = pts[i - 1];
+    const cx = (prev.x + pt.x) / 2;
+    return `${acc} C ${cx} ${prev.y}, ${cx} ${pt.y}, ${pt.x} ${pt.y}`;
+  }, "");
+  const areaPath = `${linePath} L ${pts[pts.length - 1].x} ${PAD_T + innerH} L ${pts[0].x} ${PAD_T + innerH} Z`;
+
+  // Phases
+  const headerIn = clamp01(p / 0.15);
+  const lineDraw = clamp01((p - 0.15) / 0.4);     // 0.15 → 0.55
+  const areaIn = clamp01((p - 0.5) / 0.2);
+  const roiIn = clamp01((p - 0.6) / 0.15);
+  const statsIn = clamp01((p - 0.7) / 0.12);
+  const hotPhase = clamp01((p - 0.78) / 0.22);
+
+  // Animated counters
+  const pipelineK = Math.round(clamp01(lineDraw) * 1200);
+  const pipelineLabel = pipelineK >= 1000
+    ? `${(pipelineK / 1000).toFixed(1).replace(".", ",")} MSEK`
+    : `${pipelineK} kkr`;
+  const meetings = Math.floor(statsIn * 7);
+  const cpm = statsIn > 0.1 ? `${Math.round(3200)} kr` : "—";
+  const roiPct = Math.round(roiIn * 312);
+
+  // Path length approx for dasharray scrub
+  const PATH_LEN = 700;
+
+  return (
+    <div className="ps-screen">
+      <div className="ps-toolbar" style={{ opacity: headerIn }}>
+        <span className="ps-tbtitle">Kampanj · Analys</span>
+        <span className="ps-pill" style={{ marginLeft: "auto" }}>Senaste 4 veckorna</span>
+      </div>
+
+      <div className="ps-bigval" style={{ opacity: headerIn }}>
+        <span className="ps-bigvallbl">PIPELINE-VÄRDE</span>
+        <div className="ps-bigvalnum">{pipelineLabel}</div>
+      </div>
+
+      <div className="ps-chartwrap" style={{ opacity: headerIn }}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="ps-chart" preserveAspectRatio="none">
+          {/* Grid */}
+          {[0.25, 0.5, 0.75, 1].map((t, i) => (
+            <line key={i} x1={PAD_L} x2={W - PAD_R}
+              y1={PAD_T + innerH * (1 - t)} y2={PAD_T + innerH * (1 - t)}
+              stroke="var(--line)" strokeWidth="1" strokeDasharray="2 4" opacity="0.5" />
+          ))}
+          {/* Area */}
+          <defs>
+            <linearGradient id="ps-area-grad" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="var(--scene)" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="var(--scene)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d={areaPath} fill="url(#ps-area-grad)" opacity={areaIn} />
+          {/* Line */}
+          <path d={linePath} fill="none" stroke="var(--scene)" strokeWidth="2.5"
+            strokeLinecap="round" strokeLinejoin="round"
+            style={{
+              strokeDasharray: PATH_LEN,
+              strokeDashoffset: PATH_LEN * (1 - lineDraw),
+            }} />
+          {/* Points */}
+          {pts.map((pt, i) => {
+            const tIn = clamp01(lineDraw * CHART.length - i);
+            return (
+              <g key={i} opacity={tIn}>
+                <circle cx={pt.x} cy={pt.y} r="4" fill="var(--pg)" stroke="var(--scene)" strokeWidth="2" />
+                <text x={pt.x} y={H - 8} textAnchor="middle" fontSize="9"
+                  fontFamily="JetBrains Mono, ui-monospace, monospace"
+                  fill="var(--tx3)" letterSpacing="0.05em">{pt.w}</text>
+              </g>
+            );
+          })}
+        </svg>
+        <div className="ps-roi" style={{ opacity: roiIn, transform: `translateY(${(1 - roiIn) * 6}px)` }}>
+          <TrendingUp size={14} /> +{roiPct}% ROI
+        </div>
+      </div>
+
+      <div className="ps-ministats" style={{ opacity: statsIn, transform: `translateY(${(1 - statsIn) * 8}px)` }}>
+        <div className="ps-mstat"><b>{meetings}</b><span>möten bokade</span></div>
+        <div className="ps-mstat"><b>{cpm}</b><span>kostnad / möte</span></div>
+        <div className="ps-mstat em"><b>+{roiPct}%</b><span>ROI</span></div>
+      </div>
+
+      <div className="ps-hot">
+        {HOT_REPLIES.map((r, i) => {
+          const op = clamp01(hotPhase * 3 - i);
+          return (
+            <div key={r.initials} className="ps-hotcard"
+              style={{ opacity: op, transform: `translateY(${(1 - op) * 8}px)` }}>
+              <span className="ps-av">{r.initials}</span>
+              <span className="ps-hotinfo">
+                <b>{r.name} · <em>{r.company}</em></b>
+                <span className="ps-hotquote">"{r.quote}"</span>
+              </span>
+              <span className="ps-status ps-st-replied">Intresserad</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const STEP_COMPS = [Step1, Step2, Step3, Step4, Step5];
 
 // ---------------- panel ----------------
 function Panel({ idx, p }: { idx: number; p: number }) {
