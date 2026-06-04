@@ -402,6 +402,9 @@ export async function refreshMicrosoftToken(opts: {
   );
   if (!res.ok) {
     const txt = await res.text();
+    if (isPermanentTokenError(res.status, txt)) {
+      throw new TokenRevokedError("microsoft", `Microsoft token revoked: ${txt.slice(0, 200)}`);
+    }
     throw new Error(`Microsoft token refresh failed: ${res.status} ${txt}`);
   }
   return await res.json();
