@@ -57,15 +57,15 @@ const EmailAccounts = () => {
 
   return (
     <Layout>
-      <div className="container py-12 max-w-3xl">
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">{t("emailAccounts.title")}</h1>
-            <p className="text-muted-foreground mt-1">
+      <div className="container py-8 md:py-12 max-w-3xl">
+        <div className="flex items-start justify-between gap-3 mb-6 md:mb-8 flex-wrap">
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-bold">{t("emailAccounts.title")}</h1>
+            <p className="text-muted-foreground mt-1 text-sm md:text-base">
               {t("emailAccounts.subtitle")}
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} className="gap-1.5">
+          <Button onClick={() => setDialogOpen(true)} size="sm" className="gap-1.5 shrink-0">
             <Plus className="h-4 w-4" /> {t("emailAccounts.connect")}
           </Button>
         </div>
