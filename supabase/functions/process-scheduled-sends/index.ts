@@ -9,8 +9,9 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const DAY_NAMES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-const MAX_BATCH = 50;
+const MAX_BATCH = 200;
+const SOFT_TIME_BUDGET_MS = 20_000;
+const MAX_ATTEMPTS = 3;
 
 function startOfDayUtc(d = new Date()) {
   const x = new Date(d);
@@ -41,14 +42,12 @@ function effectiveDailyCap(limit: any, accountCreatedAt: string, sequenceLimit: 
 }
 
 function inWindow(now: Date, sendingDays: string[], startHHmm: string, endHHmm: string, tz: string): { ok: boolean; nextSlot: Date } {
-  // Compute local time string in tz; fall back to UTC if invalid
   let localStr: string;
   try {
     localStr = now.toLocaleString("en-US", { timeZone: tz, hour12: false, weekday: "short", hour: "2-digit", minute: "2-digit" });
   } catch {
     localStr = now.toUTCString();
   }
-  // Parse "Mon, 14:23"
   const m = localStr.match(/(\w{3})[^\d]*(\d{1,2}):(\d{2})/);
   const dow = (m?.[1] ?? "").toLowerCase();
   const hh = parseInt(m?.[2] ?? "0", 10);
@@ -61,21 +60,39 @@ function inWindow(now: Date, sendingDays: string[], startHHmm: string, endHHmm: 
   const minutesEnd = eh * 60 + em;
   const timeOk = minutesNow >= minutesStart && minutesNow < minutesEnd;
   if (dayOk && timeOk) return { ok: true, nextSlot: now };
-  // Defer 1 hour and let next pass handle re-eval
   const next = new Date(now.getTime() + 60 * 60 * 1000);
   return { ok: false, nextSlot: next };
+}
+
+// Round-robin a list grouped by `keyFn` so no single key monopolizes processing.
+function interleaveByKey<T>(items: T[], keyFn: (t: T) => string): T[] {
+  const groups = new Map<string, T[]>();
+  for (const it of items) {
+    const k = keyFn(it);
+    const g = groups.get(k);
+    if (g) g.push(it); else groups.set(k, [it]);
+  }
+  const queues = Array.from(groups.values());
+  const out: T[] = [];
+  let i = 0;
+  while (out.length < items.length) {
+    const q = queues[i % queues.length];
+    if (q.length > 0) out.push(q.shift()!);
+    i++;
+    if (i > items.length * queues.length) break; // safety
+  }
+  return out;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  const tStart = Date.now();
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-  const result = { processed: 0, sent: 0, cancelled: 0, deferred: 0, failed: 0, paused: 0, requeued: 0 };
+  const result = { processed: 0, sent: 0, cancelled: 0, deferred: 0, failed: 0, paused: 0, requeued: 0, retried: 0, time_budget_hit: false };
 
   try {
-    // (B) Requeue any rows stuck in 'processing' for >10 min — a previous
-    // invocation crashed mid-flight. Safe to retry: send-email is the only
-    // step with external side effects and runs AFTER the claim flip.
+    // Recovery: requeue rows stuck in 'processing' for >10 min.
     const stuckCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const { data: requeued } = await admin
       .from("scheduled_sends")
@@ -85,12 +102,10 @@ Deno.serve(async (req) => {
       .select("id");
     result.requeued = requeued?.length ?? 0;
 
-    // (B) Atomically claim due rows: fetch ids, then flip 'scheduled' → 'processing'
-    // and use the RETURNING set as the work list. If two invocations overlap,
-    // only one wins each row.
+    // Atomically claim due rows.
     const { data: candidates } = await admin
       .from("scheduled_sends")
-      .select("id")
+      .select("id, user_id")
       .eq("status", "scheduled")
       .lte("scheduled_for", new Date().toISOString())
       .order("scheduled_for", { ascending: true })
@@ -110,27 +125,93 @@ Deno.serve(async (req) => {
       .eq("status", "scheduled")
       .select("*");
 
-    const due = claimed ?? [];
+    let due = claimed ?? [];
     if (due.length === 0) {
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Cache per request
-    const sequenceCache = new Map<string, any>();
-    const accountCache = new Map<string, any>();
-    const limitCache = new Map<string, any>();
-    const sentTodayCache = new Map<string, number>();
-    const lastSentCache = new Map<string, number>(); // accountId -> ts ms
-    const pausedAccounts = new Set<string>(); // accountIds with token errors this run
+    // Fairness: round-robin by user so a single user can't hog a batch.
+    due = interleaveByKey(due, (r: any) => r.user_id);
 
-    const todayStart = startOfDayUtc().toISOString();
+    // ----- Batched preloads (kills the N+1) -----
+    const leadIds = Array.from(new Set(due.map((r: any) => r.lead_id).filter(Boolean)));
+    const seqIds = Array.from(new Set(due.map((r: any) => r.sequence_id).filter(Boolean)));
+    const accIds = Array.from(new Set(due.map((r: any) => r.email_account_id).filter(Boolean)));
+    const stepIds = Array.from(new Set(due.map((r: any) => r.step_id).filter(Boolean)));
+    const userIds = Array.from(new Set(due.map((r: any) => r.user_id).filter(Boolean)));
+
+    const [
+      leadsRes,
+      seqsRes,
+      accsRes,
+      limitsRes,
+      stepsRes,
+      bouncesRes,
+      sentTodayRes,
+    ] = await Promise.all([
+      admin.from("sequence_leads")
+        .select("id, status, email, full_name, first_name, last_name, company, role")
+        .in("id", leadIds.length ? leadIds : ["00000000-0000-0000-0000-000000000000"]),
+      admin.from("sequences").select("*").in("id", seqIds.length ? seqIds : ["00000000-0000-0000-0000-000000000000"]),
+      admin.from("email_accounts").select("*").in("id", accIds.length ? accIds : ["00000000-0000-0000-0000-000000000000"]),
+      admin.from("email_account_sending_limits").select("*").in("email_account_id", accIds.length ? accIds : ["00000000-0000-0000-0000-000000000000"]),
+      admin.from("sequence_steps").select("*").in("id", stepIds.length ? stepIds : ["00000000-0000-0000-0000-000000000000"]),
+      admin.from("bounces").select("user_id, email").in("user_id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]),
+      // Today's sent counts grouped by account
+      admin.from("email_messages")
+        .select("email_account_id")
+        .in("email_account_id", accIds.length ? accIds : ["00000000-0000-0000-0000-000000000000"])
+        .eq("direction", "outbound")
+        .eq("status", "sent")
+        .gte("sent_at", startOfDayUtc().toISOString()),
+    ]);
+
+    const leadById = new Map<string, any>();
+    for (const l of leadsRes.data ?? []) leadById.set(l.id, l);
+    const seqById = new Map<string, any>();
+    for (const s of seqsRes.data ?? []) seqById.set(s.id, s);
+    const accById = new Map<string, any>();
+    for (const a of accsRes.data ?? []) accById.set(a.id, a);
+    const limitByAcc = new Map<string, any>();
+    for (const l of limitsRes.data ?? []) limitByAcc.set(l.email_account_id, l);
+    const stepById = new Map<string, any>();
+    for (const st of stepsRes.data ?? []) stepById.set(st.id, st);
+
+    // Bounce set keyed by `user_id|email_lower`
+    const bouncedSet = new Set<string>();
+    for (const b of bouncesRes.data ?? []) {
+      bouncedSet.add(`${b.user_id}|${String(b.email).toLowerCase()}`);
+    }
+
+    const sentTodayByAcc = new Map<string, number>();
+    for (const m of sentTodayRes.data ?? []) {
+      sentTodayByAcc.set(m.email_account_id, (sentTodayByAcc.get(m.email_account_id) ?? 0) + 1);
+    }
+
+    // Per-run state
+    const lastSentCache = new Map<string, number>();
+    const pausedAccounts = new Set<string>();
+    const stepOrderCache = new Map<string, any>(); // `${seqId}|${step_order}` → nextStep
 
     for (const row of due) {
+      // Soft time budget — let cron call us again rather than 504-ing mid-batch.
+      if (Date.now() - tStart > SOFT_TIME_BUDGET_MS) {
+        result.time_budget_hit = true;
+        // Release the unprocessed claims back to scheduled.
+        const remaining = due.slice(due.indexOf(row)).map((r: any) => r.id);
+        if (remaining.length > 0) {
+          await admin.from("scheduled_sends")
+            .update({ status: "scheduled" })
+            .in("id", remaining)
+            .eq("status", "processing");
+        }
+        break;
+      }
+
       result.processed++;
 
-      // (C) Skip rows for an account that already token-failed this batch.
       if (pausedAccounts.has(row.email_account_id)) {
         await admin.from("scheduled_sends")
           .update({ status: "paused_account_error", error_message: "Email account needs reconnect" })
@@ -139,15 +220,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-
-      // Lead status check
-      const { data: lead } = await admin
-        .from("sequence_leads")
-        .select("id, status, email, full_name, first_name, last_name, company, role")
-        .eq("id", row.lead_id)
-        .maybeSingle();
-
-      if (!lead || ["replied", "unsubscribed", "bounced", "completed"].includes(lead?.status)) {
+      const lead = leadById.get(row.lead_id);
+      if (!lead || ["replied", "unsubscribed", "bounced", "completed"].includes(lead.status)) {
         await admin.from("scheduled_sends").update({
           status: "cancelled",
           cancelled_reason: lead ? `lead_${lead.status}` : "lead_missing",
@@ -156,11 +230,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Bounce check
-      const { data: bounced } = await admin
-        .from("bounces")
-        .select("id").eq("user_id", row.user_id).ilike("email", lead.email).maybeSingle();
-      if (bounced) {
+      if (bouncedSet.has(`${row.user_id}|${String(lead.email).toLowerCase()}`)) {
         await admin.from("scheduled_sends").update({
           status: "cancelled",
           cancelled_reason: "bounce",
@@ -169,13 +239,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Sequence
-      let seq = sequenceCache.get(row.sequence_id);
-      if (!seq) {
-        const { data } = await admin.from("sequences").select("*").eq("id", row.sequence_id).maybeSingle();
-        seq = data;
-        sequenceCache.set(row.sequence_id, seq);
-      }
+      const seq = seqById.get(row.sequence_id);
       if (!seq || seq.status === "paused" || seq.status === "completed") {
         if (seq?.status === "completed") {
           await admin.from("scheduled_sends").update({
@@ -184,7 +248,6 @@ Deno.serve(async (req) => {
           }).eq("id", row.id);
           result.cancelled++;
         } else {
-          // Reset claim so a future run picks it up.
           await admin.from("scheduled_sends")
             .update({ status: "scheduled", scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString() })
             .eq("id", row.id);
@@ -193,7 +256,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Window check
       const sendingDays = Array.isArray(seq.sending_days) ? seq.sending_days : ["mon","tue","wed","thu","fri"];
       const { ok: windowOk, nextSlot } = inWindow(new Date(), sendingDays, seq.sending_window_start, seq.sending_window_end, seq.timezone || "UTC");
       if (!windowOk) {
@@ -204,16 +266,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Account + limits
-      let acc = accountCache.get(row.email_account_id);
-      if (!acc) {
-        const { data } = await admin.from("email_accounts").select("*").eq("id", row.email_account_id).maybeSingle();
-        acc = data;
-        accountCache.set(row.email_account_id, acc);
-      }
+      const acc = accById.get(row.email_account_id);
       if (!acc || acc.status !== "active") {
-        // Account inactive/error → pause every scheduled row for this account
-        // so the user fixes it once, not row by row.
         pausedAccounts.add(row.email_account_id);
         await admin.from("scheduled_sends")
           .update({ status: "paused_account_error", error_message: `Account status: ${acc?.status ?? "missing"}` })
@@ -223,27 +277,10 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      let limit = limitCache.get(row.email_account_id);
-      if (!limit) {
-        const { data } = await admin.from("email_account_sending_limits").select("*").eq("email_account_id", row.email_account_id).maybeSingle();
-        limit = data;
-        limitCache.set(row.email_account_id, limit);
-      }
+      const limit = limitByAcc.get(row.email_account_id);
       const cap = effectiveDailyCap(limit, acc.created_at, seq.daily_limit_per_account || 25, acc.provider);
 
-      // Sent today count
-      let sentToday = sentTodayCache.get(row.email_account_id);
-      if (sentToday === undefined) {
-        const { count } = await admin
-          .from("email_messages")
-          .select("id", { count: "exact", head: true })
-          .eq("email_account_id", row.email_account_id)
-          .eq("direction", "outbound")
-          .eq("status", "sent")
-          .gte("sent_at", todayStart);
-        sentToday = count || 0;
-        sentTodayCache.set(row.email_account_id, sentToday);
-      }
+      const sentToday = sentTodayByAcc.get(row.email_account_id) ?? 0;
       if (sentToday >= cap) {
         const tomorrow = startOfDayUtc(new Date(Date.now() + 24 * 60 * 60 * 1000));
         await admin.from("scheduled_sends")
@@ -253,7 +290,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Throttle: 30-120s between sends from same inbox
+      // Throttle: 30-120s between sends from same inbox (within this batch run).
       const lastSent = lastSentCache.get(row.email_account_id) ?? 0;
       const minGap = 30_000 + Math.floor(Math.random() * 90_000);
       const earliest = lastSent + minGap;
@@ -265,8 +302,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Step content
-      const { data: step } = await admin.from("sequence_steps").select("*").eq("id", row.step_id).maybeSingle();
+      const step = stepById.get(row.step_id);
       if (!step) {
         await admin.from("scheduled_sends").update({ status: "failed", error_message: "step missing" }).eq("id", row.id);
         result.failed++;
@@ -285,19 +321,22 @@ Deno.serve(async (req) => {
       const rawBody = renderTemplate(step.body || "", vars);
       const isHtml = /<\/?[a-z][\s\S]*?>/i.test(rawBody);
 
-      // Find prior outbound for this lead/sequence to chain reply
-      const { data: prior } = await admin
-        .from("email_messages")
-        .select("message_id_header, thread_key")
-        .eq("user_id", row.user_id)
-        .eq("lead_id", row.lead_id)
-        .eq("sequence_id", row.sequence_id)
-        .eq("direction", "outbound")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Prior outbound for chain reply — kept per-row but only fires when step_order > 1.
+      let prior: any = null;
+      if ((step.step_order ?? 0) > 1) {
+        const { data } = await admin
+          .from("email_messages")
+          .select("message_id_header, thread_key")
+          .eq("user_id", row.user_id)
+          .eq("lead_id", row.lead_id)
+          .eq("sequence_id", row.sequence_id)
+          .eq("direction", "outbound")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        prior = data;
+      }
 
-      // Invoke send-email
       const sendRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: "POST",
         headers: {
@@ -318,8 +357,6 @@ Deno.serve(async (req) => {
         }),
       });
 
-      // (C) 401 from send-email = token revoked. Pause all scheduled rows for
-      // this account, don't mark them failed. User reconnects → admin re-arms.
       if (sendRes.status === 401) {
         pausedAccounts.add(row.email_account_id);
         await admin.from("scheduled_sends")
@@ -327,6 +364,30 @@ Deno.serve(async (req) => {
           .eq("email_account_id", row.email_account_id)
           .in("status", ["scheduled", "processing"]);
         result.paused++;
+        continue;
+      }
+
+      // 503 = transient. Retry up to MAX_ATTEMPTS with backoff; then fail.
+      if (sendRes.status === 503) {
+        const txt = await sendRes.text().catch(() => "");
+        const nextAttempts = (row.attempts ?? 0) + 1;
+        if (nextAttempts < MAX_ATTEMPTS) {
+          const backoffMin = Math.pow(3, nextAttempts); // 3min, 9min
+          await admin.from("scheduled_sends").update({
+            status: "scheduled",
+            scheduled_for: new Date(Date.now() + backoffMin * 60 * 1000).toISOString(),
+            attempts: nextAttempts,
+            error_message: txt.slice(0, 500),
+          }).eq("id", row.id);
+          result.retried++;
+        } else {
+          await admin.from("scheduled_sends").update({
+            status: "failed",
+            attempts: nextAttempts,
+            error_message: `Transient after ${MAX_ATTEMPTS} attempts: ${txt.slice(0, 400)}`,
+          }).eq("id", row.id);
+          result.failed++;
+        }
         continue;
       }
 
@@ -340,10 +401,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-
-      // send-email may return 200 + { skipped: true } when last-mile safety
-      // (lead status, sequence paused, bounce, unsubscribe) blocked the send.
-      // Treat that as a cancel, not a successful send.
       const sendJson = await sendRes.json().catch(() => ({} as any));
       if (sendJson?.skipped) {
         await admin.from("scheduled_sends").update({
@@ -355,20 +412,27 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      await admin.from("scheduled_sends").update({ status: "sent" }).eq("id", row.id);
+      await admin.from("scheduled_sends").update({ status: "sent", attempts: (row.attempts ?? 0) + 1 }).eq("id", row.id);
       result.sent++;
-      sentTodayCache.set(row.email_account_id, (sentToday || 0) + 1);
+      sentTodayByAcc.set(row.email_account_id, sentToday + 1);
       lastSentCache.set(row.email_account_id, Date.now());
 
-      // Schedule next step (if any)
-      const { data: nextStep } = await admin
-        .from("sequence_steps")
-        .select("*")
-        .eq("sequence_id", row.sequence_id)
-        .gt("step_order", step.step_order)
-        .order("step_order", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      // Next step. Cache lookup per (seq, current step_order) so two rows on
+      // the same step in the same batch don't both hit the DB.
+      const nextKey = `${row.sequence_id}|${step.step_order}`;
+      let nextStep = stepOrderCache.get(nextKey);
+      if (nextStep === undefined) {
+        const { data } = await admin
+          .from("sequence_steps")
+          .select("*")
+          .eq("sequence_id", row.sequence_id)
+          .gt("step_order", step.step_order)
+          .order("step_order", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        nextStep = data ?? null;
+        stepOrderCache.set(nextKey, nextStep);
+      }
 
       if (nextStep) {
         const waitMs = (nextStep.wait_days || 0) * 24 * 60 * 60 * 1000;
