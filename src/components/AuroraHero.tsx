@@ -90,7 +90,7 @@ export default function AuroraHero() {
       <section className="hero">
         <div className="hero-wrap">
           <span className="badge"><span className="ping" /> Ansluten till 3 inkorgar · skickar nu</span>
-          <h1 className="hh">Outbound som känns <span className="em">skriven för hand</span></h1>
+          <h1 className="hh">Hitta nya kunder med AI.</h1>
           <p className="hsub">MailLead.ai genererar personliga kalla mejl och uppföljningar för varje lead — och samlar svaren i en inkorg.</p>
           <div className="hcta">
             <a className="btn btn-pri" href="/signup">Skapa ditt första mejl – gratis <ArrowRight size={18} /></a>
