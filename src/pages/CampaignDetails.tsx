@@ -61,18 +61,18 @@ const CampaignDetails = () => {
 
   return (
     <Layout>
-      <div className="border-b sticky top-20 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="container py-4 space-y-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+      <div className="border-b sticky top-16 md:top-20 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="container py-3 md:py-4 space-y-3 md:space-y-4">
+          <div className="flex items-center gap-2 md:gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="shrink-0">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <Input
               value={name || campaign.name}
               onChange={(e) => handleNameChange(e.target.value)}
-              className="text-lg font-semibold border-none shadow-none px-2 focus-visible:ring-1 max-w-md"
+              className="text-base md:text-lg font-semibold border-none shadow-none px-2 focus-visible:ring-1 max-w-md min-w-0 flex-1"
             />
-            <div className="ml-auto">
+            <div className="ml-auto shrink-0">
               <CampaignStatusActions
                 sequenceId={sequence.id}
                 status={sequence.status}
@@ -81,18 +81,21 @@ const CampaignDetails = () => {
             </div>
           </div>
           <Tabs value={activeTab} onValueChange={setTab}>
-            <TabsList>
-              <TabsTrigger value="overview">Översikt</TabsTrigger>
-              <TabsTrigger value="leads">Leads ({leads.length})</TabsTrigger>
-              <TabsTrigger value="sequence">Sekvens</TabsTrigger>
-              <TabsTrigger value="schedule">Schema</TabsTrigger>
-              <TabsTrigger value="senders">Avsändare & start</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+              <TabsList className="w-max">
+                <TabsTrigger value="overview">Översikt</TabsTrigger>
+                <TabsTrigger value="leads">Leads ({leads.length})</TabsTrigger>
+                <TabsTrigger value="sequence">Sekvens</TabsTrigger>
+                <TabsTrigger value="schedule">Schema</TabsTrigger>
+                <TabsTrigger value="senders">Avsändare & start</TabsTrigger>
+              </TabsList>
+            </div>
           </Tabs>
         </div>
       </div>
 
-      <div className="container py-8">
+      <div className="container py-6 md:py-8">
+
         <Tabs value={activeTab} onValueChange={setTab}>
           <TabsContent value="overview"><OverviewTab campaign={campaign} sequenceStatus={sequence.status} sequenceId={sequence.id} leadCount={leads.length} /></TabsContent>
           <TabsContent value="leads"><LeadsTab sequenceId={sequence.id} /></TabsContent>

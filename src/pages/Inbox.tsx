@@ -7,7 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Inbox as InboxIcon, RefreshCw, Send, Loader2, Mail, MailOpen, ArrowDown, ArrowUp, Search, Sparkles, Ban, AlertCircle } from "lucide-react";
+import { Inbox as InboxIcon, RefreshCw, Send, Loader2, Mail, MailOpen, ArrowDown, ArrowUp, Search, Sparkles, Ban, AlertCircle, ArrowLeft, SlidersHorizontal } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -98,10 +100,14 @@ const Inbox = () => {
     [messages],
   );
 
-  // Auto-select first thread on load
+  const isMobile = useIsMobile();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Auto-select first thread on load (desktop only)
   useEffect(() => {
+    if (isMobile) return;
     if (!selectedId && filteredThreads.length > 0) setSelectedId(filteredThreads[0].id);
-  }, [filteredThreads, selectedId]);
+  }, [filteredThreads, selectedId, isMobile]);
 
   // Reset reply state when switching threads
   useEffect(() => {
@@ -215,83 +221,108 @@ const Inbox = () => {
     }
   };
 
+  const filtersContent = (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-xs uppercase tracking-wider text-muted-foreground">Mejlkonto</label>
+        <Select value={accountId} onValueChange={setAccountId}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alla konton</SelectItem>
+            {accounts.map((a) => (
+              <SelectItem key={a.id} value={a.id}>{a.email}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs uppercase tracking-wider text-muted-foreground">Status</label>
+        <div className="flex gap-1">
+          <Button size="sm" variant={!onlyUnread ? "secondary" : "ghost"} onClick={() => setOnlyUnread(false)} className="flex-1">Alla</Button>
+          <Button size="sm" variant={onlyUnread ? "secondary" : "ghost"} onClick={() => setOnlyUnread(true)} className="flex-1">Olästa</Button>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs uppercase tracking-wider text-muted-foreground">Sentiment</label>
+        <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alla</SelectItem>
+            <SelectItem value="positive">Positiva</SelectItem>
+            <SelectItem value="neutral">Neutrala</SelectItem>
+            <SelectItem value="negative">Negativa</SelectItem>
+            <SelectItem value="auto_reply">Auto-svar</SelectItem>
+            <SelectItem value="unsubscribe_request">Avregistreringar</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs uppercase tracking-wider text-muted-foreground">Sök</label>
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input className="pl-7" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Avsändare, ämne…" />
+        </div>
+      </div>
+      <div className="pt-2 border-t space-y-2">
+        <label className="text-xs uppercase tracking-wider text-muted-foreground">Omfång</label>
+        <div className="flex gap-1">
+          <Button size="sm" variant={!showAll ? "secondary" : "ghost"} onClick={() => setShowAll(false)} className="flex-1 text-xs">Endast leads</Button>
+          <Button size="sm" variant={showAll ? "secondary" : "ghost"} onClick={() => setShowAll(true)} className="flex-1 text-xs">Visa alla</Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground leading-tight">
+          {showAll
+            ? "Visar alla mejl i dina synkade konton."
+            : "Visar bara mejl till/från dina leads och kampanjsvar."}
+        </p>
+      </div>
+    </div>
+  );
+
+  const showListMobile = !selected;
+  const showThreadMobile = !!selected;
+
   return (
     <Layout>
-      <div className="container max-w-7xl py-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
-              <InboxIcon className="h-6 w-6 text-primary" /> Unibox
+      <div className="container max-w-7xl py-4 md:py-6">
+        <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-semibold flex items-center gap-2">
+              <InboxIcon className="h-5 w-5 md:h-6 md:w-6 text-primary" /> Unibox
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs md:text-sm text-muted-foreground">
               Alla svar från alla mejlkonton och kampanjer på ett ställe
             </p>
           </div>
-          <Button onClick={handleSync} disabled={syncing} variant="outline" className="gap-2">
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Hämta nytt
-          </Button>
+          <div className="flex items-center gap-2">
+            <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 lg:hidden">
+                  <SlidersHorizontal className="h-4 w-4" /> Filter
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[300px] overflow-y-auto">
+                <SheetHeader className="mb-4">
+                  <SheetTitle>Filter</SheetTitle>
+                </SheetHeader>
+                {filtersContent}
+              </SheetContent>
+            </Sheet>
+            <Button onClick={handleSync} disabled={syncing} variant="outline" size="sm" className="gap-2">
+              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              <span className="hidden sm:inline">Hämta nytt</span>
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] xl:grid-cols-[280px_360px_1fr] gap-4 h-[calc(100vh-220px)] min-h-[500px]">
-          {/* Filters */}
-          <div className="space-y-4 rounded-lg border p-3 bg-card overflow-y-auto">
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-muted-foreground">Mejlkonto</label>
-              <Select value={accountId} onValueChange={setAccountId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alla konton</SelectItem>
-                  {accounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>{a.email}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-muted-foreground">Status</label>
-              <div className="flex gap-1">
-                <Button size="sm" variant={!onlyUnread ? "secondary" : "ghost"} onClick={() => setOnlyUnread(false)} className="flex-1">Alla</Button>
-                <Button size="sm" variant={onlyUnread ? "secondary" : "ghost"} onClick={() => setOnlyUnread(true)} className="flex-1">Olästa</Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-muted-foreground">Sentiment</label>
-              <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alla</SelectItem>
-                  <SelectItem value="positive">Positiva</SelectItem>
-                  <SelectItem value="neutral">Neutrala</SelectItem>
-                  <SelectItem value="negative">Negativa</SelectItem>
-                  <SelectItem value="auto_reply">Auto-svar</SelectItem>
-                  <SelectItem value="unsubscribe_request">Avregistreringar</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-muted-foreground">Sök</label>
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input className="pl-7" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Avsändare, ämne…" />
-              </div>
-            </div>
-            <div className="pt-2 border-t space-y-2">
-              <label className="text-xs uppercase tracking-wider text-muted-foreground">Omfång</label>
-              <div className="flex gap-1">
-                <Button size="sm" variant={!showAll ? "secondary" : "ghost"} onClick={() => setShowAll(false)} className="flex-1 text-xs">Endast leads</Button>
-                <Button size="sm" variant={showAll ? "secondary" : "ghost"} onClick={() => setShowAll(true)} className="flex-1 text-xs">Visa alla</Button>
-              </div>
-              <p className="text-[10px] text-muted-foreground leading-tight">
-                {showAll
-                  ? "Visar alla mejl i dina synkade konton."
-                  : "Visar bara mejl till/från dina leads och kampanjsvar."}
-              </p>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[260px_360px_1fr] gap-4 h-[calc(100dvh-180px)] md:h-[calc(100vh-220px)] min-h-[500px]">
+          {/* Filters (desktop) */}
+          <div className="hidden lg:block space-y-4 rounded-lg border p-3 bg-card overflow-y-auto">
+            {filtersContent}
           </div>
 
           {/* Thread list */}
-          <div className="rounded-lg border bg-card overflow-hidden flex flex-col xl:col-auto lg:col-span-1">
+          <div className={`rounded-lg border bg-card overflow-hidden flex-col xl:col-auto lg:col-span-1 ${showListMobile ? "flex" : "hidden"} lg:flex`}>
+
             <div className="border-b flex">
               <button
                 onClick={() => { setView("inbox"); setSelectedId(null); }}
@@ -337,7 +368,7 @@ const Inbox = () => {
           </div>
 
           {/* Conversation */}
-          <div className="rounded-lg border bg-card overflow-hidden hidden lg:flex flex-col lg:col-span-2 xl:col-span-1">
+          <div className={`rounded-lg border bg-card overflow-hidden flex-col lg:col-span-2 xl:col-span-1 ${showThreadMobile ? "flex" : "hidden"} lg:flex`}>
             {!selected ? (
               <div className="flex-1 grid place-items-center text-sm text-muted-foreground p-6 text-center">
                 Välj en konversation för att läsa och svara.
@@ -345,10 +376,16 @@ const Inbox = () => {
             ) : (
               <>
                 <div className="px-4 py-3 border-b space-y-2">
-                  <div>
-                    <div className="font-medium truncate">{selected.subject || "(utan ämne)"}</div>
-                    <div className="text-xs text-muted-foreground truncate">{selected.participants.join(", ")}</div>
+                  <div className="flex items-start gap-2">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 -ml-1 lg:hidden shrink-0" onClick={() => setSelectedId(null)} aria-label="Tillbaka">
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">{selected.subject || "(utan ämne)"}</div>
+                      <div className="text-xs text-muted-foreground truncate">{selected.participants.join(", ")}</div>
+                    </div>
                   </div>
+
                   {lastInbound && (
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <SentimentBadge sentiment={lastInbound.sentiment} />
