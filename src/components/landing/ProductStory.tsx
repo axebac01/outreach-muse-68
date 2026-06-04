@@ -541,7 +541,7 @@ export default function ProductStory() {
         {/* Bottom progress rail */}
         <div className="ps-railwrap">
           <div className="ps-railline">
-            <div className="ps-railfill" style={{ width: `${(progress / 4) * 100}%`, background: activeAccent }} />
+            <div className="ps-railfill" style={{ width: `${(progress / 5) * 100}%`, background: activeAccent }} />
           </div>
           <div className="ps-railsteps">
             {STEPS.map((s, i) => (
