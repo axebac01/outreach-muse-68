@@ -445,13 +445,20 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
 async function syncOutlook(admin: any, account: any) {
   const accessToken = await getValidMicrosoftAccessToken(admin, account);
   const HARD_CAP = 500;
-  const sinceIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
-  const filter = `receivedDateTime ge ${sinceIso}`;
-  const baseUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filter)}&$select=id,internetMessageId,internetMessageHeaders,subject,from,toRecipients,receivedDateTime,bodyPreview,body,conversationId`;
+  const selectFields = "id,internetMessageId,internetMessageHeaders,subject,from,toRecipients,receivedDateTime,bodyPreview,body,conversationId";
 
-  // Page through @odata.nextLink up to HARD_CAP.
+  // Delta-sync if we have a stored deltaLink; otherwise full initial sync
+  // using the delta endpoint (Graph returns a deltaLink on the last page so
+  // subsequent runs become incremental). On invalid/expired delta link
+  // (410 Gone), reset and fall back to a 14-day list window for that run.
   const messages: any[] = [];
-  let nextUrl: string | null = baseUrl;
+  let nextUrl: string | null = account.provider_delta_link
+    ? String(account.provider_delta_link)
+    : `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$select=${selectFields}&$top=100`;
+  let newDeltaLink: string | null = null;
+  let deltaFailed = false;
+  let usingDelta = true;
+
   while (nextUrl && messages.length < HARD_CAP) {
     const resp = await fetch(nextUrl, {
       headers: {
@@ -459,18 +466,47 @@ async function syncOutlook(admin: any, account: any) {
         Prefer: 'outlook.body-content-type="html"',
       },
     });
+    if (resp.status === 410 || resp.status === 404) {
+      // Delta token expired — clear and fall back
+      deltaFailed = true;
+      newDeltaLink = null;
+      messages.length = 0;
+      await admin.from("email_accounts").update({ provider_delta_link: null }).eq("id", account.id);
+      break;
+    }
     if (!resp.ok) {
       const t = await resp.text();
-      throw new Error(`Outlook list failed: ${resp.status} ${t.slice(0, 200)}`);
+      throw new Error(`Outlook ${usingDelta ? "delta" : "list"} failed: ${resp.status} ${t.slice(0, 200)}`);
     }
     const list = await resp.json();
     for (const m of list.value ?? []) messages.push(m);
     nextUrl = list["@odata.nextLink"] ?? null;
+    if (list["@odata.deltaLink"]) newDeltaLink = String(list["@odata.deltaLink"]);
+  }
+
+  // Fallback: 14-day window list when delta failed
+  if (deltaFailed) {
+    usingDelta = false;
+    const sinceIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+    const filter = `receivedDateTime ge ${sinceIso}`;
+    let url: string | null = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filter)}&$select=${selectFields}`;
+    while (url && messages.length < HARD_CAP) {
+      const resp = await fetch(url, {
+        headers: { Authorization: `Bearer ${accessToken}`, Prefer: 'outlook.body-content-type="html"' },
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        throw new Error(`Outlook list fallback failed: ${resp.status} ${t.slice(0, 200)}`);
+      }
+      const list = await resp.json();
+      for (const m of list.value ?? []) messages.push(m);
+      url = list["@odata.nextLink"] ?? null;
+    }
   }
 
   const accountEmailLower = String(account.email).toLowerCase();
   const candidates = messages.filter((m) => (m.from?.emailAddress?.address ?? "").toLowerCase() !== accountEmailLower);
-  const ids = candidates.map((m) => m.id as string);
+  const ids = candidates.map((m) => m.id as string).filter(Boolean);
 
   // Batched dedupe.
   let known = new Set<string>();
@@ -486,7 +522,7 @@ async function syncOutlook(admin: any, account: any) {
   let inserted = 0;
   for (const msg of candidates) {
     const providerId: string = msg.id;
-    if (known.has(providerId)) continue;
+    if (!providerId || known.has(providerId)) continue;
     const headers = (msg.internetMessageHeaders ?? []) as { name: string; value: string }[];
     const h = (k: string) => headers.find((x) => x.name.toLowerCase() === k.toLowerCase())?.value ?? null;
     const refsRaw = h("References") || "";
@@ -514,12 +550,15 @@ async function syncOutlook(admin: any, account: any) {
     inserted++;
   }
 
-  await admin
-    .from("email_accounts")
-    .update({ last_synced_at: new Date().toISOString(), status_message: null })
-    .eq("id", account.id);
+  const update: Record<string, unknown> = {
+    last_synced_at: new Date().toISOString(),
+    status_message: null,
+  };
+  if (newDeltaLink) update.provider_delta_link = newDeltaLink;
+  await admin.from("email_accounts").update(update).eq("id", account.id);
   return inserted;
 }
+
 
 async function syncImap(admin: any, account: any): Promise<number> {
   if (!account.imap_host || !account.imap_port || !account.imap_username || !account.imap_password_enc) {
