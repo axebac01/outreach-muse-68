@@ -385,14 +385,14 @@ Deno.serve(async (req) => {
             status: "scheduled",
             scheduled_for: new Date(Date.now() + backoffMin * 60 * 1000).toISOString(),
             attempts: nextAttempts,
-            error_message: txt.slice(0, 500),
+            error_message: redactSecrets(txt).slice(0, 500),
           }).eq("id", row.id);
           result.retried++;
         } else {
           await admin.from("scheduled_sends").update({
             status: "failed",
             attempts: nextAttempts,
-            error_message: `Transient after ${MAX_ATTEMPTS} attempts: ${txt.slice(0, 400)}`,
+            error_message: `Transient after ${MAX_ATTEMPTS} attempts: ${redactSecrets(txt).slice(0, 400)}`,
           }).eq("id", row.id);
           result.failed++;
         }
@@ -403,7 +403,7 @@ Deno.serve(async (req) => {
         const txt = await sendRes.text().catch(() => "");
         await admin.from("scheduled_sends").update({
           status: "failed",
-          error_message: txt.slice(0, 500),
+          error_message: redactSecrets(txt).slice(0, 500),
         }).eq("id", row.id);
         result.failed++;
         continue;
@@ -414,7 +414,7 @@ Deno.serve(async (req) => {
         await admin.from("scheduled_sends").update({
           status: "cancelled",
           cancelled_reason: sendJson?.reason || "skipped_last_mile",
-          error_message: sendJson?.error?.slice?.(0, 500) ?? null,
+          error_message: sendJson?.error ? redactSecrets(sendJson.error).slice(0, 500) : null,
         }).eq("id", row.id);
         result.cancelled++;
         continue;
@@ -424,6 +424,13 @@ Deno.serve(async (req) => {
       result.sent++;
       sentTodayByAcc.set(row.email_account_id, sentToday + 1);
       lastSentCache.set(row.email_account_id, Date.now());
+      // Persist last_send_at so cross-cron throttle works. Best-effort; failure
+      // here doesn't roll back the send.
+      admin.from("email_accounts")
+        .update({ last_send_at: new Date().toISOString() })
+        .eq("id", row.email_account_id)
+        .then(() => {}, () => {});
+
 
       // Next step. Cache lookup per (seq, current step_order) so two rows on
       // the same step in the same batch don't both hit the DB.
