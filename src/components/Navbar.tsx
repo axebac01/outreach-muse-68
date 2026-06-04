@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, Settings, Inbox as InboxIcon, Building2, Users } from "lucide-react";
+import { Menu, X, LogOut, Settings, Inbox as InboxIcon, Building2, Users, BarChart3, Mail, LayoutDashboard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useUnreadInboxCount } from "@/hooks/useInbox";
 import logo from "@/assets/logo.svg";
@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useUnsavedChangesGuard } from "@/hooks/useSaveStatus";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const Navbar = () => {
   const location = useLocation();
