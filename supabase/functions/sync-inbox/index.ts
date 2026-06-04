@@ -2,6 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { simpleParser } from "npm:mailparser@3.7.2";
 import { corsHeaders, decryptToken, getValidGoogleAccessToken, getValidMicrosoftAccessToken, TokenRevokedError } from "../_shared/oauth.ts";
 import { ImapClient, ImapError } from "../_shared/imapClient.ts";
+import { redactSecrets } from "../_shared/redactSecrets.ts";
+
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -702,11 +704,12 @@ Deno.serve(async (req) => {
             .eq("id", acc.id);
         } else {
           await admin.from("email_accounts")
-            .update({ status_message: `Sync error: ${msg.slice(0, 200)}` })
+            .update({ status_message: `Sync error: ${redactSecrets(msg).slice(0, 200)}` })
             .eq("id", acc.id);
         }
       }
     }
+
 
     return new Response(JSON.stringify({ ok: true, new_messages: totalNew, errors }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
