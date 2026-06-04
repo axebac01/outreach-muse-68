@@ -664,7 +664,7 @@ const CSS = `
 .ps-railwrap{position:absolute;left:0;right:0;bottom:32px;padding:0 max(48px,8vw);z-index:3;}
 .ps-railline{height:2px;background:var(--line);border-radius:2px;overflow:hidden;}
 .ps-railfill{height:100%;border-radius:2px;transition:width .15s linear,background .8s cubic-bezier(.22,.61,.36,1);}
-.ps-railsteps{display:grid;grid-template-columns:repeat(4,1fr);margin-top:12px;}
+.ps-railsteps{display:grid;grid-template-columns:repeat(5,1fr);margin-top:12px;}
 .ps-railstep{display:flex;flex-direction:column;gap:3px;opacity:.4;transition:opacity .4s;}
 .ps-railstep.on{opacity:1;}
 .ps-rnum{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--scene);letter-spacing:.1em;}
