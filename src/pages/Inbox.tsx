@@ -100,10 +100,14 @@ const Inbox = () => {
     [messages],
   );
 
-  // Auto-select first thread on load
+  const isMobile = useIsMobile();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Auto-select first thread on load (desktop only)
   useEffect(() => {
+    if (isMobile) return;
     if (!selectedId && filteredThreads.length > 0) setSelectedId(filteredThreads[0].id);
-  }, [filteredThreads, selectedId]);
+  }, [filteredThreads, selectedId, isMobile]);
 
   // Reset reply state when switching threads
   useEffect(() => {
