@@ -711,7 +711,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: accounts } = await admin
       .from("email_accounts")
-      .select("id, user_id, email, provider, auth_type, access_token_enc, refresh_token_enc, token_expires_at, status, history_id, imap_last_uid, imap_host, imap_port, imap_secure, imap_username, imap_password_enc")
+      .select("id, user_id, email, provider, auth_type, access_token_enc, refresh_token_enc, token_expires_at, status, history_id, provider_delta_link, imap_last_uid, imap_host, imap_port, imap_secure, imap_username, imap_password_enc")
       .eq("user_id", userId)
       .eq("status", "active");
 
