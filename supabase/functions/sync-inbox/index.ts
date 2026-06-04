@@ -601,9 +601,19 @@ Deno.serve(async (req) => {
         const msg = e?.message ?? String(e);
         console.error("sync failed for", acc.email, msg);
         errors.push({ account: acc.email, error: msg });
-        await admin.from("email_accounts")
-          .update({ status_message: `Sync error: ${msg.slice(0, 200)}` })
-          .eq("id", acc.id);
+        if (e instanceof TokenRevokedError) {
+          // Account already flagged inside oauth helper, but ensure status flips.
+          await admin.from("email_accounts")
+            .update({
+              status: "error",
+              status_message: `invalid_grant: Anslutningen har gått ut — återanslut ${e.provider}-kontot.`,
+            })
+            .eq("id", acc.id);
+        } else {
+          await admin.from("email_accounts")
+            .update({ status_message: `Sync error: ${msg.slice(0, 200)}` })
+            .eq("id", acc.id);
+        }
       }
     }
 
