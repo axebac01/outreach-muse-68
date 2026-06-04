@@ -70,18 +70,48 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-  const result = { processed: 0, sent: 0, cancelled: 0, deferred: 0, failed: 0 };
+  const result = { processed: 0, sent: 0, cancelled: 0, deferred: 0, failed: 0, paused: 0, requeued: 0 };
 
   try {
-    const { data: due } = await admin
+    // (B) Requeue any rows stuck in 'processing' for >10 min — a previous
+    // invocation crashed mid-flight. Safe to retry: send-email is the only
+    // step with external side effects and runs AFTER the claim flip.
+    const stuckCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: requeued } = await admin
       .from("scheduled_sends")
-      .select("*")
+      .update({ status: "scheduled" })
+      .eq("status", "processing")
+      .lt("updated_at", stuckCutoff)
+      .select("id");
+    result.requeued = requeued?.length ?? 0;
+
+    // (B) Atomically claim due rows: fetch ids, then flip 'scheduled' → 'processing'
+    // and use the RETURNING set as the work list. If two invocations overlap,
+    // only one wins each row.
+    const { data: candidates } = await admin
+      .from("scheduled_sends")
+      .select("id")
       .eq("status", "scheduled")
       .lte("scheduled_for", new Date().toISOString())
       .order("scheduled_for", { ascending: true })
       .limit(MAX_BATCH);
 
-    if (!due || due.length === 0) {
+    if (!candidates || candidates.length === 0) {
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const candidateIds = candidates.map((r: any) => r.id);
+    const { data: claimed } = await admin
+      .from("scheduled_sends")
+      .update({ status: "processing" })
+      .in("id", candidateIds)
+      .eq("status", "scheduled")
+      .select("*");
+
+    const due = claimed ?? [];
+    if (due.length === 0) {
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -93,11 +123,22 @@ Deno.serve(async (req) => {
     const limitCache = new Map<string, any>();
     const sentTodayCache = new Map<string, number>();
     const lastSentCache = new Map<string, number>(); // accountId -> ts ms
+    const pausedAccounts = new Set<string>(); // accountIds with token errors this run
 
     const todayStart = startOfDayUtc().toISOString();
 
     for (const row of due) {
       result.processed++;
+
+      // (C) Skip rows for an account that already token-failed this batch.
+      if (pausedAccounts.has(row.email_account_id)) {
+        await admin.from("scheduled_sends")
+          .update({ status: "paused_account_error", error_message: "Email account needs reconnect" })
+          .eq("id", row.id);
+        result.paused++;
+        continue;
+      }
+
 
       // Lead status check
       const { data: lead } = await admin
