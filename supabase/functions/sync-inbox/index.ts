@@ -437,35 +437,49 @@ async function persistInbound(admin: any, account: any, p: ParsedMessage, provid
 
 async function syncOutlook(admin: any, account: any) {
   const accessToken = await getValidMicrosoftAccessToken(admin, account);
-  // Last 14 days, inbox, not from self
+  const HARD_CAP = 500;
   const sinceIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
   const filter = `receivedDateTime ge ${sinceIso}`;
-  const url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filter)}&$select=id,internetMessageId,internetMessageHeaders,subject,from,toRecipients,receivedDateTime,bodyPreview,body,conversationId`;
-  const resp = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Prefer: 'outlook.body-content-type="html"',
-    },
-  });
-  if (!resp.ok) {
-    const t = await resp.text();
-    throw new Error(`Outlook list failed: ${resp.status} ${t.slice(0, 200)}`);
+  const baseUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=${encodeURIComponent(filter)}&$select=id,internetMessageId,internetMessageHeaders,subject,from,toRecipients,receivedDateTime,bodyPreview,body,conversationId`;
+
+  // Page through @odata.nextLink up to HARD_CAP.
+  const messages: any[] = [];
+  let nextUrl: string | null = baseUrl;
+  while (nextUrl && messages.length < HARD_CAP) {
+    const resp = await fetch(nextUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Prefer: 'outlook.body-content-type="html"',
+      },
+    });
+    if (!resp.ok) {
+      const t = await resp.text();
+      throw new Error(`Outlook list failed: ${resp.status} ${t.slice(0, 200)}`);
+    }
+    const list = await resp.json();
+    for (const m of list.value ?? []) messages.push(m);
+    nextUrl = list["@odata.nextLink"] ?? null;
   }
-  const list = await resp.json();
+
   const accountEmailLower = String(account.email).toLowerCase();
-  let inserted = 0;
-  for (const msg of list.value ?? []) {
-    const fromAddr = msg.from?.emailAddress?.address || "";
-    if (fromAddr.toLowerCase() === accountEmailLower) continue;
-    const providerId: string = msg.id;
+  const candidates = messages.filter((m) => (m.from?.emailAddress?.address ?? "").toLowerCase() !== accountEmailLower);
+  const ids = candidates.map((m) => m.id as string);
+
+  // Batched dedupe.
+  let known = new Set<string>();
+  if (ids.length > 0) {
     const { data: existing } = await admin
       .from("email_messages")
-      .select("id")
-      .eq("provider_message_id", providerId)
+      .select("provider_message_id")
       .eq("email_account_id", account.id)
-      .maybeSingle();
-    if (existing) continue;
+      .in("provider_message_id", ids);
+    known = new Set((existing ?? []).map((r: any) => r.provider_message_id));
+  }
 
+  let inserted = 0;
+  for (const msg of candidates) {
+    const providerId: string = msg.id;
+    if (known.has(providerId)) continue;
     const headers = (msg.internetMessageHeaders ?? []) as { name: string; value: string }[];
     const h = (k: string) => headers.find((x) => x.name.toLowerCase() === k.toLowerCase())?.value ?? null;
     const refsRaw = h("References") || "";
@@ -473,6 +487,7 @@ async function syncOutlook(admin: any, account: any) {
     const bodyHtml = msg.body?.contentType === "html" ? msg.body?.content || null : null;
     const bodyText = msg.body?.contentType === "text" ? msg.body?.content || "" : (bodyHtml ? htmlToText(bodyHtml) : "");
     const fromName = msg.from?.emailAddress?.name;
+    const fromAddr = msg.from?.emailAddress?.address || "";
     const toAddr = (msg.toRecipients ?? []).map((r: any) => r.emailAddress?.address).filter(Boolean).join(", ");
 
     const parsed: ParsedMessage = {
@@ -491,6 +506,7 @@ async function syncOutlook(admin: any, account: any) {
     await persistInbound(admin, account, parsed, providerId);
     inserted++;
   }
+
   await admin
     .from("email_accounts")
     .update({ last_synced_at: new Date().toISOString(), status_message: null })
