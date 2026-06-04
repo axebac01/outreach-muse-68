@@ -14,6 +14,8 @@ import {
 import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
 import { htmlToPlainText, looksLikeHtml } from "../_shared/htmlToText.ts";
 import { withRetry, TransientError, isTransientStatus, isTransientSmtpCode } from "../_shared/retry.ts";
+import { redactSecrets } from "../_shared/redactSecrets.ts";
+
 
 function encodeMimeWord(s: string): string {
   if (!s) return s;
@@ -491,13 +493,14 @@ Deno.serve(async (req) => {
         /timeout|network|econnreset|etimedout|socket/i.test(msg);
       if (isTransient) {
         return new Response(
-          JSON.stringify({ error: msg.slice(0, 500), reason: "transient" }),
+          JSON.stringify({ error: redactSecrets(msg).slice(0, 500), reason: "transient" }),
           { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       status = "failed";
-      errorMessage = msg;
+      errorMessage = redactSecrets(msg);
     }
+
 
 
     const sentAt = status === "sent" ? new Date().toISOString() : null;

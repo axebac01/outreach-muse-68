@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { renderTemplate } from "../_shared/renderTemplate.ts";
+import { redactSecrets } from "../_shared/redactSecrets.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -149,7 +151,7 @@ Deno.serve(async (req) => {
       limitsRes,
       stepsRes,
       bouncesRes,
-      sentTodayRes,
+      sentTodayRpc,
     ] = await Promise.all([
       admin.from("sequence_leads")
         .select("id, status, email, full_name, first_name, last_name, company, role")
@@ -159,14 +161,10 @@ Deno.serve(async (req) => {
       admin.from("email_account_sending_limits").select("*").in("email_account_id", accIds.length ? accIds : ["00000000-0000-0000-0000-000000000000"]),
       admin.from("sequence_steps").select("*").in("id", stepIds.length ? stepIds : ["00000000-0000-0000-0000-000000000000"]),
       admin.from("bounces").select("user_id, email").in("user_id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]),
-      // Today's sent counts grouped by account
-      admin.from("email_messages")
-        .select("email_account_id")
-        .in("email_account_id", accIds.length ? accIds : ["00000000-0000-0000-0000-000000000000"])
-        .eq("direction", "outbound")
-        .eq("status", "sent")
-        .gte("sent_at", startOfDayUtc().toISOString()),
+      // Aggregated count via RPC — avoids hauling rows back just to count.
+      admin.rpc("get_sent_today_by_account", { account_ids: accIds.length ? accIds : ["00000000-0000-0000-0000-000000000000"] }),
     ]);
+
 
     const leadById = new Map<string, any>();
     for (const l of leadsRes.data ?? []) leadById.set(l.id, l);
@@ -186,14 +184,24 @@ Deno.serve(async (req) => {
     }
 
     const sentTodayByAcc = new Map<string, number>();
-    for (const m of sentTodayRes.data ?? []) {
-      sentTodayByAcc.set(m.email_account_id, (sentTodayByAcc.get(m.email_account_id) ?? 0) + 1);
+    for (const r of (sentTodayRpc.data ?? []) as Array<{ email_account_id: string; sent_count: number }>) {
+      sentTodayByAcc.set(r.email_account_id, Number(r.sent_count) || 0);
     }
 
     // Per-run state
     const lastSentCache = new Map<string, number>();
     const pausedAccounts = new Set<string>();
     const stepOrderCache = new Map<string, any>(); // `${seqId}|${step_order}` → nextStep
+
+    // Seed throttle cache from persisted last_send_at so the 30-120s gap
+    // also applies across cron runs (not just within one batch).
+    for (const a of accsRes.data ?? []) {
+      if (a.last_send_at) {
+        const t = new Date(a.last_send_at).getTime();
+        if (!Number.isNaN(t)) lastSentCache.set(a.id, t);
+      }
+    }
+
 
     for (const row of due) {
       // Soft time budget — let cron call us again rather than 504-ing mid-batch.
@@ -377,14 +385,14 @@ Deno.serve(async (req) => {
             status: "scheduled",
             scheduled_for: new Date(Date.now() + backoffMin * 60 * 1000).toISOString(),
             attempts: nextAttempts,
-            error_message: txt.slice(0, 500),
+            error_message: redactSecrets(txt).slice(0, 500),
           }).eq("id", row.id);
           result.retried++;
         } else {
           await admin.from("scheduled_sends").update({
             status: "failed",
             attempts: nextAttempts,
-            error_message: `Transient after ${MAX_ATTEMPTS} attempts: ${txt.slice(0, 400)}`,
+            error_message: `Transient after ${MAX_ATTEMPTS} attempts: ${redactSecrets(txt).slice(0, 400)}`,
           }).eq("id", row.id);
           result.failed++;
         }
@@ -395,7 +403,7 @@ Deno.serve(async (req) => {
         const txt = await sendRes.text().catch(() => "");
         await admin.from("scheduled_sends").update({
           status: "failed",
-          error_message: txt.slice(0, 500),
+          error_message: redactSecrets(txt).slice(0, 500),
         }).eq("id", row.id);
         result.failed++;
         continue;
@@ -406,7 +414,7 @@ Deno.serve(async (req) => {
         await admin.from("scheduled_sends").update({
           status: "cancelled",
           cancelled_reason: sendJson?.reason || "skipped_last_mile",
-          error_message: sendJson?.error?.slice?.(0, 500) ?? null,
+          error_message: sendJson?.error ? redactSecrets(sendJson.error).slice(0, 500) : null,
         }).eq("id", row.id);
         result.cancelled++;
         continue;
@@ -416,6 +424,13 @@ Deno.serve(async (req) => {
       result.sent++;
       sentTodayByAcc.set(row.email_account_id, sentToday + 1);
       lastSentCache.set(row.email_account_id, Date.now());
+      // Persist last_send_at so cross-cron throttle works. Best-effort; failure
+      // here doesn't roll back the send.
+      admin.from("email_accounts")
+        .update({ last_send_at: new Date().toISOString() })
+        .eq("id", row.email_account_id)
+        .then(() => {}, () => {});
+
 
       // Next step. Cache lookup per (seq, current step_order) so two rows on
       // the same step in the same batch don't both hit the DB.
