@@ -13,6 +13,7 @@ import {
 } from "../_shared/unsubscribe.ts";
 import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
 import { htmlToPlainText, looksLikeHtml } from "../_shared/htmlToText.ts";
+import { withRetry, TransientError, isTransientStatus, isTransientSmtpCode } from "../_shared/retry.ts";
 
 function encodeMimeWord(s: string): string {
   if (!s) return s;
@@ -111,23 +112,28 @@ async function sendViaGmail(
     extraHeaders,
   });
   const raw = base64UrlEncode(rfc);
-  const res = await fetch(
-    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+  return await withRetry(async () => {
+    const res = await fetch(
+      "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ raw }),
       },
-      body: JSON.stringify({ raw }),
-    },
-  );
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Gmail send failed: ${res.status} ${txt}`);
-  }
-  const json = await res.json();
-  return { messageId: json.id ?? null };
+    );
+    if (!res.ok) {
+      const txt = await res.text();
+      if (isTransientStatus(res.status)) {
+        throw new TransientError(res.status, txt);
+      }
+      throw new Error(`Gmail send failed: ${res.status} ${txt}`);
+    }
+    const json = await res.json();
+    return { messageId: json.id ?? null };
+  });
 }
 
 function parseAddr(addr: string): { name?: string; address: string } {
@@ -174,19 +180,24 @@ async function sendViaOutlook(
     internetMessageHeaders: internetHeaders,
   };
 
-  const res = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ message, saveToSentItems: true }),
+  return await withRetry(async () => {
+    const res = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message, saveToSentItems: true }),
+    });
+    if (!res.ok && res.status !== 202) {
+      const txt = await res.text();
+      if (isTransientStatus(res.status)) {
+        throw new TransientError(res.status, txt);
+      }
+      throw new Error(`Outlook send failed: ${res.status} ${txt}`);
+    }
+    return { messageId: null };
   });
-  if (!res.ok && res.status !== 202) {
-    const txt = await res.text();
-    throw new Error(`Outlook send failed: ${res.status} ${txt}`);
-  }
-  return { messageId: null };
 }
 
 Deno.serve(async (req) => {
@@ -470,9 +481,24 @@ Deno.serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+      // Transient: tell caller to retry later (don't insert a failed
+      // email_messages row — that would create a phantom "sent" attempt).
+      const msg = sendErr?.message ?? "Send failed";
+      const smtpCodeMatch = /\b(4\d{2})\b/.exec(msg);
+      const isTransient =
+        sendErr instanceof TransientError ||
+        (smtpCodeMatch && isTransientSmtpCode(Number(smtpCodeMatch[1]))) ||
+        /timeout|network|econnreset|etimedout|socket/i.test(msg);
+      if (isTransient) {
+        return new Response(
+          JSON.stringify({ error: msg.slice(0, 500), reason: "transient" }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       status = "failed";
-      errorMessage = sendErr?.message || "Send failed";
+      errorMessage = msg;
     }
+
 
     const sentAt = status === "sent" ? new Date().toISOString() : null;
     const snippet = (body_text || (body_html ? body_html.replace(/<[^>]+>/g, " ") : "") || "").slice(0, 220);
