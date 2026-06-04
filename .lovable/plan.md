@@ -1,69 +1,68 @@
-## Mål
+# Plan: Premium-uppgradering av ProductStory
 
-Lägg till en pinnad scroll-sektion direkt under nuvarande hero som visar hela MailLead-flödet i 4 steg. Hero behålls oförändrad som teaser. Texten är sticky till vänster, mockupen byter visuellt till höger synkat med scrollens progress.
+Mål: göra scroll-storyn lika smidig och "wow" som Linear, Vercel, Arc, Framer och Stripe. Mindre "demo-mockup", mer cinematisk produktupplevelse.
 
-## Användarflöde i scroll-storyn
+## Vad de bästa sajterna gör (och vi inte gör idag)
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  STEG 1  │  Hitta exakt rätt leads                      │
-│  (sticky │  ICP-filter (titel, bransch, storlek) →      │
-│   text)  │  resultatlista med "Avslöja"-knapp           │
-├──────────┼──────────────────────────────────────────────┤
-│  STEG 2  │  Importera till en kampanj                   │
-│          │  Checkboxar tickas av en efter en, sticky    │
-│          │  footer "Importera 4 leads" lyfts fram       │
-├──────────┼──────────────────────────────────────────────┤
-│  STEG 3  │  AI skriver kampanjen åt dig                 │
-│          │  Prompt-input fylls i ("Sälj rekryterings-   │
-│          │  tjänster till IT-företag"), sedan ström-    │
-│          │  mande generering av 3 sekvenssteg           │
-├──────────┼──────────────────────────────────────────────┤
-│  STEG 4  │  Skicka — och få svar                        │
-│          │  Mejl flyger iväg (kuvert-animation),        │
-│          │  status flippar till "Skickat" → "Svarade",  │
-│          │  liten analytics-chip räknar upp 23% svar    │
-└──────────┴──────────────────────────────────────────────┘
-```
+1. **Horisontell pinning istället för vertikal stack** (Linear, Apple, Igloo Inc). Sektionen pinnas, innehållet glider i sidled mellan stegen. Känns som en film, inte en lång sida.
+2. **Riktiga produkt-UI:n, inte symboliska mockups** (Vercel, Linear, Attio). Visa faktiska skärmar från appen — samma typsnitt, samma komponenter, samma färger som inne i produkten. Bygger trovärdighet direkt.
+3. **Crossfade + parallax mellan steg** (Stripe, Framer). Gammalt UI bleknar/skalas ner och nytt glider in från höger med subtil parallax på inre lager (toolbar rör sig snabbare än bakgrund).
+4. **Diegetisk text** (Arc, Rauno). Rubriker bor inuti scenen, inte i en separat textkolumn. Text och UI andas tillsammans.
+5. **Mikromotion driven av scroll-progress, inte tid** (Linear). Cursorn flyttar sig, ett filter markeras, ett mejl skrivs — allt scrubbat med scroll. Användaren känner att de styr.
+6. **En enda accentfärg per scen** med mjuk färgresa (orange → guld → grön → orange-glow). Bakgrundsgradient morfar långsamt.
+7. **Tystnad mellan stegen** — 10–15% scroll där inget händer förutom andning/parallax. Ger rytm.
+8. **Audio-cue alt. haptisk "tick"** vid stegövergångar (valfritt, av som default).
+9. **Slut-payoff**: sista scenen zoomar ut till en dashboard som sammanfattar hela resan ("23 svar · 4 möten bokade"). Cliffhanger → CTA.
 
-Höjd: ca 4× viewport-höjd så varje steg får ~1 skärm scroll-utrymme. Sista frame släpper pinningen mjukt och övergår i nuvarande "Så funkar det"-sektion.
+## Vad vi bygger
 
-## Designprinciper
+### A. Layout-byte: horisontell scrollytelling
+- Sektionen blir `height: 500vh`, inre `position: sticky; height: 100vh`.
+- Scen-container: `display: flex; width: 400vw`, translateX baserat på scroll-progress.
+- Mobil: behåll vertikal stack (kortvariant), men polera (se D).
 
-- **Behåller Aurora-estetiken** — samma färgtokens, samma glasmorfism, samma `Schibsted Grotesk`/mono. Inga nya färger eller fonter.
-- **Vänster:** Eyebrow ("STEG 0X · TITEL"), stor rubrik, kort brödtext, 1–2 microbullets med ikoner. Sticky tills nästa steg tar över med crossfade.
-- **Höger:** En enda "glass-stage" (samma stil som hero-mockupen) där innehållet morfar mellan stegen. Ingen tom canvas mellan stegen — animationen pågår alltid.
-- **Progress-indikator:** 4 vertikala stickor till vänster om mockupen som fylls i takt med scroll. Klickbara för att hoppa direkt till ett steg.
-- **Tempo:** ~80% av scroll-spannet visar steget i lugnt tillstånd, ~20% är morph-övergång till nästa. Inte för snabbt — användaren ska hinna läsa.
+### B. Riktiga produkt-skärmar
+- Återanvänd faktiska komponenter från `/leads`, `/campaigns/[id]`, `/inbox` i mini-format (read-only, mockad data).
+- Wrappa i en "device frame" (subtil 1px border, top-bar med trafikljus-prickar, mjuk inner-shadow).
+- Konsekvent skala 0.85 så de känns som "tittar in i appen".
 
-## Mobil-fallback (< 1024 px)
+### C. Cinematisk scene-direction
+- **Scen 1 (Sök):** cursor glider in, klickar filter ett-efter-ett, leads tonar in rad-för-rad, "Avslöja mejl" pulsar och avslöjar.
+- **Scen 2 (Importera):** checkboxar bockas i sekvens med liten "tick"-skala, footer-bar slidar upp, hela urvalet flyger i en båge mot kampanj-ikonen (motion path).
+- **Scen 3 (AI):** prompt skrivs tecken-för-tecken (scroll-scrubbat, inte tid), sedan "thinking shimmer" på AI-knappen, sedan 3 mejlkort som bygger sig själva rad-för-rad med caret.
+- **Scen 4 (Skicka & svar):** kuvert flyger ut i parabel mot inkorg-ikoner, status-chips morfar Queued→Sent→Replied, dashboard tonar in över med stora siffror (23 svar, 12% reply, 4 möten).
 
-Pinning fungerar dåligt på mobil (höga sektioner = lång scroll utan progress-känsla). På mobil:
-- Sektionen blir 4 staplade kort, ett per steg
-- Varje kort animeras in när det scrollas in i viewport (samma `reveal` IntersectionObserver som finns idag)
-- Mockup ovanför text i varje kort, statisk slutstate av animationen (ingen morph)
+### D. Mikrodetaljer som lyfter känslan
+- **Färgresa**: CSS-variabel `--scene-accent` interpoleras mellan stegen, driver glow, progress-rail och knapp-accenter.
+- **Aurora-bakgrund** rör sig långsamt parallax (translateY * 0.3).
+- **Grain-overlay** (4% opacity) för filmkänsla.
+- **Progress-rail** byts mot en horisontell tunn linje längst ner med 4 steg-etiketter som highlightas. Mjuk spring-animation.
+- **"Scroll" hint** byts till en subtil pil + "Scroll" som fadar efter första scrollen, Apple-stil.
+- **Spring easing** (framer `useSpring` på scroll-progress) så allt känns viktat, inte linjärt.
+- **Reduced motion**: hoppar direkt till sluttillstånd per scen, ingen pinning.
 
-## Tekniskt
+### E. Performance
+- `will-change: transform` bara på aktiva lager.
+- Tunga SVG/blur bara på desktop ≥1024px.
+- Lazy-mounta scen 3 & 4 tills de är inom 1 scen-bredd från viewport.
 
-- Ny komponent `src/components/landing/ProductStory.tsx` som monteras i `AuroraLanding.tsx` direkt efter `</section>` på hero, före nuvarande "Så funkar det".
-- Scroll-progress via `useScroll` + `useTransform` från **framer-motion** (redan i package.json — verifiera; annars `bun add framer-motion`).
-- Pinning via `position: sticky` på höger glas-stage inuti en hög container. Ingen GSAP, ingen extern lib.
-- Varje steg-mockup som egen komponent (`Step1Search`, `Step2Import`, `Step3AIWrite`, `Step4Send`) med interna keyframe-animationer styrda av en `progress`-prop (0–1) från parent.
-- Stegens innehåll (mockad data, ICP-filter, prompt-text, mejlkroppar) ligger i en `storyContent.ts`-fil — lätt att redigera utan att röra logiken.
-- `prefers-reduced-motion`: hoppar direkt till varje stegs slutstate utan morph, ingen kuvert-flygning.
-- Stilen följer befintliga CSS-variabler i `#ml-aurora` — ingen ny global CSS, allt scopas i komponenten med Tailwind + inline `style`-tags.
+## Tekniska detaljer
 
-## Avgränsning
+- `framer-motion`: `useScroll` + `useSpring({stiffness: 80, damping: 20})` för smooth scrub.
+- `useTransform` på `scrollYProgress` → `translateX` på horisontell rail.
+- Varje scen får en lokal `progress` (0–1) härledd från global progress via `useTransform`.
+- Cursor och typing-animationer drivs av samma lokala progress (deterministiskt, reversibelt).
+- Färg-interpolation via `useMotionTemplate` på CSS-variabel.
+- Filer som ändras: `src/components/landing/ProductStory.tsx` (omskrivning), ev. ny `ProductStoryMobile.tsx` för att hålla filen läsbar.
 
-- Hero och alla sektioner under "Så funkar det" rörs inte.
-- Inga nya backend-anrop, inga riktiga data — allt är mockat i komponenten.
-- Endast svensk text (matchar core memory).
-- Bygger inte separat /demo-sida — bara förstärker landningssidan.
+## Vad jag rekommenderar du säger ja till
 
-## Leveranskriterier
+**Minsta möjliga "wow"-paket (det jag skulle göra först):**
+1. Horisontell pinning (A)
+2. Spring-easad scroll + färgresa (D)
+3. Cursor-driven mikromotion i scen 1 + typing-scrub i scen 3 (C)
+4. Slut-payoff dashboard i scen 4 (C)
 
-1. Scroll-pinnad sektion fungerar smooth i Chrome/Safari/Firefox desktop ≥ 1024 px
-2. Mobil får staplad fallback utan pinning
-3. `prefers-reduced-motion` respekteras
-4. Inga regressions på hero, features, pris, FAQ
-5. Lighthouse Performance-score för / faller inte mer än 3 poäng
+**Full version:** ovan + riktiga produktkomponenter (B) + audio-cue + diegetisk text.
+
+Säg vilken nivå du vill ha så bygger jag.
