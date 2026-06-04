@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { LANDING_FAQS } from "@/data/landingFaqs";
 import { LEGAL } from "@/config/legal";
+import ProductStory from "@/components/landing/ProductStory";
 
 const TYPE_TEXT =
   "Hej Sara,\n\nsåg att Kavalan växer snabbt — grattis! Hur hanterar ni outbound i dag? Värt ett kort samtal nästa vecka?\n\n/ Alex";
