@@ -204,6 +204,8 @@ export default function AuroraLanding() {
           </div>
         </div></section>
 
+        <ProductStory />
+
         {/* HOW IT WORKS */}
         <section className="section"><div className="wrap">
           <p className="eyebrow reveal">Så funkar det</p>
