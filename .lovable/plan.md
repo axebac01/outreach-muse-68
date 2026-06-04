@@ -1,51 +1,76 @@
-# Verifiering av Sprint 1 — 3 brister hittade
+# Sprint 2 — Prestanda, retry & dataintegritet
 
-Jag gick igenom cron, race-condition-fixen, token-felhanteringen och re-launch-guarden mot faktisk kod + databas. Tre saker behöver åtgärdas innan Sprint 2.
+Mål: göra schemaläggaren effektiv och självläkande utan att ändra hur features beter sig för användaren. Inga UI-ändringar i denna sprint.
 
-## 🔴 Bug 1 — Dubbla cron-jobb
+## A. Batcha bort N+1 i `process-scheduled-sends` (#7)
 
-Det finns nu **två** jobb för varje schemaläggare i `cron.job`:
+Idag gör loopen per rad: `sequence_leads`, `bounces`, `sequences`, `email_accounts`, `email_account_sending_limits`, `sent today count`, `sequence_steps`, `prior message`. Vid 50 rader = ~400 round-trips ⇒ funktionen riskerar att tajma ut innan batchen är klar.
 
-| jobid | jobname | schedule |
-|---|---|---|
-| 1 | process-scheduled-sends-every-5min | `*/5 * * * *` |
-| 4 | process-scheduled-sends-every-minute | `* * * * *` ← ny |
-| 3 | sync-inbox-every-10-min | `*/10 * * * *` |
-| 5 | sync-inbox-every-10-minutes | `*/10 * * * *` ← ny |
+**Fix:** efter claim, gör fem batchade SELECTs upfront och bygg maps:
+- `sequence_leads` WHERE id IN (...) — alla leads i batchen
+- `bounces` WHERE user_id IN + lower(email) IN
+- `sequences` WHERE id IN (cache:ad redan, men flytta till en query)
+- `email_accounts` + `email_account_sending_limits` WHERE id IN
+- `sequence_steps` WHERE id IN
+- `sent today counts`: ett aggregat-query (`select email_account_id, count(*) … group by`) istället för ett count per konto
+- `prior outbound message`: en query med `IN (lead_id, sequence_id)`-par via `or(...)`-filter, eller skippa cache och gör per-rad bara om mejlet faktiskt är ett uppföljningssteg
 
-Konsekvens: `process-scheduled-sends` triggas både var 5:e minut OCH varje minut från två olika jobb. `sync-inbox` triggas dubbelt var 10:e minut. Förutom onödig last ökar det risken för dubbletter (se Bug 2).
+Behåll caches inom loopen som fallback. Mål: ≤10 DB-queries totalt per batch oavsett storlek.
 
-**Fix:** `cron.unschedule(1)`, `cron.unschedule(3)`. Behåll jobid 4 (varje minut) och 5 (var 10:e min).
+## B. Sync-inbox-fönster + idempotens (#8)
 
-## 🔴 Bug 2 — `updated_at` uppdateras inte → "stuck"-requeue plockar levande rader
+Nuvarande `syncGmail` hämtar alltid `newer_than:14d` och `LIMIT 50`. Problem:
+- Vid större backlog (>50 nya mejl per 10-min-fönster, t.ex. efter outage) tappar vi mejl permanent eftersom Gmail-listan inte är paginerad.
+- För konto som varit pausat >14 dagar missar vi allt däremellan.
+- `existing`-kollen via `provider_message_id` görs per meddelande ⇒ N+1.
 
-`scheduled_sends` har en `updated_at`-kolumn, **men ingen trigger** som bumpar den (verifierat i `information_schema.triggers`). Ny UPDATE som flippar `status = 'processing'` rör inte `updated_at`.
+**Fix:**
+1. Använd `historyId` (Gmail) / `deltaToken` (Graph) när det redan finns sparat på `email_accounts.history_id`. Fall tillbaka till `newer_than:Xd` bara vid första körningen.
+2. Pagina listan med `pageToken` tills allt nytt sedan `history_id` är hämtat (med tak, t.ex. 500 per körning för säkerhet).
+3. Förladda alla `provider_message_id` för kontot i batchen i ett enda query istället för per meddelande.
+4. För IMAP: behåll `imap_last_uid`-strategin (verifiera att den redan finns och fungerar).
+5. Outlook: använd `@odata.nextLink` paginering om den saknas.
 
-Konsekvens i `process-scheduled-sends/index.ts`:
-- Recovery-steget letar `status='processing' AND updated_at < now()-10min` och sätter tillbaka till `scheduled`.
-- Eftersom `updated_at` är från radens skapande blir varje rad som claimades men hör till en sekvens som lanserades >10 min sedan **omedelbart återställd** medan en parallell körning fortfarande håller på att skicka den.
-- Med varje-minut-cron + 50 rader per batch ⇒ realistisk risk att samma e-post skickas två gånger.
+## C. Retry på transienta fel (#9)
 
-**Fix (välj A — minimal, säker):**
-1. Migration: trigger `BEFORE UPDATE ON scheduled_sends` som sätter `NEW.updated_at = now()` (samma mönster som befintlig `set_updated_at()`-funktion).
-2. Lägg också explicit `updated_at: new Date().toISOString()` i claim-UPDATE i `process-scheduled-sends` som suspender + bälte.
-3. Behåll requeue-logiken som den är — den blir korrekt så fort tidsstämpeln faktiskt rör sig.
+Idag: vilket fel som helst från Gmail/Graph/SMTP markerar raden `failed` permanent. Tillfälliga 429/5xx/network-fel bränner försök i onödan.
 
-## 🟡 Bug 3 — `oauth-callback` re-armar bara Google/Microsoft-rader, inte SMTP-konton
+**Fix:** i `send-email`:
+- Wrappa providerns send-anrop i en retry-helper: max 3 försök, exponentiell backoff (1s, 4s, 12s), jitter.
+- Retry endast vid: HTTP 408/429/500/502/503/504, `fetch`-network-fel, SMTP `4xx`-koder.
+- Andra fel (4xx-permanenta, autentisering) faller igenom direkt.
+- I `process-scheduled-sends`: vid `send-email` 5xx-svar, sätt raden tillbaka till `scheduled` + `scheduled_for = now()+5min` upp till `attempts < 3` (kräver ny kolumn `attempts int default 0` på `scheduled_sends` — migration). Efter 3 misslyckanden ⇒ `status='failed'`.
 
-`oauth-callback/index.ts:127-134` återställer `paused_account_error` → `scheduled` när OAuth-konto återansluts. Men `process-scheduled-sends` markerar **alla** konton (även SMTP/IMAP) som `paused_account_error` vid `account.status !== 'active'` (rad 214-223). SMTP-konton går aldrig via `oauth-callback`, så när användaren fixar dem manuellt i UI blir de pausade raderna kvarliggande för alltid.
+## D. FK CASCADE för `scheduled_sends.email_account_id` (Nytt)
 
-**Fix:** I `EmailAccounts.tsx`-mutationen som flippar SMTP-konto tillbaka till `active`, eller i `useUpdateEmailAccount`, kör samma re-arm-update på `scheduled_sends` (status `paused_account_error` → `scheduled`, `scheduled_for = now()`) för det aktuella `email_account_id`. Alternativt: edge-funktion `rearm-account` som båda vägarna anropar.
+Om en användare raderar ett trasigt e-postkonto och lägger till ett nytt blir kvarvarande `paused_account_error`/`scheduled`-rader föräldralösa (refererar till borttaget konto-ID). Re-arm-triggern fungerar inte. Idag står `scheduled_sends.email_account_id` antingen utan FK eller utan CASCADE.
 
-## ✅ Verifierat OK
+**Fix:** migration som droppar befintlig FK (om finns) och lägger till `ON DELETE CASCADE`. Verifiera även `sequence_leads`, `sequence_steps`, `lead_id`, `sequence_id` har vettiga CASCADE/SET NULL-regler — fixa bara de som är fel.
 
-- `process-scheduled-sends`: atomisk claim (SELECT ids → UPDATE … WHERE status='scheduled' RETURNING) fungerar.
-- `send-email`: returnerar 401 + `reason: token_revoked` på `TokenRevokedError`. Scheduler tolkar 401 korrekt och pausar hela kontot, inte enstaka rader.
-- `_shared/oauth.ts`: `isPermanentTokenError` täcker `invalid_grant` + relevanta `AADSTS`-koder. Flagar `email_accounts.status='error'` + `status_message`.
-- `sync-inbox`: fångar `TokenRevokedError` och sätter `status='error'`. SMTP/IMAP-login fail flaggar också `status_message`.
-- `launch-sequence`: guard byggd på `seq.status NOT IN ('draft','paused')` → returnerar 409. Status flippas till `active` först efter `scheduled_sends.insert`.
-- UI (`EmailAccounts.tsx`, `SendersTab.tsx`): visar `status_message` + "Återanslut"-knapp. Översättningar finns både SV/EN.
+## E. Större batch + rättvisare ordning (Nytt)
 
-## Frågor innan jag bygger
+`MAX_BATCH=50` med `order by scheduled_for asc` ⇒ vid backlog svältar nyare rader.
 
-Inga — fixarna är entydiga. Säg "kör" så åtgärdar jag alla tre och verifierar att duplikat-jobben är borta innan Sprint 2 startar.
+**Fix:**
+1. Höj `MAX_BATCH` till 200.
+2. Byt ordning till `(user_id, scheduled_for asc)` så ingen enskild användare kan monopolisera en batch. Alternativ: round-robin per `email_account_id`.
+3. Lägg till en mjuk tidsbudget i loopen: bryt om körningen pågått >20s så cron-jobbet alltid hinner returnera innan timeout.
+
+## Tekniska detaljer (för referens)
+
+- Ny kolumn: `scheduled_sends.attempts int not null default 0`. Bumpas vid retry, nollställs vid lyckad send.
+- Migration på FK kräver att vi först läser `pg_constraint` för befintlig referens; om ingen finns lägger vi bara till en med CASCADE.
+- Retry-helpern läggs i `_shared/retry.ts` så `sync-inbox` kan återanvända den senare.
+
+## Verifiering efter implementation
+
+- Logga `processed/sent/deferred/failed/requeued` per körning och kolla att antalet DB-queries sjunker drastiskt (manuellt anrop med 50 due rows ⇒ förvänta <15 queries).
+- Tvinga 503 från Gmail mockat (eller temporärt skicka till ogiltigt scope) ⇒ rad ska gå `scheduled → scheduled+5min` 3 gånger, sedan `failed`.
+- Radera ett kopplat e-postkonto med scheduled rader ⇒ raderna ska försvinna.
+- Tvinga >50 inkommande mejl ⇒ alla ska hamna i `email_messages` över max 1–2 körningar.
+
+## Utanför scope
+
+Sprint 3 (#10–#17): throttle, mobillayout, rate-limit-UI, auth-byte, empty state, bounces DELETE, krypterad token-vy, timezone-validering.
+
+Säg "kör" så börjar jag med A (största risken om scheduler tajmar ut) och jobbar nedåt.
