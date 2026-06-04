@@ -325,7 +325,7 @@ const CSS = `
   --bg-glass:rgba(255,255,255,.65);--bg-glass-bd:#D8CEBC;--bg-glass-tx:#221F1A;--bg-glass-h:rgba(255,255,255,.9);
   --eyebrow:#E0512B;--pri-sh:0 8px 26px rgba(224,81,43,.28);--pri-h:#C53F1D;
   --ease:cubic-bezier(.22,.61,.36,1);--ease-out:cubic-bezier(.16,1,.3,1);
-  position:relative;min-height:100vh;overflow:hidden;background:var(--pg);color:var(--tx);
+  position:relative;min-height:100vh;overflow-x:clip;background:var(--pg);color:var(--tx);
   font-family:'Schibsted Grotesk',system-ui,sans-serif;transition:background .4s var(--ease),color .4s var(--ease);
 }
 .dark #ml-aurora{
