@@ -235,6 +235,39 @@ export async function exchangeGoogleCode(opts: {
   return await res.json();
 }
 
+export class TokenRevokedError extends Error {
+  provider: string;
+  constructor(provider: string, message: string) {
+    super(message);
+    this.name = "TokenRevokedError";
+    this.provider = provider;
+  }
+}
+
+function isPermanentTokenError(status: number, body: string): boolean {
+  // Google + Microsoft both signal revoked/expired refresh tokens via
+  // `invalid_grant`. 400/401 with that code is permanent — user must reconnect.
+  if (status !== 400 && status !== 401) return false;
+  return /invalid_grant|AADSTS7000(8|82)|AADSTS50173|AADSTS54005/i.test(body);
+}
+
+async function markAccountTokenRevoked(
+  admin: ReturnType<typeof createClient>,
+  accountId: string,
+  provider: string,
+  detail: string,
+) {
+  try {
+    await admin
+      .from("email_accounts")
+      .update({
+        status: "error",
+        status_message: `invalid_grant: Anslutningen har gått ut — återanslut ${provider}-kontot. (${detail.slice(0, 120)})`,
+      })
+      .eq("id", accountId);
+  } catch (_) { /* best effort */ }
+}
+
 export async function refreshGoogleToken(opts: {
   refreshToken: string;
   clientId: string;
@@ -253,6 +286,9 @@ export async function refreshGoogleToken(opts: {
   });
   if (!res.ok) {
     const txt = await res.text();
+    if (isPermanentTokenError(res.status, txt)) {
+      throw new TokenRevokedError("google", `Google token revoked: ${txt.slice(0, 200)}`);
+    }
     throw new Error(`Google token refresh failed: ${res.status} ${txt}`);
   }
   return await res.json();
@@ -366,6 +402,9 @@ export async function refreshMicrosoftToken(opts: {
   );
   if (!res.ok) {
     const txt = await res.text();
+    if (isPermanentTokenError(res.status, txt)) {
+      throw new TokenRevokedError("microsoft", `Microsoft token revoked: ${txt.slice(0, 200)}`);
+    }
     throw new Error(`Microsoft token refresh failed: ${res.status} ${txt}`);
   }
   return await res.json();
@@ -404,14 +443,23 @@ export async function getValidMicrosoftAccessToken(
     return await decryptToken(admin, account.access_token_enc);
   }
   if (!account.refresh_token_enc) {
-    throw new Error("No refresh token on file — reconnect the account");
+    await markAccountTokenRevoked(admin, account.id, "microsoft", "missing refresh token");
+    throw new TokenRevokedError("microsoft", "No refresh token on file — reconnect the account");
   }
   const refreshToken = await decryptToken(admin, account.refresh_token_enc);
-  const tokens = await refreshMicrosoftToken({
-    refreshToken,
-    clientId: Deno.env.get("MICROSOFT_CLIENT_ID")!,
-    clientSecret: Deno.env.get("MICROSOFT_CLIENT_SECRET")!,
-  });
+  let tokens;
+  try {
+    tokens = await refreshMicrosoftToken({
+      refreshToken,
+      clientId: Deno.env.get("MICROSOFT_CLIENT_ID")!,
+      clientSecret: Deno.env.get("MICROSOFT_CLIENT_SECRET")!,
+    });
+  } catch (e) {
+    if (e instanceof TokenRevokedError) {
+      await markAccountTokenRevoked(admin, account.id, "microsoft", e.message);
+    }
+    throw e;
+  }
   const newAccessEnc = await encryptToken(admin, tokens.access_token);
   const update: Record<string, unknown> = {
     access_token_enc: newAccessEnc,
@@ -445,14 +493,23 @@ export async function getValidGoogleAccessToken(
     return await decryptToken(admin, account.access_token_enc);
   }
   if (!account.refresh_token_enc) {
-    throw new Error("No refresh token on file — reconnect the account");
+    await markAccountTokenRevoked(admin, account.id, "google", "missing refresh token");
+    throw new TokenRevokedError("google", "No refresh token on file — reconnect the account");
   }
   const refreshToken = await decryptToken(admin, account.refresh_token_enc);
-  const tokens = await refreshGoogleToken({
-    refreshToken,
-    clientId: Deno.env.get("GOOGLE_CLIENT_ID")!,
-    clientSecret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
-  });
+  let tokens;
+  try {
+    tokens = await refreshGoogleToken({
+      refreshToken,
+      clientId: Deno.env.get("GOOGLE_CLIENT_ID")!,
+      clientSecret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
+    });
+  } catch (e) {
+    if (e instanceof TokenRevokedError) {
+      await markAccountTokenRevoked(admin, account.id, "google", e.message);
+    }
+    throw e;
+  }
   const newAccessEnc = await encryptToken(admin, tokens.access_token);
   await admin
     .from("email_accounts")

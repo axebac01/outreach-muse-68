@@ -122,6 +122,17 @@ Deno.serve(async (req) => {
       id = data.id;
     }
 
+    // Re-arm any sends that got paused while this account was broken.
+    await admin
+      .from("scheduled_sends")
+      .update({
+        status: "scheduled",
+        error_message: null,
+        scheduled_for: new Date().toISOString(),
+      })
+      .eq("email_account_id", id)
+      .eq("status", "paused_account_error");
+
     return new Response(
       JSON.stringify({ ok: true, id, email: userInfo.email }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },

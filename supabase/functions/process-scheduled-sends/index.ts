@@ -70,18 +70,48 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-  const result = { processed: 0, sent: 0, cancelled: 0, deferred: 0, failed: 0 };
+  const result = { processed: 0, sent: 0, cancelled: 0, deferred: 0, failed: 0, paused: 0, requeued: 0 };
 
   try {
-    const { data: due } = await admin
+    // (B) Requeue any rows stuck in 'processing' for >10 min — a previous
+    // invocation crashed mid-flight. Safe to retry: send-email is the only
+    // step with external side effects and runs AFTER the claim flip.
+    const stuckCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: requeued } = await admin
       .from("scheduled_sends")
-      .select("*")
+      .update({ status: "scheduled" })
+      .eq("status", "processing")
+      .lt("updated_at", stuckCutoff)
+      .select("id");
+    result.requeued = requeued?.length ?? 0;
+
+    // (B) Atomically claim due rows: fetch ids, then flip 'scheduled' → 'processing'
+    // and use the RETURNING set as the work list. If two invocations overlap,
+    // only one wins each row.
+    const { data: candidates } = await admin
+      .from("scheduled_sends")
+      .select("id")
       .eq("status", "scheduled")
       .lte("scheduled_for", new Date().toISOString())
       .order("scheduled_for", { ascending: true })
       .limit(MAX_BATCH);
 
-    if (!due || due.length === 0) {
+    if (!candidates || candidates.length === 0) {
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const candidateIds = candidates.map((r: any) => r.id);
+    const { data: claimed } = await admin
+      .from("scheduled_sends")
+      .update({ status: "processing" })
+      .in("id", candidateIds)
+      .eq("status", "scheduled")
+      .select("*");
+
+    const due = claimed ?? [];
+    if (due.length === 0) {
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -93,11 +123,22 @@ Deno.serve(async (req) => {
     const limitCache = new Map<string, any>();
     const sentTodayCache = new Map<string, number>();
     const lastSentCache = new Map<string, number>(); // accountId -> ts ms
+    const pausedAccounts = new Set<string>(); // accountIds with token errors this run
 
     const todayStart = startOfDayUtc().toISOString();
 
     for (const row of due) {
       result.processed++;
+
+      // (C) Skip rows for an account that already token-failed this batch.
+      if (pausedAccounts.has(row.email_account_id)) {
+        await admin.from("scheduled_sends")
+          .update({ status: "paused_account_error", error_message: "Email account needs reconnect" })
+          .eq("id", row.id);
+        result.paused++;
+        continue;
+      }
+
 
       // Lead status check
       const { data: lead } = await admin
@@ -143,6 +184,10 @@ Deno.serve(async (req) => {
           }).eq("id", row.id);
           result.cancelled++;
         } else {
+          // Reset claim so a future run picks it up.
+          await admin.from("scheduled_sends")
+            .update({ status: "scheduled", scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString() })
+            .eq("id", row.id);
           result.deferred++;
         }
         continue;
@@ -152,7 +197,9 @@ Deno.serve(async (req) => {
       const sendingDays = Array.isArray(seq.sending_days) ? seq.sending_days : ["mon","tue","wed","thu","fri"];
       const { ok: windowOk, nextSlot } = inWindow(new Date(), sendingDays, seq.sending_window_start, seq.sending_window_end, seq.timezone || "UTC");
       if (!windowOk) {
-        await admin.from("scheduled_sends").update({ scheduled_for: nextSlot.toISOString() }).eq("id", row.id);
+        await admin.from("scheduled_sends")
+          .update({ status: "scheduled", scheduled_for: nextSlot.toISOString() })
+          .eq("id", row.id);
         result.deferred++;
         continue;
       }
@@ -165,8 +212,14 @@ Deno.serve(async (req) => {
         accountCache.set(row.email_account_id, acc);
       }
       if (!acc || acc.status !== "active") {
-        await admin.from("scheduled_sends").update({ scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString() }).eq("id", row.id);
-        result.deferred++;
+        // Account inactive/error → pause every scheduled row for this account
+        // so the user fixes it once, not row by row.
+        pausedAccounts.add(row.email_account_id);
+        await admin.from("scheduled_sends")
+          .update({ status: "paused_account_error", error_message: `Account status: ${acc?.status ?? "missing"}` })
+          .eq("email_account_id", row.email_account_id)
+          .in("status", ["scheduled", "processing"]);
+        result.paused++;
         continue;
       }
 
@@ -193,7 +246,9 @@ Deno.serve(async (req) => {
       }
       if (sentToday >= cap) {
         const tomorrow = startOfDayUtc(new Date(Date.now() + 24 * 60 * 60 * 1000));
-        await admin.from("scheduled_sends").update({ scheduled_for: tomorrow.toISOString() }).eq("id", row.id);
+        await admin.from("scheduled_sends")
+          .update({ status: "scheduled", scheduled_for: tomorrow.toISOString() })
+          .eq("id", row.id);
         result.deferred++;
         continue;
       }
@@ -204,7 +259,8 @@ Deno.serve(async (req) => {
       const earliest = lastSent + minGap;
       if (Date.now() < earliest) {
         await admin.from("scheduled_sends")
-          .update({ scheduled_for: new Date(earliest).toISOString() }).eq("id", row.id);
+          .update({ status: "scheduled", scheduled_for: new Date(earliest).toISOString() })
+          .eq("id", row.id);
         result.deferred++;
         continue;
       }
@@ -262,6 +318,18 @@ Deno.serve(async (req) => {
         }),
       });
 
+      // (C) 401 from send-email = token revoked. Pause all scheduled rows for
+      // this account, don't mark them failed. User reconnects → admin re-arms.
+      if (sendRes.status === 401) {
+        pausedAccounts.add(row.email_account_id);
+        await admin.from("scheduled_sends")
+          .update({ status: "paused_account_error", error_message: "Email account needs reconnect" })
+          .eq("email_account_id", row.email_account_id)
+          .in("status", ["scheduled", "processing"]);
+        result.paused++;
+        continue;
+      }
+
       if (!sendRes.ok) {
         const txt = await sendRes.text().catch(() => "");
         await admin.from("scheduled_sends").update({
@@ -271,6 +339,7 @@ Deno.serve(async (req) => {
         result.failed++;
         continue;
       }
+
 
       // send-email may return 200 + { skipped: true } when last-mile safety
       // (lead status, sequence paused, bounce, unsubscribe) blocked the send.

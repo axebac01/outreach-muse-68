@@ -5,6 +5,7 @@ import {
   decryptToken,
   getValidGoogleAccessToken,
   getValidMicrosoftAccessToken,
+  TokenRevokedError,
 } from "../_shared/oauth.ts";
 import {
   signUnsubscribeToken,
@@ -457,6 +458,18 @@ Deno.serve(async (req) => {
         );
       }
     } catch (sendErr: any) {
+      // Permanent token failure → tell caller (scheduler) to pause the account,
+      // not mark the row as failed. Account is already flagged in oauth helper.
+      if (sendErr instanceof TokenRevokedError) {
+        return new Response(
+          JSON.stringify({
+            error: "Email account needs reconnect",
+            reason: "token_revoked",
+            provider: sendErr.provider,
+          }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       status = "failed";
       errorMessage = sendErr?.message || "Send failed";
     }

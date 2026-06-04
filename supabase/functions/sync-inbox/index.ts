@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { simpleParser } from "npm:mailparser@3.7.2";
-import { corsHeaders, decryptToken, getValidGoogleAccessToken, getValidMicrosoftAccessToken } from "../_shared/oauth.ts";
+import { corsHeaders, decryptToken, getValidGoogleAccessToken, getValidMicrosoftAccessToken, TokenRevokedError } from "../_shared/oauth.ts";
 import { ImapClient, ImapError } from "../_shared/imapClient.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -601,9 +601,19 @@ Deno.serve(async (req) => {
         const msg = e?.message ?? String(e);
         console.error("sync failed for", acc.email, msg);
         errors.push({ account: acc.email, error: msg });
-        await admin.from("email_accounts")
-          .update({ status_message: `Sync error: ${msg.slice(0, 200)}` })
-          .eq("id", acc.id);
+        if (e instanceof TokenRevokedError) {
+          // Account already flagged inside oauth helper, but ensure status flips.
+          await admin.from("email_accounts")
+            .update({
+              status: "error",
+              status_message: `invalid_grant: Anslutningen har gått ut — återanslut ${e.provider}-kontot.`,
+            })
+            .eq("id", acc.id);
+        } else {
+          await admin.from("email_accounts")
+            .update({ status_message: `Sync error: ${msg.slice(0, 200)}` })
+            .eq("id", acc.id);
+        }
       }
     }
 
