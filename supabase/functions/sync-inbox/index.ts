@@ -100,26 +100,93 @@ function extractEmail(addr: string): string {
 
 async function syncGmail(admin: any, account: any) {
   const accessToken = await getValidGoogleAccessToken(admin, account);
-  const url = "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=" +
-    encodeURIComponent("in:inbox -from:me newer_than:14d") + "&maxResults=50";
-  const listResp = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!listResp.ok) {
-    const t = await listResp.text();
-    throw new Error(`Gmail list failed: ${listResp.status} ${t.slice(0, 200)}`);
+
+  // Strategy: if we have a historyId, use Gmail History API for incremental
+  // sync (cheap, exact). On first run or 404 (history expired >7d), fall back
+  // to list with paging until either we exhaust pages or hit a hard cap.
+  const HARD_CAP = 500;
+  const ids: string[] = [];
+  let newHistoryId: string | null = null;
+
+  if (account.history_id) {
+    try {
+      let pageToken: string | undefined;
+      do {
+        const u = new URL("https://gmail.googleapis.com/gmail/v1/users/me/history");
+        u.searchParams.set("startHistoryId", String(account.history_id));
+        u.searchParams.set("historyTypes", "messageAdded");
+        u.searchParams.set("labelId", "INBOX");
+        if (pageToken) u.searchParams.set("pageToken", pageToken);
+        const r = await fetch(u, { headers: { Authorization: `Bearer ${accessToken}` } });
+        if (r.status === 404) {
+          // history too old — reset and fall back
+          newHistoryId = null;
+          ids.length = 0;
+          break;
+        }
+        if (!r.ok) {
+          const t = await r.text();
+          throw new Error(`Gmail history failed: ${r.status} ${t.slice(0, 200)}`);
+        }
+        const j = await r.json();
+        if (j.historyId) newHistoryId = String(j.historyId);
+        for (const h of j.history ?? []) {
+          for (const ma of h.messagesAdded ?? []) {
+            const id = ma.message?.id;
+            if (id) ids.push(id);
+          }
+        }
+        pageToken = j.nextPageToken;
+      } while (pageToken && ids.length < HARD_CAP);
+    } catch (e) {
+      // Fall through to fallback list
+      console.warn("history sync failed, falling back to list:", (e as Error).message);
+    }
   }
-  const list = await listResp.json();
-  const ids: string[] = (list.messages ?? []).map((m: any) => m.id);
-  let inserted = 0;
-  for (const id of ids) {
-    // Skip if already stored
+
+  if (ids.length === 0 && !account.history_id) {
+    // First-time sync — list newest first with paging up to HARD_CAP.
+    let pageToken: string | undefined;
+    do {
+      const u = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+      u.searchParams.set("q", "in:inbox -from:me newer_than:14d");
+      u.searchParams.set("maxResults", "100");
+      if (pageToken) u.searchParams.set("pageToken", pageToken);
+      const r = await fetch(u, { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (!r.ok) {
+        const t = await r.text();
+        throw new Error(`Gmail list failed: ${r.status} ${t.slice(0, 200)}`);
+      }
+      const j = await r.json();
+      for (const m of j.messages ?? []) if (m.id) ids.push(m.id);
+      pageToken = j.nextPageToken;
+    } while (pageToken && ids.length < HARD_CAP);
+
+    // Capture the current historyId so next run uses incremental sync.
+    const profResp = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (profResp.ok) {
+      const prof = await profResp.json();
+      newHistoryId = prof.historyId ? String(prof.historyId) : null;
+    }
+  }
+
+  // Dedupe upfront in ONE query.
+  const uniqueIds = Array.from(new Set(ids));
+  let toFetch = uniqueIds;
+  if (uniqueIds.length > 0) {
     const { data: existing } = await admin
       .from("email_messages")
-      .select("id")
-      .eq("provider_message_id", id)
+      .select("provider_message_id")
       .eq("email_account_id", account.id)
-      .maybeSingle();
-    if (existing) continue;
+      .in("provider_message_id", uniqueIds);
+    const known = new Set((existing ?? []).map((r: any) => r.provider_message_id));
+    toFetch = uniqueIds.filter((id) => !known.has(id));
+  }
 
+  let inserted = 0;
+  for (const id of toFetch) {
     const detResp = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
       { headers: { Authorization: `Bearer ${accessToken}` } },
@@ -130,10 +197,13 @@ async function syncGmail(admin: any, account: any) {
     await persistInbound(admin, account, parsed, id);
     inserted++;
   }
-  await admin
-    .from("email_accounts")
-    .update({ last_synced_at: new Date().toISOString(), status_message: null })
-    .eq("id", account.id);
+
+  const update: Record<string, unknown> = {
+    last_synced_at: new Date().toISOString(),
+    status_message: null,
+  };
+  if (newHistoryId) update.history_id = newHistoryId;
+  await admin.from("email_accounts").update(update).eq("id", account.id);
   return inserted;
 }
 
