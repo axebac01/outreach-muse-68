@@ -112,23 +112,28 @@ async function sendViaGmail(
     extraHeaders,
   });
   const raw = base64UrlEncode(rfc);
-  const res = await fetch(
-    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+  return await withRetry(async () => {
+    const res = await fetch(
+      "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ raw }),
       },
-      body: JSON.stringify({ raw }),
-    },
-  );
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Gmail send failed: ${res.status} ${txt}`);
-  }
-  const json = await res.json();
-  return { messageId: json.id ?? null };
+    );
+    if (!res.ok) {
+      const txt = await res.text();
+      if (isTransientStatus(res.status)) {
+        throw new TransientError(res.status, txt);
+      }
+      throw new Error(`Gmail send failed: ${res.status} ${txt}`);
+    }
+    const json = await res.json();
+    return { messageId: json.id ?? null };
+  });
 }
 
 function parseAddr(addr: string): { name?: string; address: string } {
@@ -175,19 +180,24 @@ async function sendViaOutlook(
     internetMessageHeaders: internetHeaders,
   };
 
-  const res = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ message, saveToSentItems: true }),
+  return await withRetry(async () => {
+    const res = await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message, saveToSentItems: true }),
+    });
+    if (!res.ok && res.status !== 202) {
+      const txt = await res.text();
+      if (isTransientStatus(res.status)) {
+        throw new TransientError(res.status, txt);
+      }
+      throw new Error(`Outlook send failed: ${res.status} ${txt}`);
+    }
+    return { messageId: null };
   });
-  if (!res.ok && res.status !== 202) {
-    const txt = await res.text();
-    throw new Error(`Outlook send failed: ${res.status} ${txt}`);
-  }
-  return { messageId: null };
 }
 
 Deno.serve(async (req) => {
