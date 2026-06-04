@@ -107,6 +107,7 @@ async function syncGmail(admin: any, account: any) {
   const HARD_CAP = 500;
   const ids: string[] = [];
   let newHistoryId: string | null = null;
+  let historyExpired = false;
 
   if (account.history_id) {
     try {
@@ -119,9 +120,12 @@ async function syncGmail(admin: any, account: any) {
         if (pageToken) u.searchParams.set("pageToken", pageToken);
         const r = await fetch(u, { headers: { Authorization: `Bearer ${accessToken}` } });
         if (r.status === 404) {
-          // history too old — reset and fall back
+          // History expired (>7d). Clear cursor so we fall back to a list-based
+          // sync in THIS run, and persist null so it sticks.
+          historyExpired = true;
           newHistoryId = null;
           ids.length = 0;
+          await admin.from("email_accounts").update({ history_id: null }).eq("id", account.id);
           break;
         }
         if (!r.ok) {
@@ -139,13 +143,13 @@ async function syncGmail(admin: any, account: any) {
         pageToken = j.nextPageToken;
       } while (pageToken && ids.length < HARD_CAP);
     } catch (e) {
-      // Fall through to fallback list
       console.warn("history sync failed, falling back to list:", (e as Error).message);
+      historyExpired = true;
     }
   }
 
-  if (ids.length === 0 && !account.history_id) {
-    // First-time sync — list newest first with paging up to HARD_CAP.
+  if (ids.length === 0 && (!account.history_id || historyExpired)) {
+    // First-time sync OR history expired — list newest first with paging.
     let pageToken: string | undefined;
     do {
       const u = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
@@ -171,6 +175,7 @@ async function syncGmail(admin: any, account: any) {
       newHistoryId = prof.historyId ? String(prof.historyId) : null;
     }
   }
+
 
   // Dedupe upfront in ONE query.
   const uniqueIds = Array.from(new Set(ids));
