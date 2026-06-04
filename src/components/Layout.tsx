@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import CookieBanner from "./CookieBanner";
+import { ReconnectBanner } from "./ReconnectBanner";
 
 const APP_PREFIXES = [
   "/dashboard",
@@ -23,6 +24,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+      {isApp && <ReconnectBanner />}
       <main className="flex-1">{children}</main>
       {!isApp && <Footer />}
       <CookieBanner />
@@ -31,3 +33,4 @@ const Layout = ({ children }: { children: ReactNode }) => {
 };
 
 export default Layout;
+
