@@ -24,10 +24,10 @@ export const ReconnectBanner = () => {
       to="/email-accounts"
       className="block bg-destructive/10 border-b border-destructive/30 text-destructive hover:bg-destructive/15 transition-colors"
     >
-      <div className="container mx-auto px-4 py-2.5 flex items-center gap-2 text-sm">
-        <AlertTriangle className="h-4 w-4 shrink-0" />
-        <span className="font-medium">{msg}</span>
-        <span className="text-destructive/80">Klicka för att fixa →</span>
+      <div className="container mx-auto px-4 py-2.5 flex items-start sm:items-center gap-2 text-sm flex-wrap">
+        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 sm:mt-0" />
+        <span className="font-medium break-words min-w-0">{msg}</span>
+        <span className="text-destructive/80 ml-auto sm:ml-0 whitespace-nowrap">Fixa →</span>
       </div>
     </Link>
   );
