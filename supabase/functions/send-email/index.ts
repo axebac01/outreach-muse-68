@@ -5,6 +5,7 @@ import {
   decryptToken,
   getValidGoogleAccessToken,
   getValidMicrosoftAccessToken,
+  TokenRevokedError,
 } from "../_shared/oauth.ts";
 import {
   signUnsubscribeToken,
