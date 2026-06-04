@@ -497,6 +497,8 @@ Deno.serve(async (req) => {
       }
       status = "failed";
       errorMessage = msg;
+    }
+
 
     const sentAt = status === "sent" ? new Date().toISOString() : null;
     const snippet = (body_text || (body_html ? body_html.replace(/<[^>]+>/g, " ") : "") || "").slice(0, 220);
