@@ -560,7 +560,7 @@ export default function ProductStory() {
 // ---------------- styles ----------------
 const CSS = `
 .ps-section{position:relative;}
-.ps-section:not(.ps-mobile){height:500vh;}
+.ps-section:not(.ps-mobile){height:600vh;}
 .ps-pin{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
 
 .ps-introhead{position:absolute;top:0;left:0;right:0;padding:90px 32px 0;text-align:center;z-index:3;pointer-events:none;}
