@@ -59,17 +59,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Guard against duplicate scheduling on re-launch.
-    const { count: existingScheduled } = await admin
-      .from("scheduled_sends")
-      .select("id", { count: "exact", head: true })
-      .eq("sequence_id", sequenceId);
-    if ((existingScheduled ?? 0) > 0) {
-      return new Response(JSON.stringify({ error: "Kampanjen är redan startad." }), {
-        status: 409,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Guard against re-launch duplication. Only 'draft' or 'paused' may launch.
+    // Checking scheduled_sends count is wrong — after a sequence completes, all
+    // rows have status 'sent' so the count guard would let a re-launch through
+    // and duplicate every email.
+    if (!["draft", "paused"].includes(seq.status)) {
+      return new Response(
+        JSON.stringify({ error: `Sekvensen är redan startad (status: ${seq.status}).` }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
+
+
 
 
     const [{ data: leadsRaw }, { data: steps }, { data: senders }, { data: unsubs }] = await Promise.all([
