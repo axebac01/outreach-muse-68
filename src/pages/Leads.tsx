@@ -821,13 +821,76 @@ export default function Leads() {
           {/* Results */}
           <div className="space-y-3">
             {!searchTriggered && (
-              <Card className="border-dashed">
-                <CardContent className="py-16 text-center">
-                  <Sparkles className="h-10 w-10 mx-auto text-muted-foreground/40 mb-4" />
-                  <h3 className="font-semibold text-lg">Börja söka bland leads</h3>
-                  <p className="text-muted-foreground text-sm mt-1 max-w-md mx-auto">
-                    Sätt dina filter till vänster. Du betalar bara {CREDITS_PER_REVEAL} credits per lead du
-                    väljer att avslöja — sökning är gratis.
+              <Card className="border-dashed overflow-hidden">
+                <CardContent className="py-8 px-6">
+                  <div className="text-center max-w-md mx-auto mb-6">
+                    <Sparkles className="h-9 w-9 mx-auto text-primary/60 mb-3" />
+                    <h3 className="font-semibold text-lg">Börja söka bland leads</h3>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      Sätt dina filter till vänster — sökning är gratis. Du betalar bara{" "}
+                      {CREDITS_PER_REVEAL} credits per lead du väljer att avslöja.
+                    </p>
+                  </div>
+
+                  <div className="relative rounded-lg border border-border/60 bg-muted/30">
+                    <div className="flex items-center justify-between px-4 py-2 border-b border-border/60">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Så här ser resultaten ut
+                      </span>
+                      <Badge variant="secondary" className="text-[10px] font-normal">
+                        Exempel
+                      </Badge>
+                    </div>
+                    <div className="divide-y divide-border/60 opacity-80 pointer-events-none select-none">
+                      {[
+                        { name: "An**a S******m", title: "VP of Sales", company: "Klarna", badges: ["email", "phone", "loc", "ind"] },
+                        { name: "Ma***s J*******n", title: "Head of Growth", company: "Spotify", badges: ["email", "loc", "ind"] },
+                        { name: "Em**y L*******t", title: "CMO", company: "Tink", badges: ["email", "phone", "loc"] },
+                        { name: "Jo**n B*****n", title: "Founder & CEO", company: "Kry", badges: ["email", "loc", "ind"] },
+                        { name: "So**a E*****d", title: "Sales Director", company: "Voi Technology", badges: ["email", "phone", "ind"] },
+                      ].map((s, i) => (
+                        <div key={i} className="flex items-start gap-3 px-4 py-3">
+                          <Checkbox className="mt-1" checked={false} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium">{s.name}</span>
+                              <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                                <Lock className="h-2.5 w-2.5" /> Lås upp för fullt namn
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-0.5">
+                              {s.title} · <span className="text-foreground/80">{s.company}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              {s.badges.includes("email") && (
+                                <Badge variant="secondary" className="text-[10px] font-normal gap-1">
+                                  <Mail className="h-2.5 w-2.5" /> Email
+                                </Badge>
+                              )}
+                              {s.badges.includes("phone") && (
+                                <Badge variant="secondary" className="text-[10px] font-normal gap-1">
+                                  <Phone className="h-2.5 w-2.5" /> Direktnr
+                                </Badge>
+                              )}
+                              {s.badges.includes("loc") && (
+                                <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                                  <MapPin className="h-2.5 w-2.5" /> Plats
+                                </Badge>
+                              )}
+                              {s.badges.includes("ind") && (
+                                <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                                  <Building2 className="h-2.5 w-2.5" /> Bransch
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-center text-xs text-muted-foreground mt-5">
+                    Fyll i filter till vänster och klicka <span className="font-medium text-foreground">Sök leads</span> för att se riktiga resultat.
                   </p>
                 </CardContent>
               </Card>
