@@ -477,14 +477,14 @@ export default function ProductStory() {
   // Spring-eased global progress for buttery scrub
   const smooth = useSpring(scrollYProgress, { stiffness: 90, damping: 24, mass: 0.4 });
   // 4 panels → 0..4
-  const stepProgress = useTransform(smooth, [0, 1], [0, 4]);
-  // Horizontal translate: 0vw → -300vw
-  const trackX = useTransform(smooth, [0, 1], ["0vw", "-300vw"]);
+  const stepProgress = useTransform(smooth, [0, 1], [0, 5]);
+  // Horizontal translate: 0vw → -400vw (5 paneler)
+  const trackX = useTransform(smooth, [0, 1], ["0vw", "-400vw"]);
 
   const [progress, setProgress] = useState(0);
   useMotionValueEvent(stepProgress, "change", (v) => setProgress(v));
 
-  const activeStep = Math.min(3, Math.floor(progress));
+  const activeStep = Math.min(4, Math.floor(progress));
   const localP = progress - activeStep;
   const activeAccent = STEPS[activeStep].accent;
 
