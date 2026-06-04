@@ -481,9 +481,22 @@ Deno.serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+      // Transient: tell caller to retry later (don't insert a failed
+      // email_messages row — that would create a phantom "sent" attempt).
+      const msg = sendErr?.message ?? "Send failed";
+      const smtpCodeMatch = /\b(4\d{2})\b/.exec(msg);
+      const isTransient =
+        sendErr instanceof TransientError ||
+        (smtpCodeMatch && isTransientSmtpCode(Number(smtpCodeMatch[1]))) ||
+        /timeout|network|econnreset|etimedout|socket/i.test(msg);
+      if (isTransient) {
+        return new Response(
+          JSON.stringify({ error: msg.slice(0, 500), reason: "transient" }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       status = "failed";
-      errorMessage = sendErr?.message || "Send failed";
-    }
+      errorMessage = msg;
 
     const sentAt = status === "sent" ? new Date().toISOString() : null;
     const snippet = (body_text || (body_html ? body_html.replace(/<[^>]+>/g, " ") : "") || "").slice(0, 220);
