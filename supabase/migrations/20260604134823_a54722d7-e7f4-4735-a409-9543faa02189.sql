@@ -1,0 +1,1 @@
+CREATE TRIGGER scheduled_sends_set_updated_at BEFORE UPDATE ON public.scheduled_sends FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();

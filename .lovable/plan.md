@@ -1,68 +1,51 @@
-# Implementationsplan — launch-blockerare
+# Verifiering av Sprint 1 — 3 brister hittade
 
-Vi hoppar över #4 (Google OAuth) och #5 (Analytics demodata) enligt din instruktion. Plan i tre sprintar — vi tar Sprint 1 först och stämmer av innan vi går vidare.
+Jag gick igenom cron, race-condition-fixen, token-felhanteringen och re-launch-guarden mot faktisk kod + databas. Tre saker behöver åtgärdas innan Sprint 2.
 
-## Sprint 1 — kritiska blockerare (gör nu)
+## 🔴 Bug 1 — Dubbla cron-jobb
 
-### A. Cron-jobb för utskick och inbox-sync (#1)
-Schemalägger två återkommande jobb mot edge functions:
+Det finns nu **två** jobb för varje schemaläggare i `cron.job`:
 
-- `process-scheduled-sends` — varje minut
-- `sync-inbox-cron` — var 10:e minut
+| jobid | jobname | schedule |
+|---|---|---|
+| 1 | process-scheduled-sends-every-5min | `*/5 * * * *` |
+| 4 | process-scheduled-sends-every-minute | `* * * * *` ← ny |
+| 3 | sync-inbox-every-10-min | `*/10 * * * *` |
+| 5 | sync-inbox-every-10-minutes | `*/10 * * * *` ← ny |
 
-Läggs in via `supabase--insert` (inte migration — innehåller projekt-URL och service-key och får inte köras vid remix). Använder `pg_cron` + `pg_net` (redan installerade). Auth via service-role key i header.
+Konsekvens: `process-scheduled-sends` triggas både var 5:e minut OCH varje minut från två olika jobb. `sync-inbox` triggas dubbelt var 10:e minut. Förutom onödig last ökar det risken för dubbletter (se Bug 2).
 
-Verifiering efteråt: kontrollera att jobben dyker upp och att första körningen producerar loggar i båda funktionerna.
+**Fix:** `cron.unschedule(1)`, `cron.unschedule(3)`. Behåll jobid 4 (varje minut) och 5 (var 10:e min).
 
-### B. Race condition i scheduler (#2)
-I `process-scheduled-sends/index.ts`:
+## 🔴 Bug 2 — `updated_at` uppdateras inte → "stuck"-requeue plockar levande rader
 
-- Innan loopen — kör en `UPDATE scheduled_sends SET status='processing', updated_at=now() WHERE id IN (...) AND status='scheduled' RETURNING *`. Endast rader som faktiskt flippades behandlas.
-- Om en cron-körning överlappar nästa fångar `WHERE status='scheduled'`-villkoret inget dubbelt.
-- Vid lyckat utskick: `status='sent'`. Vid fel: `status='failed'` (som idag). Vid oväntat crash mellan processing och sent → läggs till en `requeue_stuck_processing` regel: rader som varit `processing` i >10 min flippas tillbaka till `scheduled` i början av varje körning.
+`scheduled_sends` har en `updated_at`-kolumn, **men ingen trigger** som bumpar den (verifierat i `information_schema.triggers`). Ny UPDATE som flippar `status = 'processing'` rör inte `updated_at`.
 
-### C. Token-fel märks i UI:t (#3)
-Två delar:
+Konsekvens i `process-scheduled-sends/index.ts`:
+- Recovery-steget letar `status='processing' AND updated_at < now()-10min` och sätter tillbaka till `scheduled`.
+- Eftersom `updated_at` är från radens skapande blir varje rad som claimades men hör till en sekvens som lanserades >10 min sedan **omedelbart återställd** medan en parallell körning fortfarande håller på att skicka den.
+- Med varje-minut-cron + 50 rader per batch ⇒ realistisk risk att samma e-post skickas två gånger.
 
-1. I `_shared/oauth.ts` — när `getValidGoogleAccessToken` / `getValidMicrosoftAccessToken` får `invalid_grant` eller motsvarande permanent fel, kasta ett typat fel (`TokenRevokedError`).
-2. I `send-email` och `sync-inbox` — fånga `TokenRevokedError`, sätt `email_accounts.status='error'` och `status_message='Anslutningen har gått ut — återanslut kontot'`. Returnera 401 (inte 500) så schedulern kan särskilja.
-3. I `process-scheduled-sends` — vid 401 från send-email: pausa alla `scheduled` rader för det kontot (sätt `status='paused_account_error'`) i stället för att markera dem `failed`. När kontot återansluts → flippas de tillbaka till `scheduled`.
-4. I UI:t (`EmailAccounts.tsx`) — visa redan idag `status_message` om vi har det. Verifiera att banner syns när status='error'. Lägg till diskret "Återanslut"-knapp som triggar oauth-start på nytt.
+**Fix (välj A — minimal, säker):**
+1. Migration: trigger `BEFORE UPDATE ON scheduled_sends` som sätter `NEW.updated_at = now()` (samma mönster som befintlig `set_updated_at()`-funktion).
+2. Lägg också explicit `updated_at: new Date().toISOString()` i claim-UPDATE i `process-scheduled-sends` som suspender + bälte.
+3. Behåll requeue-logiken som den är — den blir korrekt så fort tidsstämpeln faktiskt rör sig.
 
-### D. Re-launch duplicering (#6)
-I `launch-sequence/index.ts:44` — byt guarden från "finns scheduled_sends?" till `sequences.status NOT IN ('draft','paused')`. Returnera 409 med meddelande "Sekvensen är redan startad" om den är aktiv/klar.
+## 🟡 Bug 3 — `oauth-callback` re-armar bara Google/Microsoft-rader, inte SMTP-konton
 
-## Sprint 2 — efter avstämning
+`oauth-callback/index.ts:127-134` återställer `paused_account_error` → `scheduled` när OAuth-konto återansluts. Men `process-scheduled-sends` markerar **alla** konton (även SMTP/IMAP) som `paused_account_error` vid `account.status !== 'active'` (rad 214-223). SMTP-konton går aldrig via `oauth-callback`, så när användaren fixar dem manuellt i UI blir de pausade raderna kvarliggande för alltid.
 
-- **#7 N+1 i schedulern** — batchhämta sequence/account/limits/sent-counts per körning istället för per rad.
-- **#8 Inbox-sync fönster** — höj från 14d/50 till 30d/200, paginera om fler finns.
-- **#9 Retry på transienta fel** — lägg till `attempt_count` + `next_attempt_at` på `scheduled_sends`. 429/503/network → exponential backoff (1m, 5m, 30m, 2h), max 4 försök, sedan `failed`.
+**Fix:** I `EmailAccounts.tsx`-mutationen som flippar SMTP-konto tillbaka till `active`, eller i `useUpdateEmailAccount`, kör samma re-arm-update på `scheduled_sends` (status `paused_account_error` → `scheduled`, `scheduled_for = now()`) för det aktuella `email_account_id`. Alternativt: edge-funktion `rearm-account` som båda vägarna anropar.
 
-## Sprint 3 — löpande
+## ✅ Verifierat OK
 
-- #10 Persistera throttle-state i DB istället för per-invocation cache
-- #11 Mobil layout för Leads + Inbox
-- #12 Rate-limit på `track-visit` per site_key
-- #13 Byt `auth.getClaims()` mot `auth.getUser()` i `leads-search`
-- #14 Empty state i Inbox när inga konton anslutna
-- #15 DELETE-policy på `bounces`
-- #16 Dölj `access_token_enc`/`refresh_token_enc` via view (security_invoker) + neka direktläsning på basetabellen
-- #17 Robust timezone-validering i sändningsfönstret
+- `process-scheduled-sends`: atomisk claim (SELECT ids → UPDATE … WHERE status='scheduled' RETURNING) fungerar.
+- `send-email`: returnerar 401 + `reason: token_revoked` på `TokenRevokedError`. Scheduler tolkar 401 korrekt och pausar hela kontot, inte enstaka rader.
+- `_shared/oauth.ts`: `isPermanentTokenError` täcker `invalid_grant` + relevanta `AADSTS`-koder. Flagar `email_accounts.status='error'` + `status_message`.
+- `sync-inbox`: fångar `TokenRevokedError` och sätter `status='error'`. SMTP/IMAP-login fail flaggar också `status_message`.
+- `launch-sequence`: guard byggd på `seq.status NOT IN ('draft','paused')` → returnerar 409. Status flippas till `active` först efter `scheduled_sends.insert`.
+- UI (`EmailAccounts.tsx`, `SendersTab.tsx`): visar `status_message` + "Återanslut"-knapp. Översättningar finns både SV/EN.
 
-## Tekniska detaljer (Sprint 1)
+## Frågor innan jag bygger
 
-**Migrationer:** ingen ny SQL-migration behövs för cron — `pg_cron`/`pg_net` finns redan. Cron-jobben läggs in via `supabase--insert` (projekt-specifik data).
-
-**Schema-ändringar:** ny status-värden på `scheduled_sends`: `'processing'`, `'paused_account_error'`. Görs via migration (CHECK constraint om sådan finns).
-
-**Nya kolumner:** inga i Sprint 1.
-
-**Edge functions att redeploya efter ändringar:** `process-scheduled-sends`, `send-email`, `sync-inbox`, `launch-sequence`.
-
-## Vad jag INTE rör i denna plan
-- #4 Google OAuth — separat scope-beslut senare
-- #5 Analytics mockdata — du tar det själv
-- Innehåll/copy på landningssidan
-- Stripe/credits-flöden
-
-Godkänn så börjar jag med Sprint 1 (A→B→C→D i den ordningen, så att cron är på plats innan vi ändrar scheduler-logiken).
+Inga — fixarna är entydiga. Säg "kör" så åtgärdar jag alla tre och verifierar att duplikat-jobben är borta innan Sprint 2 startar.
