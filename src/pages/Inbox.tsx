@@ -368,7 +368,7 @@ const Inbox = () => {
           </div>
 
           {/* Conversation */}
-          <div className="rounded-lg border bg-card overflow-hidden hidden lg:flex flex-col lg:col-span-2 xl:col-span-1">
+          <div className={`rounded-lg border bg-card overflow-hidden flex-col lg:col-span-2 xl:col-span-1 ${showThreadMobile ? "flex" : "hidden"} lg:flex`}>
             {!selected ? (
               <div className="flex-1 grid place-items-center text-sm text-muted-foreground p-6 text-center">
                 Välj en konversation för att läsa och svara.
@@ -376,10 +376,16 @@ const Inbox = () => {
             ) : (
               <>
                 <div className="px-4 py-3 border-b space-y-2">
-                  <div>
-                    <div className="font-medium truncate">{selected.subject || "(utan ämne)"}</div>
-                    <div className="text-xs text-muted-foreground truncate">{selected.participants.join(", ")}</div>
+                  <div className="flex items-start gap-2">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 -ml-1 lg:hidden shrink-0" onClick={() => setSelectedId(null)} aria-label="Tillbaka">
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">{selected.subject || "(utan ämne)"}</div>
+                      <div className="text-xs text-muted-foreground truncate">{selected.participants.join(", ")}</div>
+                    </div>
                   </div>
+
                   {lastInbound && (
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <SentimentBadge sentiment={lastInbound.sentiment} />
