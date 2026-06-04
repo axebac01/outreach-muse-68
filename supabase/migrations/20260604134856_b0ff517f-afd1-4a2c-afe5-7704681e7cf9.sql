@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.rearm_paused_sends_on_account_active() FROM PUBLIC, anon, authenticated;
