@@ -1,68 +1,59 @@
-# Plan: Premium-uppgradering av ProductStory
+# Plan: Steg 05 — Värde & analys
 
-Mål: göra scroll-storyn lika smidig och "wow" som Linear, Vercel, Arc, Framer och Stripe. Mindre "demo-mockup", mer cinematisk produktupplevelse.
+Lägga till en femte scen i ProductStory som landar hela storyn i konkret affärsvärde, inte bara "svar kom in".
 
-## Vad de bästa sajterna gör (och vi inte gör idag)
+## Konceptet
 
-1. **Horisontell pinning istället för vertikal stack** (Linear, Apple, Igloo Inc). Sektionen pinnas, innehållet glider i sidled mellan stegen. Känns som en film, inte en lång sida.
-2. **Riktiga produkt-UI:n, inte symboliska mockups** (Vercel, Linear, Attio). Visa faktiska skärmar från appen — samma typsnitt, samma komponenter, samma färger som inne i produkten. Bygger trovärdighet direkt.
-3. **Crossfade + parallax mellan steg** (Stripe, Framer). Gammalt UI bleknar/skalas ner och nytt glider in från höger med subtil parallax på inre lager (toolbar rör sig snabbare än bakgrund).
-4. **Diegetisk text** (Arc, Rauno). Rubriker bor inuti scenen, inte i en separat textkolumn. Text och UI andas tillsammans.
-5. **Mikromotion driven av scroll-progress, inte tid** (Linear). Cursorn flyttar sig, ett filter markeras, ett mejl skrivs — allt scrubbat med scroll. Användaren känner att de styr.
-6. **En enda accentfärg per scen** med mjuk färgresa (orange → guld → grön → orange-glow). Bakgrundsgradient morfar långsamt.
-7. **Tystnad mellan stegen** — 10–15% scroll där inget händer förutom andning/parallax. Ger rytm.
-8. **Audio-cue alt. haptisk "tick"** vid stegövergångar (valfritt, av som default).
-9. **Slut-payoff**: sista scenen zoomar ut till en dashboard som sammanfattar hela resan ("23 svar · 4 möten bokade"). Cliffhanger → CTA.
+Scenen heter **"Resultat & pipeline-värde"** och visar:
+- En **stor headline-siffra**: pipeline-värde i SEK (t.ex. "1,2 MSEK i pipeline").
+- En **scroll-animerad graf** över 4 veckor som visar svar/möten/pipeline-värde som växer.
+- **3 mini-stats** under: positiva svar, möten bokade, kostnad per möte.
+- En lista med **3 "heta" svar** (riktiga namn från tidigare scener, t.ex. Sara Lind, Mona Ek) med korta svarscitat och en grön "Intresserad"-tag.
+- **Diegetisk text** vid sidan: "Från kall lista till varm pipeline — automatiskt."
 
-## Vad vi bygger
+## Grafen
 
-### A. Layout-byte: horisontell scrollytelling
-- Sektionen blir `height: 500vh`, inre `position: sticky; height: 100vh`.
-- Scen-container: `display: flex; width: 400vw`, translateX baserat på scroll-progress.
-- Mobil: behåll vertikal stack (kortvariant), men polera (se D).
+- SVG-baserad linje- + area-graf, 4 datapunkter (V1–V4).
+- Stroke och fyllning interpoleras med scenens accentfärg (orange).
+- Linjen ritas tecken-för-tecken via `stroke-dasharray` scrubbat på scrollens lokala progress (0→1).
+- Area under linjen fade:ar in efter linjen är dragen.
+- Datapunkter pop:ar in en i taget med liten ring-puls.
+- Y-axel: dolda gridlinjer (svagt), X-axel: V1/V2/V3/V4-etiketter.
+- En "ROI"-pil som pekar uppåt-höger med "+312%" som tonar in sist.
 
-### B. Riktiga produkt-skärmar
-- Återanvänd faktiska komponenter från `/leads`, `/campaigns/[id]`, `/inbox` i mini-format (read-only, mockad data).
-- Wrappa i en "device frame" (subtil 1px border, top-bar med trafikljus-prickar, mjuk inner-shadow).
-- Konsekvent skala 0.85 så de känns som "tittar in i appen".
+## Scen-flöde (lokal progress 0→1)
 
-### C. Cinematisk scene-direction
-- **Scen 1 (Sök):** cursor glider in, klickar filter ett-efter-ett, leads tonar in rad-för-rad, "Avslöja mejl" pulsar och avslöjar.
-- **Scen 2 (Importera):** checkboxar bockas i sekvens med liten "tick"-skala, footer-bar slidar upp, hela urvalet flyger i en båge mot kampanj-ikonen (motion path).
-- **Scen 3 (AI):** prompt skrivs tecken-för-tecken (scroll-scrubbat, inte tid), sedan "thinking shimmer" på AI-knappen, sedan 3 mejlkort som bygger sig själva rad-för-rad med caret.
-- **Scen 4 (Skicka & svar):** kuvert flyger ut i parabel mot inkorg-ikoner, status-chips morfar Queued→Sent→Replied, dashboard tonar in över med stora siffror (23 svar, 12% reply, 4 möten).
+```text
+0.00 – 0.15  Header + tom graf-ram fade:ar in
+0.15 – 0.55  Grafens linje ritas, datapunkter pop:ar
+0.55 – 0.70  Area-fyllning fade:ar in + ROI-pil
+0.70 – 1.00  Mini-stats + 3 "heta svar" cascade:ar in
+```
 
-### D. Mikrodetaljer som lyfter känslan
-- **Färgresa**: CSS-variabel `--scene-accent` interpoleras mellan stegen, driver glow, progress-rail och knapp-accenter.
-- **Aurora-bakgrund** rör sig långsamt parallax (translateY * 0.3).
-- **Grain-overlay** (4% opacity) för filmkänsla.
-- **Progress-rail** byts mot en horisontell tunn linje längst ner med 4 steg-etiketter som highlightas. Mjuk spring-animation.
-- **"Scroll" hint** byts till en subtil pil + "Scroll" som fadar efter första scrollen, Apple-stil.
-- **Spring easing** (framer `useSpring` på scroll-progress) så allt känns viktat, inte linjärt.
-- **Reduced motion**: hoppar direkt till sluttillstånd per scen, ingen pinning.
+## Tekniska ändringar
 
-### E. Performance
-- `will-change: transform` bara på aktiva lager.
-- Tunga SVG/blur bara på desktop ≥1024px.
-- Lazy-mounta scen 3 & 4 tills de är inom 1 scen-bredd från viewport.
+- `src/components/landing/ProductStory.tsx`
+  - Lägg till `STEPS[4]` (accent: guld/grön — guld `#D9920F` föreslås för "värde/pengar"-känsla).
+  - Ny `Step5({ p })` med SVG-grafen + statsen + heta svar.
+  - Uppdatera `STEP_COMPS` till 5 element.
+  - Justera scrollhöjd: `height: 500vh` → `height: 600vh` (5 paneler).
+  - Uppdatera `stepProgress` mapping `[0,1] → [0,5]`.
+  - Uppdatera `trackX` mapping `[0,1] → ["0vw", "-400vw"]`.
+  - Uppdatera `activeStep` cap från 3 → 4.
+  - Lägg till nya CSS-klasser: `.ps-chart`, `.ps-chartwrap`, `.ps-hot`, `.ps-hotcard`, `.ps-roi`, `.ps-bigval`.
+  - Rail-grid blir 5 kolumner istället för 4.
+  - Mobile-fallback: lägg automatiskt till kortet (renderas från `STEPS.map`).
 
-## Tekniska detaljer
+## Innehåll (svenska)
 
-- `framer-motion`: `useScroll` + `useSpring({stiffness: 80, damping: 20})` för smooth scrub.
-- `useTransform` på `scrollYProgress` → `translateX` på horisontell rail.
-- Varje scen får en lokal `progress` (0–1) härledd från global progress via `useTransform`.
-- Cursor och typing-animationer drivs av samma lokala progress (deterministiskt, reversibelt).
-- Färg-interpolation via `useMotionTemplate` på CSS-variabel.
-- Filer som ändras: `src/components/landing/ProductStory.tsx` (omskrivning), ev. ny `ProductStoryMobile.tsx` för att hålla filen läsbar.
+- Eyebrow: `STEG 05 · RESULTAT & PIPELINE`
+- Titel: `Från kall lista till varm pipeline — automatiskt`
+- Body: `Se exakt vad kampanjen genererat. Värde per svar, kostnad per möte och tydlig ROI — utan kalkylark.`
+- Headline-siffra: `1,2 MSEK pipeline-värde`
+- Mini-stats: `7 möten bokade` · `3 200 kr / möte` · `+312% ROI`
+- 3 heta svar:
+  - Sara Lind, Kavalan — "Intressant, kan vi ta ett snack på torsdag?"
+  - Mona Ek, Tellus AB — "Vi letar faktiskt efter detta just nu."
+  - Erik Holm, Northbeam — "Skicka gärna mer info."
 
-## Vad jag rekommenderar du säger ja till
-
-**Minsta möjliga "wow"-paket (det jag skulle göra först):**
-1. Horisontell pinning (A)
-2. Spring-easad scroll + färgresa (D)
-3. Cursor-driven mikromotion i scen 1 + typing-scrub i scen 3 (C)
-4. Slut-payoff dashboard i scen 4 (C)
-
-**Full version:** ovan + riktiga produktkomponenter (B) + audio-cue + diegetisk text.
-
-Säg vilken nivå du vill ha så bygger jag.
+Säg till om värdesiffrorna ska vara mer/mindre aggressiva eller om accenten ska vara grön istället för guld.
