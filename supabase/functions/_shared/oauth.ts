@@ -235,6 +235,39 @@ export async function exchangeGoogleCode(opts: {
   return await res.json();
 }
 
+export class TokenRevokedError extends Error {
+  provider: string;
+  constructor(provider: string, message: string) {
+    super(message);
+    this.name = "TokenRevokedError";
+    this.provider = provider;
+  }
+}
+
+function isPermanentTokenError(status: number, body: string): boolean {
+  // Google + Microsoft both signal revoked/expired refresh tokens via
+  // `invalid_grant`. 400/401 with that code is permanent — user must reconnect.
+  if (status !== 400 && status !== 401) return false;
+  return /invalid_grant|AADSTS7000(8|82)|AADSTS50173|AADSTS54005/i.test(body);
+}
+
+async function markAccountTokenRevoked(
+  admin: ReturnType<typeof createClient>,
+  accountId: string,
+  provider: string,
+  detail: string,
+) {
+  try {
+    await admin
+      .from("email_accounts")
+      .update({
+        status: "error",
+        status_message: `invalid_grant: Anslutningen har gått ut — återanslut ${provider}-kontot. (${detail.slice(0, 120)})`,
+      })
+      .eq("id", accountId);
+  } catch (_) { /* best effort */ }
+}
+
 export async function refreshGoogleToken(opts: {
   refreshToken: string;
   clientId: string;
@@ -253,6 +286,9 @@ export async function refreshGoogleToken(opts: {
   });
   if (!res.ok) {
     const txt = await res.text();
+    if (isPermanentTokenError(res.status, txt)) {
+      throw new TokenRevokedError("google", `Google token revoked: ${txt.slice(0, 200)}`);
+    }
     throw new Error(`Google token refresh failed: ${res.status} ${txt}`);
   }
   return await res.json();
