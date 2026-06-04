@@ -493,14 +493,23 @@ export async function getValidGoogleAccessToken(
     return await decryptToken(admin, account.access_token_enc);
   }
   if (!account.refresh_token_enc) {
-    throw new Error("No refresh token on file — reconnect the account");
+    await markAccountTokenRevoked(admin, account.id, "google", "missing refresh token");
+    throw new TokenRevokedError("google", "No refresh token on file — reconnect the account");
   }
   const refreshToken = await decryptToken(admin, account.refresh_token_enc);
-  const tokens = await refreshGoogleToken({
-    refreshToken,
-    clientId: Deno.env.get("GOOGLE_CLIENT_ID")!,
-    clientSecret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
-  });
+  let tokens;
+  try {
+    tokens = await refreshGoogleToken({
+      refreshToken,
+      clientId: Deno.env.get("GOOGLE_CLIENT_ID")!,
+      clientSecret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
+    });
+  } catch (e) {
+    if (e instanceof TokenRevokedError) {
+      await markAccountTokenRevoked(admin, account.id, "google", e.message);
+    }
+    throw e;
+  }
   const newAccessEnc = await encryptToken(admin, tokens.access_token);
   await admin
     .from("email_accounts")
