@@ -13,6 +13,7 @@ import {
 } from "../_shared/unsubscribe.ts";
 import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
 import { htmlToPlainText, looksLikeHtml } from "../_shared/htmlToText.ts";
+import { withRetry, TransientError, isTransientStatus, isTransientSmtpCode } from "../_shared/retry.ts";
 
 function encodeMimeWord(s: string): string {
   if (!s) return s;
