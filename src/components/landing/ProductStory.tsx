@@ -45,6 +45,27 @@ const STEPS = [
     body: "Schemalagda utskick från dina inkorgar. AI klassar svar och visar pipeline live.",
     accent: "#E0512B",
   },
+  {
+    n: "05",
+    eyebrow: "Resultat & pipeline",
+    title: "Från kall lista till varm pipeline — automatiskt",
+    body: "Se exakt vad kampanjen genererat. Värde per svar, kostnad per möte och tydlig ROI — utan kalkylark.",
+    accent: "#D9920F",
+  },
+];
+
+const HOT_REPLIES = [
+  { initials: "SL", name: "Sara Lind", company: "Kavalan", quote: "Intressant, kan vi ta ett snack på torsdag?" },
+  { initials: "ME", name: "Mona Ek", company: "Tellus AB", quote: "Vi letar faktiskt efter detta just nu." },
+  { initials: "EH", name: "Erik Holm", company: "Northbeam", quote: "Skicka gärna mer info." },
+];
+
+// Graph data: pipeline value (kkr) per week
+const CHART = [
+  { w: "V1", v: 120 },
+  { w: "V2", v: 380 },
+  { w: "V3", v: 760 },
+  { w: "V4", v: 1200 },
 ];
 
 const LEADS = [
