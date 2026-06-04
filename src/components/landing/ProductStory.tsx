@@ -680,6 +680,25 @@ const CSS = `
 .ps-mtext h3{font-size:22px;font-weight:600;color:var(--hh);margin:10px 0 8px;letter-spacing:-.01em;}
 .ps-mtext p{color:var(--tx2);font-size:14.5px;line-height:1.5;margin:0;}
 
+/* STEP 5 — analys */
+.ps-bigval{display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:12px;transition:opacity .5s;}
+.ps-bigvallbl{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;letter-spacing:.16em;color:var(--eyebrow);text-transform:uppercase;}
+.ps-bigvalnum{font-size:28px;font-weight:700;color:var(--scene);letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums;}
+.ps-chartwrap{position:relative;padding:8px 6px 4px;background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:12px;transition:opacity .5s;}
+.ps-chart{display:block;width:100%;height:auto;}
+.ps-roi{position:absolute;top:10px;right:12px;display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;background:color-mix(in srgb, var(--scene) 14%, transparent);color:var(--scene);font-size:11px;font-weight:600;font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:.04em;transition:opacity .5s,transform .5s;}
+.ps-ministats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;transition:opacity .5s,transform .5s;}
+.ps-mstat{padding:10px 12px;background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:10px;display:flex;flex-direction:column;gap:3px;}
+.ps-mstat b{font-size:16px;font-weight:700;color:var(--hh);letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
+.ps-mstat span{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;letter-spacing:.12em;color:var(--tx3);text-transform:uppercase;}
+.ps-mstat.em b{color:var(--scene);}
+.ps-hot{display:flex;flex-direction:column;gap:6px;}
+.ps-hotcard{display:flex;align-items:center;gap:10px;padding:8px 11px;background:var(--panel-bg);border:1px solid var(--panel-bd);border-radius:10px;transition:opacity .45s,transform .45s;}
+.ps-hotinfo{flex:1;display:flex;flex-direction:column;line-height:1.25;min-width:0;}
+.ps-hotinfo b{font-size:12px;font-weight:600;color:var(--tx);}
+.ps-hotinfo b em{font-style:normal;font-weight:400;color:var(--tx3);font-size:11px;}
+.ps-hotquote{font-size:11.5px;color:var(--tx2);font-style:italic;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
 @media (max-width:1023px){
   .ps-section:not(.ps-mobile){display:none;}
 }
