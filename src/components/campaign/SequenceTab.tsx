@@ -66,18 +66,18 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h2 className="text-xl font-semibold">Sekvens</h2>
           <p className="text-muted-foreground text-sm">
             Skriv första mejlet och dina uppföljningar. Variabler som <code className="text-xs">{`{{first_name}}`}</code> personaliserar per lead.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setTestOpen(true)} className="gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setTestOpen(true)} className="gap-2">
             <Send className="h-4 w-4" /> Skicka test
           </Button>
-          <Button variant="outline" onClick={() => setAiOpen(true)} className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => setAiOpen(true)} className="gap-2">
             <Sparkles className="h-4 w-4 text-primary" /> Skriv med AI
           </Button>
         </div>
