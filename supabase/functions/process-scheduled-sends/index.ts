@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     const candidateIds = candidates.map((r: any) => r.id);
     const { data: claimed } = await admin
       .from("scheduled_sends")
-      .update({ status: "processing" })
+      .update({ status: "processing", updated_at: new Date().toISOString() })
       .in("id", candidateIds)
       .eq("status", "scheduled")
       .select("*");
