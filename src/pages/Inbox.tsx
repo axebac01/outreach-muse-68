@@ -413,11 +413,19 @@ const Inbox = () => {
                           <AlertCircle className="h-2.5 w-2.5" /> AI-fel
                         </Badge>
                       )}
-                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto"
-                        onClick={() => handleAnalyze(true)} disabled={analyzing}>
-                        {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                        Analysera om
-                      </Button>
+                      {aiEnabled ? (
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto"
+                          onClick={() => handleAnalyze(true)} disabled={analyzing}>
+                          {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                          Analysera om
+                        </Button>
+                      ) : (
+                        <Button asChild size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto">
+                          <Link to="/pricing">
+                            <Sparkles className="h-3 w-3" /> AI-svar (Growth)
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
