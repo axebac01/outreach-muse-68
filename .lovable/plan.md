@@ -1,104 +1,61 @@
-# Fas 3 — Plan-gates & limits
+# Fas 3.5 — Polish & verifiering inför test
 
-Hårda gates på allt som kostar pengar eller differentierar planer. Blockerar servern över taket; UI visar tydlig uppgradera-CTA.
+Tre konkreta fixar + en verifierings-runda. Inget nytt feature, bara stänga luckorna så testflödet inte kraschar.
 
-## Plan-tak
+## A1. Migrera `useUsage` → `usePlanLimits` på CreateCampaign
 
-| Resurs                      | Free  | Starter | Growth | Scale |
-| --------------------------- | ----- | ------- | ------ | ----- |
-| Mejlkonton                  | 1     | 3       | 10     | ∞     |
-| Kampanjer                   | 1     | ∞       | ∞      | ∞     |
-| Daglig sänd-cap per konto   | 50    | 200     | 500    | 1 000 |
-| AI-svar i inbox (analyze)   | ✗     | ✗       | ✓      | ✓     |
+**Problem:** `CreateCampaign.tsx` använder `useUsage().canCreateCampaign`. Den hooken läser `profile.plan` (legacy-fält) och har bara `starter`/`growth` i sin `LIMITS`-tabell — Free och Scale finns inte. En Free-user får default `starter` med 1 kampanj, vilket *råkar* funka, men det är en bugg som väntar på att hända.
 
-(Existerande `email_account_sending_limits.daily_limit` per konto gäller fortfarande — plan-capen är en *övre gräns* som tas via `LEAST(daily_limit, plan_cap)`.)
+**Fix:**
+- `CreateCampaign.tsx`: byt ut `useUsage` mot `usePlanLimits` + en separat count-query för kampanjer (eller låt `usePlanLimits` returnera `currentCounts` också — enklare). Använd `canCreateMore(limits, "campaigns", count)`.
+- Behåll `UpgradeBanner` med samma i18n-text. Banner visas när `!canCreate`.
+- **Rör inte** `useUsage` i resten av kodbasen i denna runda — bara CreateCampaign. (Resten kan migreras i en senare polish-fas.)
 
-## 1. Plan-detektering (källa till sanning)
+## A2. Banner på `EmailAccounts.tsx`
 
-Ny SQL-funktion `public.get_user_plan(user_uuid)` returnerar `text` (`free|starter|growth|scale`):
-- Läser från `subscriptions` (active/trialing/past_due, eller canceled med future period_end) i samma env som anropas via `current_setting('app.env', true)` med fallback till `'live'`.
-- Mappar `price_id` → plan-key (samma `PRICE_TO_PLAN`-tabell som i frontend, hårdkodat i funktionen).
-- Returnerar `'free'` om ingen aktiv subscription.
+**Problem:** Listsidan visar ingen feedback när användaren nått taket. Knappen "Anslut konto" är fortfarande klickbar; dialogen visar bannern först när den öppnas.
 
-Ny SQL-funktion `public.get_plan_limit(user_uuid, resource text)` returnerar `integer` (-1 = obegränsat):
-- `email_accounts`, `campaigns`, `daily_sends_per_account` enligt tabellen.
+**Fix:**
+- Lägg in `PlanLimitBanner` ovanför kontolistan om `accounts.length >= limits.email_accounts` (och limit ≠ -1).
+- Disable "Anslut konto"-knappen i samma villkor, med tooltip "Du har nått taket för din plan".
+- Banner-texten: "Du har använt X av Y mejlkonton på {plan}-planen. Uppgradera för att lägga till fler."
 
-## 2. Hårda gates — server-side
+## A3. Verifiering — triggers + felöversättning
 
-### 2a. Mejlkonton — DB-trigger på `email_accounts` BEFORE INSERT
-Trigger `enforce_email_account_limit`:
-- Räknar nuvarande `email_accounts` för `NEW.user_id` (alla statusar utom `removed` om det finns).
-- Jämför mot `get_plan_limit(NEW.user_id, 'email_accounts')`.
-- `RAISE EXCEPTION 'plan_limit_exceeded:email_accounts:%' USING ERRCODE = 'P0001'` om över.
+**Hur:** Direkt SQL-test mot DB som inloggad preview-user.
 
-Detta täcker både `oauth-callback` och `connect-smtp-account` automatiskt.
+1. Kör `SELECT public.get_user_plan(auth.uid())` — bekräfta att den returnerar `free` för testanvändaren.
+2. Kör `SELECT public.get_plan_limit(auth.uid(), 'email_accounts')` — ska returnera `1`.
+3. Skapa en andra `email_accounts`-rad via INSERT — bekräfta att `plan_limit_exceeded:email_accounts:1` kastas.
+4. I UI: trigga felet via "Anslut konto"-flödet. Bekräfta att toast visar svensk text från `errorMessages.ts`, inte raw `P0001`-meddelandet.
+5. Samma för `campaigns`.
 
-### 2b. Kampanjer — DB-trigger på `campaigns` BEFORE INSERT
-Trigger `enforce_campaign_limit`: samma mönster.
+Om något steg misslyckas: fix on the spot i samma fas.
 
-### 2c. Daglig sänd-cap — utöka `process-scheduled-sends`
-Befintlig kod kollar `email_account_sending_limits.daily_limit`. Lägg till:
-- Vid hämtning av "tillgängliga konton", använd `LEAST(daily_limit, get_plan_limit(user_id, 'daily_sends_per_account'))` som effektivt tak.
-- Plan-cap för Free (50) är lägre än default 100 → fungerar som hård broms.
+## B4. Onboarding → första kampanj — smoke test
 
-### 2d. AI-svar i inbox — gate i `analyze-inbound-email`
-- Edge function läser plan via `get_user_plan(user_id)` i början.
-- Om plan inte är `growth` eller `scale`: returnera tidigt `{ skipped: true, reason: 'plan_required' }`, sätt `ai_analysis_error = 'plan_required:growth'`. Ingen credit-kostnad.
-- `sync-inbox` triggar fortfarande analyze (gate ligger i analyze, inte i sync — då behöver vi inte duplicera plan-check).
+**Hur:** Manuell genomgång (ingen kod):
+- Ny user (eller rensa befintlig profile) → `/signup` → onboarding → connect gmail → skapa kampanj → skicka test.
 
-## 3. UI — uppgraderings-CTA
-
-### 3a. Reusable `PlanLimitBanner` + `usePlanLimits` hook
-- Ny hook `usePlanLimits()` returnerar `{ plan, limits: { email_accounts, campaigns, ... } }`. Använder `get_user_plan` + `get_plan_limit` via en enda RPC.
-- Banner: "Du har nått taket för X på Free. Uppgradera till Starter för 290 kr/mån." → länkar till `/pricing`.
-
-### 3b. ConnectEmailDialog
-- Innan dialog öppnas: kolla `email_accounts.length >= limit`. Om så, visa banner istället för dialog och knapp till `/pricing`.
-
-### 3c. CreateCampaign (var den nu ligger)
-- Samma mönster. Hitta entry-point och lägg till check.
-
-### 3d. Inbox AI-knapp
-- Om `plan ∈ {free, starter}`: visa "AI-svar (Growth)" disabled med tooltip "Uppgradera till Growth för automatiska AI-svar" + länk.
-- Dölj auto-fill av `suggested_reply` om planen inte når upp.
-
-### 3e. Felhantering på server-fel
-- Catch `plan_limit_exceeded:*` i mutations (`useCreateCampaign`, account-connect handlers) → toast med uppgradera-länk.
-
-## 4. Migrationer
-
-**Migration 1 — Plan-funktioner:**
-- `get_user_plan(uuid)` — SECURITY DEFINER, läser `subscriptions`.
-- `get_plan_limit(uuid, text)` — STABLE, hårdkodad mappning.
-- `enforce_email_account_limit()` trigger-funktion + trigger.
-- `enforce_campaign_limit()` trigger-funktion + trigger.
-
-Inga nya tabeller, inga nya GRANTs (funktioner är `SECURITY DEFINER`).
-
-## 5. Tester / verifiering manuellt
-
-1. Ny Free-användare → försök connecta 2:a Gmail-konto → ska fela med toast.
-2. Skapa kampanj nr 2 som Free → ska fela.
-3. Starter-användare → 4:e konto fela.
-4. Free-användare i inbox → AI-svar visas inte; analyze-funktionen returnerar `plan_required`.
-5. Verifiera att en användare som *nyss* uppgraderat omedelbart kan skapa fler (cache i `usePlanLimits` invalideras på subscription-realtime).
+Jag listar checkpoints användaren kan följa, och fixar bara om något konkret går sönder.
 
 ## Filer som ändras
 
-- `supabase/migrations/<ny>.sql` — plan-funktioner + triggers
-- `supabase/functions/analyze-inbound-email/index.ts` — plan-gate i toppen
-- `supabase/functions/process-scheduled-sends/index.ts` — `LEAST(daily_limit, plan_cap)`
-- `src/hooks/usePlanLimits.ts` (ny) — RPC + cache + realtime-invalidation via `useSubscription`
-- `src/components/PlanLimitBanner.tsx` (ny)
-- `src/components/ConnectEmailDialog.tsx` — gate
-- `src/hooks/useCampaigns.ts` — fånga `plan_limit_exceeded`-fel + visa CTA
-- `src/pages/Inbox.tsx` — gate AI-knapp + auto-fill
+- `src/pages/CreateCampaign.tsx` — byt `useUsage` → `usePlanLimits`
+- `src/pages/EmailAccounts.tsx` — lägg till banner + disable-knapp
+- `src/hooks/usePlanLimits.ts` — utöka med `currentCounts` (email_accounts, campaigns) via en extra query, så vi slipper räkna i två komponenter
+- `src/i18n/locales/sv.json` + `en.json` — eventuella nya banner-strängar
 
-Inga paket. Ingen ny edge function.
+## Vad jag INTE gör nu
 
-## Vad jag INTE gör
+- Migrerar inte hela `useUsage` ut (används också i Leads/Dashboard — separat polish-fas).
+- Ändrar inte plan-limits-tabellen.
+- Lägger inte till nya tester/CI.
+- Rör inte Stripe go-live (separat fråga).
 
-- Bygger inte om kreditsystemet — leads kostar fortfarande credits oavsett plan.
-- Gatar inte `inbound` (företagsspårning) — den är "Kommer snart" och har ingen riktig funktion än.
-- Migrerar inte befintliga användare ut ur över-tak-läge. Om någon har 5 konton och hamnar på Free → de behåller dem, men kan inte skapa fler. Det är acceptabelt för launch.
-- Lägger inte till "downgrade kräver att du först stänger X konton" — kommer i en senare polish-fas.
+## Acceptanskriterier
+
+- Free-user på `/create-campaign` med 1 befintlig kampanj ser banner och har submit-knappen disabled.
+- Free-user på `/email-accounts` med 1 konto ser banner och har "Anslut"-knappen disabled.
+- Manuellt SQL-test bekräftar trigger fungerar.
+- Inget regressionsfel på Starter/Growth/Scale-användare (de ska kunna skapa fritt).
