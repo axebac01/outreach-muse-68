@@ -7,7 +7,7 @@ MailLead.ai är en svensk SaaS som hjälper säljteam göra outbound mer relevan
 ## Sidor
 
 - [Start](/): Översikt, hur det funkar, funktioner och vanliga frågor.
-- [Priser](/pricing): Starter (gratis) och Growth — jämförelse och vanliga frågor.
+- [Priser](/pricing): Free (50 credits gratis), Starter 290 kr/mån, Growth 990 kr/mån, Scale 2 490 kr/mån, Enterprise på offert. Credit-toppups från 490 kr. 1 reveal = 3 credits.
 
 ## Juridik
 
