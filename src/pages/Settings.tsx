@@ -5,7 +5,7 @@ import { useUsage } from "@/hooks/useUsage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
-import { User, CreditCard, BarChart3, Pencil, Check } from "lucide-react";
+import { User, BarChart3, Pencil, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
