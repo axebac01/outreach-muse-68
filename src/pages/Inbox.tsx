@@ -58,6 +58,8 @@ const Inbox = () => {
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const { limits: planLimits } = usePlanLimits();
+  const aiEnabled = planLimits?.inbox_ai ?? false;
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["email_accounts_simple", user?.id],
