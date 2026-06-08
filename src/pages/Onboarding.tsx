@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { OnboardingPlanStep, type PlanChoice } from "@/components/OnboardingPlanStep";
 
 type ChoiceOption = { value: string; label: string };
 
@@ -16,6 +17,7 @@ type Step =
   | { type: "text"; key: string; question: string; placeholder?: string }
   | { type: "url"; key: string; question: string; placeholder?: string }
   | { type: "choice"; key: string; question: string; options: ChoiceOption[] }
+  | { type: "plan"; key: "plan" }
   | { type: "final"; key: "final" };
 
 const steps: Step[] = [
@@ -81,6 +83,7 @@ const steps: Step[] = [
       { value: "fler", label: "Fler" },
     ],
   },
+  { type: "plan", key: "plan" },
   { type: "final", key: "final" },
 ];
 
@@ -121,6 +124,7 @@ const profileFieldMap: Record<string, string> = {
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [stepIndex, setStepIndex] = useState(0);
@@ -255,7 +259,7 @@ const Onboarding = () => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && step.type !== "final") {
+    if (e.key === "Enter" && step.type !== "final" && step.type !== "plan") {
       e.preventDefault();
       goNext();
     }
@@ -269,6 +273,31 @@ const Onboarding = () => {
       setStepIndex((i) => Math.min(i + 1, steps.length - 1));
     }, 280);
   };
+
+  const handlePlanChoice = async (choice: PlanChoice) => {
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ onboarding_plan_choice: choice } as any)
+        .eq("id", user.id);
+    }
+    setAnswers((a) => ({ ...a, plan: choice }));
+    setDirection(1);
+    setStepIndex((i) => Math.min(i + 1, steps.length - 1));
+  };
+
+  // Tillbaka från Stripe-checkout → toast + auto-advance
+  useEffect(() => {
+    if (searchParams.get("subscription") === "success" && step.type === "plan") {
+      toast.success("Tack! Ditt abonnemang är aktivt.");
+      handlePlanChoice("growth"); // exakt plan kommer från subscriptions-tabellen
+      const next = new URLSearchParams(searchParams);
+      next.delete("subscription");
+      next.delete("session_id");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, step.type]);
 
   // keyboard shortcuts: 1-9 for choice, Esc/Backspace-on-empty for back
   useEffect(() => {
@@ -350,7 +379,7 @@ const Onboarding = () => {
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div key={stepIndex} className={`w-full max-w-2xl text-center ${slideClass}`}>
+        <div key={stepIndex} className={`w-full ${step.type === "plan" ? "max-w-5xl" : "max-w-2xl"} text-center ${slideClass}`}>
           <div className="text-xs font-medium tracking-widest text-muted-foreground mb-6">
             {step.type === "final" ? "KLART" : `STEG ${stepIndex + 1} AV ${steps.length - 1}`}
           </div>
@@ -446,6 +475,10 @@ const Onboarding = () => {
                 Tryck <Kbd>1-{step.options.length}</Kbd> för att välja · <Kbd>Esc</Kbd> tillbaka
               </p>
             </>
+          )}
+
+          {step.type === "plan" && (
+            <OnboardingPlanStep onSelect={handlePlanChoice} submitting={submitting} />
           )}
 
           {step.type === "final" && (

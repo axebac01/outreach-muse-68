@@ -910,6 +910,7 @@ export type Database = {
           id: string
           monthly_volume: string | null
           onboarding_completed: boolean
+          onboarding_plan_choice: string | null
           plan: string
           role: string | null
           sender_count: string | null
@@ -934,6 +935,7 @@ export type Database = {
           id: string
           monthly_volume?: string | null
           onboarding_completed?: boolean
+          onboarding_plan_choice?: string | null
           plan?: string
           role?: string | null
           sender_count?: string | null
@@ -958,6 +960,7 @@ export type Database = {
           id?: string
           monthly_volume?: string | null
           onboarding_completed?: boolean
+          onboarding_plan_choice?: string | null
           plan?: string
           role?: string | null
           sender_count?: string | null
