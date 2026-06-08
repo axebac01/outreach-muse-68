@@ -88,32 +88,7 @@ const Settings = () => {
             </div>
           </div>
 
-          <div className="rounded-xl border bg-card p-6 space-y-4 card-hover">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <CreditCard className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="font-semibold">{t("settings.plan")}</h2>
-                <p className="text-sm text-muted-foreground">{t("settings.planSub")}</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary capitalize">
-                  {plan}
-                </span>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {plan === "starter" ? t("settings.starterPlanDesc") : t("settings.growthPlanDesc")}
-                </p>
-              </div>
-              {plan === "starter" && (
-                <Button asChild size="sm">
-                  <Link to="/pricing">{t("settings.upgrade")}</Link>
-                </Button>
-              )}
-            </div>
-          </div>
+          <SubscriptionSection />
 
           <div className="rounded-xl border bg-card p-6 space-y-4 card-hover">
             <div className="flex items-center gap-3">
