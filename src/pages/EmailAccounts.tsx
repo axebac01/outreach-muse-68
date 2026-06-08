@@ -16,6 +16,9 @@ import DeliverabilityCheck from "@/components/DeliverabilityCheck";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { toUserMessage } from "@/lib/errorMessages";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { PlanLimitBanner } from "@/components/PlanLimitBanner";
+
 
 const EmailAccounts = () => {
   const { t } = useTranslation();
@@ -24,10 +27,16 @@ const EmailAccounts = () => {
   const { data: sentToday = {} } = useSentToday();
   const updateLimit = useUpdateSendingLimit();
   const del = useDeleteEmailAccount();
+  const { limits: planLimits } = usePlanLimits();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<EmailAccount | null>(null);
 
+  const accountCount = accounts?.length ?? 0;
+  const planCap = planLimits?.email_accounts ?? -1;
+  const atLimit = planCap >= 0 && accountCount >= planCap;
+
   const limitFor = (id: string) => limits.find((l) => l.email_account_id === id);
+
 
   const handleDelete = async (id: string) => {
     try {
@@ -65,10 +74,24 @@ const EmailAccounts = () => {
               {t("emailAccounts.subtitle")}
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} size="sm" className="gap-1.5 shrink-0">
+          <Button
+            onClick={() => setDialogOpen(true)}
+            size="sm"
+            className="gap-1.5 shrink-0"
+            disabled={atLimit}
+            title={atLimit ? "Du har nått taket för din plan" : undefined}
+          >
             <Plus className="h-4 w-4" /> {t("emailAccounts.connect")}
           </Button>
         </div>
+
+        {atLimit && planLimits && (
+          <div className="mb-6">
+            <PlanLimitBanner resource="email_accounts" currentPlan={planLimits.plan} />
+          </div>
+        )}
+
+
 
         {isLoading
           ? (
