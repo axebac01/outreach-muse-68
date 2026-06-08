@@ -1,19 +1,23 @@
-const clientToken = import.meta.env.VITE_PAYMENTS_CLIENT_TOKEN;
+import { isPaymentsConfigured, paymentsEnvironment } from "@/lib/stripe";
 
 export function PaymentTestModeBanner() {
-  if (!clientToken) {
+  if (!isPaymentsConfigured()) {
     return (
       <div className="w-full bg-destructive/10 border-b border-destructive/30 px-4 py-2 text-center text-sm text-destructive">
-        Produktionsbetalningar är inte konfigurerade. Slutför Stripe go-live i Lovable för att ta emot riktiga betalningar.
+        Produktion-checkout är inte konfigurerad än. Slutför Stripe go-live för att kunna ta emot riktiga betalningar.
       </div>
     );
   }
-  if (clientToken.startsWith("pk_test_")) {
-    return (
-      <div className="w-full bg-warning/10 border-b border-warning/30 px-4 py-2 text-center text-sm text-warning-foreground/80 dark:text-warning">
-        Alla betalningar i förhandsvisningen är i testläge — inga riktiga pengar dras.
-      </div>
-    );
+  try {
+    if (paymentsEnvironment() === "sandbox") {
+      return (
+        <div className="w-full bg-amber-100 border-b border-amber-300 px-4 py-2 text-center text-sm text-amber-900">
+          Alla betalningar i förhandsvisningen är i testläge. Använd kortnummer 4242 4242 4242 4242.
+        </div>
+      );
+    }
+  } catch {
+    return null;
   }
   return null;
 }

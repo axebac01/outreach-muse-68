@@ -1,20 +1,36 @@
 import Layout from "@/components/Layout";
 import SeoHead from "@/components/SeoHead";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Check, Shield, ChevronDown, Coins, Sparkles, Mail } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/context/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
+import { isPaymentsConfigured } from "@/lib/stripe";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { SubscriptionCheckoutDialog } from "@/components/SubscriptionSection";
+import { toast } from "sonner";
 
 type PlanKey = "free" | "starter" | "growth" | "scale" | "enterprise";
 
 const PLAN_ORDER: PlanKey[] = ["free", "starter", "growth", "scale", "enterprise"];
 const SALES_EMAIL = "hello@maillead.ai";
 
+const PRICE_ID_MAP: Record<Exclude<PlanKey, "free" | "enterprise">, { monthly: string; yearly: string }> = {
+  starter: { monthly: "starter_monthly", yearly: "starter_yearly" },
+  growth:  { monthly: "growth_monthly",  yearly: "growth_yearly" },
+  scale:   { monthly: "scale_monthly",   yearly: "scale_yearly" },
+};
+
 const Pricing = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { subscription, isActive } = useSubscription();
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [checkoutPriceId, setCheckoutPriceId] = useState<string | null>(null);
 
   const getPrice = (plan: PlanKey) => {
     if (plan === "free") return t("pricing.plans.free.price");
@@ -46,22 +62,51 @@ const Pricing = () => {
       );
     }
     const planName = t(`pricing.plans.${plan}.name`);
+    const priceId = PRICE_ID_MAP[plan as "starter" | "growth" | "scale"][billing];
+    const currentPriceId = subscription?.price_id;
+    const isCurrent = isActive && currentPriceId === priceId;
+
+    if (isCurrent) {
+      return (
+        <Button className="w-full" variant="outline" size="lg" disabled>
+          Nuvarande plan
+        </Button>
+      );
+    }
+
+    const handleClick = () => {
+      if (!user) {
+        navigate(`/signup?next=${encodeURIComponent("/pricing")}`);
+        return;
+      }
+      if (!isPaymentsConfigured()) {
+        toast.error("Betalningar är inte konfigurerade än. Försök igen om en stund.");
+        return;
+      }
+      setCheckoutPriceId(priceId);
+    };
+
     return (
       <Button
         className="w-full"
         variant={plan === "growth" ? "hero" : "outline"}
         size="lg"
-        asChild
+        onClick={handleClick}
       >
-        <a href={`mailto:${SALES_EMAIL}?subject=${encodeURIComponent(`Aktivera ${planName} — MailLead.ai`)}`}>
-          {t("pricing.choosePlan", { plan: planName })}
-        </a>
+        {t("pricing.choosePlan", { plan: planName })}
       </Button>
     );
   };
 
   return (
     <Layout>
+      <PaymentTestModeBanner />
+      <SubscriptionCheckoutDialog
+        open={!!checkoutPriceId}
+        onOpenChange={(o) => !o && setCheckoutPriceId(null)}
+        priceId={checkoutPriceId}
+        returnUrl={`${window.location.origin}/settings?subscription=success&session_id={CHECKOUT_SESSION_ID}`}
+      />
       <SeoHead
         title="Priser — MailLead.ai"
         description="Börja gratis med 25 credits. Toppa upp eller välj månadsplan från 290 kr/mån — du betalar bara för leads du faktiskt vill nå."
@@ -162,11 +207,6 @@ const Pricing = () => {
                   ))}
                 </ul>
                 <div className="mt-6">{planCta(plan)}</div>
-                {plan !== "free" && plan !== "enterprise" && (
-                  <p className="text-[11px] text-muted-foreground text-center mt-2">
-                    {t("pricing.earlyAccess")}
-                  </p>
-                )}
               </div>
             );
           })}
@@ -281,7 +321,7 @@ const Pricing = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          {t("pricing.earlyAccessNote")} ·{" "}
+          Frågor?{" "}
           <a href={`mailto:${SALES_EMAIL}`} className="text-primary hover:underline">
             {SALES_EMAIL}
           </a>
