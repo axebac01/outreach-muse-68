@@ -16,6 +16,9 @@ import DeliverabilityCheck from "@/components/DeliverabilityCheck";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { toUserMessage } from "@/lib/errorMessages";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { PlanLimitBanner } from "@/components/PlanLimitBanner";
+
 
 const EmailAccounts = () => {
   const { t } = useTranslation();
