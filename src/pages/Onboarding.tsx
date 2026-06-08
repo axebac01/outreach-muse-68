@@ -96,7 +96,7 @@ type CompanyData = {
   company_scrape_status?: string;
 };
 
-const STORAGE_KEY = "onboarding_progress_v1";
+const STORAGE_KEY = "onboarding_progress_v2";
 const URL_REGEX = /^([a-z0-9-]+\.)+[a-z]{2,}(\/.*)?$/i;
 const SCRAPE_TIMEOUT_MS = 20000;
 
