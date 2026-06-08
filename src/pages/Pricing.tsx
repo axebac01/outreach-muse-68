@@ -1,20 +1,36 @@
 import Layout from "@/components/Layout";
 import SeoHead from "@/components/SeoHead";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Check, Shield, ChevronDown, Coins, Sparkles, Mail } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/context/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
+import { isPaymentsConfigured } from "@/lib/stripe";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { SubscriptionCheckoutDialog } from "@/components/SubscriptionSection";
+import { toast } from "sonner";
 
 type PlanKey = "free" | "starter" | "growth" | "scale" | "enterprise";
 
 const PLAN_ORDER: PlanKey[] = ["free", "starter", "growth", "scale", "enterprise"];
 const SALES_EMAIL = "hello@maillead.ai";
 
+const PRICE_ID_MAP: Record<Exclude<PlanKey, "free" | "enterprise">, { monthly: string; yearly: string }> = {
+  starter: { monthly: "starter_monthly", yearly: "starter_yearly" },
+  growth:  { monthly: "growth_monthly",  yearly: "growth_yearly" },
+  scale:   { monthly: "scale_monthly",   yearly: "scale_yearly" },
+};
+
 const Pricing = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { subscription, isActive } = useSubscription();
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [checkoutPriceId, setCheckoutPriceId] = useState<string | null>(null);
 
   const getPrice = (plan: PlanKey) => {
     if (plan === "free") return t("pricing.plans.free.price");
