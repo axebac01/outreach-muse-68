@@ -17,6 +17,7 @@ type Step =
   | { type: "text"; key: string; question: string; placeholder?: string }
   | { type: "url"; key: string; question: string; placeholder?: string }
   | { type: "choice"; key: string; question: string; options: ChoiceOption[] }
+  | { type: "plan"; key: "plan" }
   | { type: "final"; key: "final" };
 
 const steps: Step[] = [
