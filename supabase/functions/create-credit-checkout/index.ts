@@ -9,10 +9,10 @@ const corsHeaders = {
 
 // Map of allowed price IDs → credit amount
 const CREDIT_PACKAGES: Record<string, number> = {
-  credits_500_sek: 500,
-  credits_2000_sek: 2000,
+  credits_200_sek: 200,
+  credits_800_sek: 800,
+  credits_3500_sek: 3500,
   credits_10000_sek: 10000,
-  credits_25000_sek: 25000,
 };
 
 async function resolveOrCreateCustomer(
