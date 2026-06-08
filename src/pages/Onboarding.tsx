@@ -128,7 +128,7 @@ const Onboarding = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { subscription, refetch: refetchSubscription } = useSubscription();
+  const { refetch: refetchSubscription } = useSubscription();
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
