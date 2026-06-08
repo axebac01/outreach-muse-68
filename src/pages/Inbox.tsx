@@ -121,11 +121,11 @@ const Inbox = () => {
 
   // Auto-fill reply with AI suggestion when available and user hasn't typed
   useEffect(() => {
-    if (!lastInbound || replyTouched) return;
+    if (!lastInbound || replyTouched || !aiEnabled) return;
     if (lastInbound.suggested_reply && !reply) {
       setReply(lastInbound.suggested_reply);
     }
-  }, [lastInbound?.id, lastInbound?.suggested_reply, replyTouched]);
+  }, [lastInbound?.id, lastInbound?.suggested_reply, replyTouched, aiEnabled]);
 
   // Mark as read on open
   useEffect(() => {
