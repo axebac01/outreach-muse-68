@@ -174,60 +174,140 @@
     "footer": "© 2026 MailLead.ai. Alla rättigheter förbehållna."
   },
   "pricing": {
-    "title": "Enkel och transparent prissättning",
-    "subtitle": "Börja gratis. Uppgradera när du är redo att skala.",
+    "title": "Enkel prissättning. Du betalar bara för leads du faktiskt vill nå.",
+    "subtitle": "Börja gratis med 50 credits. Toppa upp eller välj plan när du skalar.",
+    "billingMonthly": "Månadsvis",
+    "billingYearly": "Årsvis",
+    "yearlyBadge": "Spara 20 %",
+    "perMonth": "/mån",
+    "billedYearly": "fakt. årsvis",
     "popular": "Populärast",
-    "starterName": "Starter",
-    "starterPrice": "Gratis",
-    "starterDesc": "Prova gratis – inget kreditkort krävs",
-    "starterCta": "Kom igång – det är gratis",
-    "growthName": "Growth",
-    "growthPrice": "990 kr",
-    "growthPeriod": "/månad",
-    "growthDesc": "För team som menar allvar med pipeline",
-    "growthCta": "Lås upp obegränsade utskick",
-    "growthNote": "Det är mindre än en säljares timkostnad",
-    "starterFeatures": [
-      "1 kampanj",
-      "10 leads per kampanj",
-      "10 utskick genererade/månad",
-      "AI-mejlgenerering",
-      "Kompletta mejlsekvenser",
-      "Kopiera till urklipp"
-    ],
-    "growthFeatures": [
-      "Obegränsade kampanjer",
-      "Obegränsade leads",
-      "Obegränsade genereringar",
-      "AI-mejlgenerering",
-      "Uppföljningssekvenser",
-      "Prioriterad support",
-      "Teamsamarbete",
-      "Exportera till CSV (kommer snart)"
-    ],
-    "guarantee": "30 dagars pengarna-tillbaka-garanti · Inga frågor",
-    "compareTitle": "Jämför planer",
-    "feature": "Funktion",
-    "rows": {
-      "campaigns": "Kampanjer",
-      "leadsPer": "Leads per kampanj",
-      "generations": "AI-genereringar / månad",
-      "sequences": "Mejlsekvenser",
-      "regen": "Återgenerering",
-      "support": "Prioriterad support",
-      "team": "Teamsamarbete",
-      "unlimited": "Obegränsat"
+    "contactCta": "Kontakta oss",
+    "choosePlan": "Välj {{plan}}",
+    "startFree": "Kom igång gratis",
+    "earlyAccess": "Tidig tillgång",
+    "earlyAccessNote": "Vi öppnar betalplaner i etapper. Mejla oss så aktiverar vi din plan inom 24 h.",
+    "plans": {
+      "free": {
+        "name": "Free",
+        "desc": "Testa hela motorn — inget kreditkort.",
+        "price": "0 kr",
+        "credits": "50 credits engångs",
+        "leadsHint": "≈ 16 leads"
+      },
+      "starter": {
+        "name": "Starter",
+        "desc": "För soloprenören som vill ha en första pipeline.",
+        "priceMonthly": "290 kr",
+        "priceYearly": "230 kr",
+        "credits": "500 credits/mån",
+        "leadsHint": "≈ 165 leads/mån"
+      },
+      "growth": {
+        "name": "Growth",
+        "desc": "För säljteam som menar allvar med outbound.",
+        "priceMonthly": "990 kr",
+        "priceYearly": "790 kr",
+        "credits": "2 000 credits/mån",
+        "leadsHint": "≈ 665 leads/mån"
+      },
+      "scale": {
+        "name": "Scale",
+        "desc": "För byråer och team med flera avsändare.",
+        "priceMonthly": "2 490 kr",
+        "priceYearly": "1 990 kr",
+        "credits": "6 000 credits/mån",
+        "leadsHint": "≈ 2 000 leads/mån"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "desc": "Custom volym, SSO, DPA och dedikerad CSM.",
+        "price": "Kontakt",
+        "credits": "Skräddarsytt",
+        "leadsHint": "Från 6 900 kr/mån"
+      }
     },
+    "featuresLabel": "Det här ingår",
+    "features": {
+      "free": [
+        "1 aktiv kampanj",
+        "1 anslutet sändarkonto",
+        "AI-mejl & 2 uppföljningar — obegränsat",
+        "Unibox med svarsdetektion",
+        "Community-support"
+      ],
+      "starter": [
+        "3 aktiva kampanjer",
+        "3 anslutna sändarkonton",
+        "500 credits/mån — rullar över 60 dagar",
+        "Topp-up credits när du vill",
+        "Schemaläggning & sändfönster",
+        "CSV-export",
+        "E-postsupport 48 h"
+      ],
+      "growth": [
+        "Obegränsade kampanjer",
+        "10 anslutna sändarkonton",
+        "2 000 credits/mån — rullar över 60 dagar",
+        "A/B-test av sekvenssteg",
+        "AI-intent på svar (varm/kall/avregistrerad)",
+        "Anpassad spårningsdomän",
+        "3 team-platser",
+        "Prio chattsupport 24 h"
+      ],
+      "scale": [
+        "Allt i Growth, plus:",
+        "25 anslutna sändarkonton",
+        "6 000 credits/mån",
+        "10 team-platser",
+        "API + webhooks",
+        "Dedikerad CSM",
+        "Avancerad deliverability-monitoring"
+      ],
+      "enterprise": [
+        "Custom credit-volym",
+        "SSO / SAML",
+        "DPA & dedikerad miljö",
+        "On-prem IP-pool (på begäran)",
+        "Skräddarsydd onboarding"
+      ]
+    },
+    "creditUsage": {
+      "title": "Vad en credit kostar",
+      "subtitle": "Inga dolda kostnader. Du betalar bara för verifierade B2B-mejl du faktiskt avslöjar.",
+      "rows": [
+        { "action": "Reveal av verifierad B2B-mejl", "cost": "3 credits" },
+        { "action": "AI-genererat mejl + uppföljningar", "cost": "Ingår" },
+        { "action": "Skicka mejl via anslutet konto", "cost": "Ingår" },
+        { "action": "Importera egen CSV", "cost": "Ingår" },
+        { "action": "Re-reveal (samma lead)", "cost": "0" },
+        { "action": "Refund vid bouncad / felaktig data", "cost": "Automatiskt" }
+      ]
+    },
+    "topups": {
+      "title": "Behöver du mer? Toppa upp credits när som helst.",
+      "subtitle": "Topp-up-credits gäller i 12 månader och konsumeras efter plan-credits.",
+      "perCredit": "kr/credit",
+      "viewAll": "Se alla credit-paket",
+      "packs": [
+        { "credits": "500", "price": "490 kr", "perCredit": "0,98" },
+        { "credits": "2 000", "price": "1 690 kr", "perCredit": "0,85", "badge": "Populärast" },
+        { "credits": "10 000", "price": "7 490 kr", "perCredit": "0,75" },
+        { "credits": "25 000", "price": "16 990 kr", "perCredit": "0,68" }
+      ]
+    },
+    "guarantee": "30 dagars pengarna-tillbaka-garanti · GDPR-säker · Servrar i EU",
     "faqTitle": "Vanliga frågor",
     "faqs": [
-      { "q": "Kan jag avsluta när som helst?", "a": "Ja – avsluta när som helst från inställningarna. Inga frågor. Är du på Growth har du tillgång tills slutet av faktureringsperioden." },
-      { "q": "Vad händer när jag når gratisgränsen?", "a": "Du kan fortfarande se dina befintliga kampanjer och mejl. För att skapa fler utskick eller nya kampanjer behöver du uppgradera till Growth." },
-      { "q": "Sparar ni mina leaddata?", "a": "Ja, dina leads sparas säkert så att du kommer åt dina kampanjer när som helst. Vi delar eller säljer aldrig dina data." },
-      { "q": "Kan jag testa Growth-funktioner innan jag betalar?", "a": "Starter-planen ger dig full tillgång till AI-motorn. Growth tar bara bort gränserna så att du kan skala." }
-    ],
-    "footerCtaPrefix": "Nått din gratisgräns?",
-    "footerCtaLink": "Uppgradera för att fortsätta skapa utskick."
+      { "q": "Vad är en credit?", "a": "En credit är en enhet vi använder för att prissätta data. Just nu kostar reveal av ett verifierat B2B-mejl 3 credits. AI-genereringen och själva utskicket är gratis — du betalar bara för datan." },
+      { "q": "Vad händer om jag inte använder alla credits en månad?", "a": "Plan-credits rullar över i 60 dagar. Topp-up-credits gäller i 12 månader. Topp-up-credits konsumeras alltid efter plan-credits." },
+      { "q": "Kan jag toppa upp credits utan att uppgradera plan?", "a": "Ja. Du kan köpa credit-paket även på Free-planen. Du får alltid bättre pris per credit på en plan, men topp-ups är flexibla." },
+      { "q": "Kan jag avsluta när som helst?", "a": "Ja — avsluta i Inställningar utan frågor. Är du på årsplan har du tillgång till slutet av perioden." },
+      { "q": "Hur är pengarna-tillbaka-garantin?", "a": "Om du inte är nöjd inom 30 dagar betalar vi tillbaka — inga frågor. Refund av credits sker per credit du inte använt." },
+      { "q": "Sparar ni mina leaddata?", "a": "Ja, dina leads sparas säkert i EU. Vi delar eller säljer aldrig dina data och du kan radera när som helst." }
+    ]
   },
+
   "auth": {
     "loginTitle": "Välkommen tillbaka",
     "loginSub": "Logga in på ditt MailLead.ai-konto",
