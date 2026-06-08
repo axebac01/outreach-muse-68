@@ -192,32 +192,32 @@
         "name": "Free",
         "desc": "Try the full engine — no credit card.",
         "price": "Free",
-        "credits": "50 one-time credits",
-        "leadsHint": "≈ 16 leads"
+        "credits": "25 one-time credits",
+        "leadsHint": "25 leads"
       },
       "starter": {
         "name": "Starter",
         "desc": "For the solo founder building a first pipeline.",
         "priceMonthly": "290 SEK",
         "priceYearly": "230 SEK",
-        "credits": "500 credits/mo",
-        "leadsHint": "≈ 165 leads/mo"
+        "credits": "250 credits/mo",
+        "leadsHint": "250 leads/mo · 1.16 SEK/lead"
       },
       "growth": {
         "name": "Growth",
         "desc": "For sales teams serious about outbound.",
         "priceMonthly": "990 SEK",
         "priceYearly": "790 SEK",
-        "credits": "2,000 credits/mo",
-        "leadsHint": "≈ 665 leads/mo"
+        "credits": "1,000 credits/mo",
+        "leadsHint": "1,000 leads/mo · 0.99 SEK/lead"
       },
       "scale": {
         "name": "Scale",
         "desc": "For agencies and teams with multiple senders.",
         "priceMonthly": "2,490 SEK",
         "priceYearly": "1,990 SEK",
-        "credits": "6,000 credits/mo",
-        "leadsHint": "≈ 2,000 leads/mo"
+        "credits": "3,000 credits/mo",
+        "leadsHint": "3,000 leads/mo · 0.83 SEK/lead"
       },
       "enterprise": {
         "name": "Enterprise",
@@ -239,7 +239,7 @@
       "starter": [
         "3 active campaigns",
         "3 connected sending accounts",
-        "500 credits/mo — rollover 60 days",
+        "250 credits/mo — rollover 60 days",
         "Top up credits anytime",
         "Scheduling & sending windows",
         "CSV export",
@@ -248,7 +248,7 @@
       "growth": [
         "Unlimited campaigns",
         "10 connected sending accounts",
-        "2,000 credits/mo — rollover 60 days",
+        "1,000 credits/mo — rollover 60 days",
         "A/B testing of sequence steps",
         "AI intent classification on replies",
         "Custom tracking domain",
@@ -258,7 +258,7 @@
       "scale": [
         "Everything in Growth, plus:",
         "25 connected sending accounts",
-        "6,000 credits/mo",
+        "3,000 credits/mo",
         "10 team seats",
         "API + webhooks",
         "Dedicated CSM",
@@ -274,36 +274,40 @@
     },
     "creditUsage": {
       "title": "What a credit costs",
-      "subtitle": "No hidden fees. You only pay for verified B2B emails you actually reveal.",
+      "subtitle": "1 credit = 1 verified email. AI writing, sequences and sending are always included.",
       "rows": [
-        { "action": "Reveal a verified B2B email", "cost": "3 credits" },
+        { "action": "Verified B2B email", "cost": "1 credit" },
         { "action": "AI-generated email + follow-ups", "cost": "Included" },
-        { "action": "Send emails via your account", "cost": "Included" },
+        { "action": "AI builds a full campaign/sequence for you", "cost": "Included" },
+        { "action": "Sending & scheduling", "cost": "Included" },
         { "action": "Import your own CSV", "cost": "Included" },
         { "action": "Re-reveal (same lead)", "cost": "0" },
-        { "action": "Refund on bounced / bad data", "cost": "Automatic" }
+        { "action": "Refund on bounced / bad data", "cost": "Automatic" },
+        { "action": "Direct mobile number (coming soon)", "cost": "5 credits" },
+        { "action": "Deep ICP research per lead (coming soon)", "cost": "3 credits" }
       ]
     },
     "topups": {
       "title": "Need more? Top up credits anytime.",
-      "subtitle": "Top-up credits are valid for 12 months and consumed after plan credits.",
+      "subtitle": "Top-up credits are valid for 12 months and consumed after plan credits. Plans always have a better per-credit price.",
       "perCredit": "SEK/credit",
       "viewAll": "See all credit packs",
       "packs": [
-        { "credits": "500", "price": "490 SEK", "perCredit": "0.98" },
-        { "credits": "2,000", "price": "1,690 SEK", "perCredit": "0.85", "badge": "Most popular" },
-        { "credits": "10,000", "price": "7,490 SEK", "perCredit": "0.75" },
-        { "credits": "25,000", "price": "16,990 SEK", "perCredit": "0.68" }
+        { "credits": "200", "price": "390 SEK", "perCredit": "1.95" },
+        { "credits": "800", "price": "1,390 SEK", "perCredit": "1.74", "badge": "Most popular" },
+        { "credits": "3,500", "price": "5,490 SEK", "perCredit": "1.57" },
+        { "credits": "10,000", "price": "13,990 SEK", "perCredit": "1.40" }
       ]
     },
     "guarantee": "30-day money-back guarantee · GDPR-secure · EU servers",
     "faqTitle": "Frequently asked questions",
     "faqs": [
-      { "q": "What is a credit?", "a": "A credit is a unit we use to price data. Right now, revealing a verified B2B email costs 3 credits. AI generation and sending are free — you only pay for the data." },
-      { "q": "What happens if I don't use all my credits in a month?", "a": "Plan credits roll over for 60 days. Top-up credits are valid for 12 months. Top-up credits are always consumed after plan credits." },
-      { "q": "Can I top up credits without upgrading my plan?", "a": "Yes. You can buy credit packs even on the Free plan. You always get a better price per credit on a plan, but top-ups are flexible." },
+      { "q": "What is a credit?", "a": "One credit equals one verified B2B email. AI writing, campaign building and sending are always included — you only pay for the data we fetch for you." },
+      { "q": "What happens if I don't use all my credits in a month?", "a": "Plan credits roll over for 60 days. Top-up credits are valid for 12 months and are always consumed after plan credits." },
+      { "q": "Can I top up credits without upgrading my plan?", "a": "Yes. You can buy credit packs even on the Free plan. Plans always have a better per-credit price, but top-ups are flexible." },
+      { "q": "Do AI emails or campaign building cost extra?", "a": "No. Unlimited AI writing, regeneration, sequences and campaign building are included in all plans — even Free. We only charge for data." },
       { "q": "Can I cancel anytime?", "a": "Yes — cancel in Settings, no questions asked. On a yearly plan you keep access until the end of the period." },
-      { "q": "How does the money-back guarantee work?", "a": "If you're not satisfied within 30 days, we refund — no questions asked. Refunds are per unused credit." },
+      { "q": "How does the money-back guarantee work?", "a": "If you're not satisfied within 30 days, we refund — no questions asked. Unused credits are refunded per credit." },
       { "q": "Do you store my lead data?", "a": "Yes, your leads are stored securely in the EU. We never share or sell your data and you can delete anytime." }
     ]
   },
