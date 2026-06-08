@@ -19,37 +19,37 @@ interface Pack {
   description: string;
 }
 
-// 1 lead = 3 credits. Topp-ups prissatta så att planen alltid är bättre kr/credit.
+// 1 credit = 1 verifierad mejladress. Plan ger alltid bättre kr/credit än topp-up.
 const PACKS: Pack[] = [
   {
-    priceId: "credits_500_sek",
-    credits: 500,
-    priceSek: 490,
-    perCredit: 0.98,
-    description: "Snabb påfyllning. Räcker till ~165 leads.",
+    priceId: "credits_200_sek",
+    credits: 200,
+    priceSek: 390,
+    perCredit: 1.95,
+    description: "Snabb påfyllning. 200 verifierade leads.",
   },
   {
-    priceId: "credits_2000_sek",
-    credits: 2000,
-    priceSek: 1690,
-    perCredit: 0.85,
+    priceId: "credits_800_sek",
+    credits: 800,
+    priceSek: 1390,
+    perCredit: 1.74,
     badge: "Populärast",
-    description: "Räcker till ~665 leads. 15 % rabatt.",
+    description: "800 leads — passar en månadskampanj.",
+  },
+  {
+    priceId: "credits_3500_sek",
+    credits: 3500,
+    priceSek: 5490,
+    perCredit: 1.57,
+    description: "3 500 leads — flera kampanjer parallellt.",
   },
   {
     priceId: "credits_10000_sek",
     credits: 10000,
-    priceSek: 7490,
-    perCredit: 0.75,
-    description: "Räcker till ~3 330 leads. 25 % rabatt.",
-  },
-  {
-    priceId: "credits_25000_sek",
-    credits: 25000,
-    priceSek: 16990,
-    perCredit: 0.68,
+    priceSek: 13990,
+    perCredit: 1.40,
     badge: "Bästa pris",
-    description: "Räcker till ~8 330 leads. 32 % rabatt — för byråer.",
+    description: "10 000 leads — bäst kr/credit. För byråer.",
   },
 ];
 
