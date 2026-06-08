@@ -259,7 +259,7 @@ const Onboarding = () => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && step.type !== "final") {
+    if (e.key === "Enter" && step.type !== "final" && step.type !== "plan") {
       e.preventDefault();
       goNext();
     }
@@ -273,6 +273,31 @@ const Onboarding = () => {
       setStepIndex((i) => Math.min(i + 1, steps.length - 1));
     }, 280);
   };
+
+  const handlePlanChoice = async (choice: PlanChoice) => {
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ onboarding_plan_choice: choice } as any)
+        .eq("id", user.id);
+    }
+    setAnswers((a) => ({ ...a, plan: choice }));
+    setDirection(1);
+    setStepIndex((i) => Math.min(i + 1, steps.length - 1));
+  };
+
+  // Tillbaka från Stripe-checkout → toast + auto-advance
+  useEffect(() => {
+    if (searchParams.get("subscription") === "success" && step.type === "plan") {
+      toast.success("Tack! Ditt abonnemang är aktivt.");
+      handlePlanChoice("growth"); // exakt plan kommer från subscriptions-tabellen
+      const next = new URLSearchParams(searchParams);
+      next.delete("subscription");
+      next.delete("session_id");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, step.type]);
 
   // keyboard shortcuts: 1-9 for choice, Esc/Backspace-on-empty for back
   useEffect(() => {
