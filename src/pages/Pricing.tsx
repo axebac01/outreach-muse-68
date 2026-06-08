@@ -207,11 +207,6 @@ const Pricing = () => {
                   ))}
                 </ul>
                 <div className="mt-6">{planCta(plan)}</div>
-                {plan !== "free" && plan !== "enterprise" && (
-                  <p className="text-[11px] text-muted-foreground text-center mt-2">
-                    {t("pricing.earlyAccess")}
-                  </p>
-                )}
               </div>
             );
           })}
