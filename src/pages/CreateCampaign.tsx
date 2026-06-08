@@ -98,7 +98,7 @@ const CreateCampaign = () => {
               <Input id="tone" placeholder={t("createCampaign.tonePh")} value={form.tone} onChange={(e) => update("tone", e.target.value)} required />
             </div>
             <div className="flex gap-3 pt-2">
-              <Button type="submit" variant="hero" className="flex-1" disabled={createCampaign.isPending || !canCreateCampaign}>
+              <Button type="submit" variant="hero" className="flex-1" disabled={createCampaign.isPending || !canCreate}>
                 {createCampaign.isPending ? t("createCampaign.creating") : t("createCampaign.createBtn")}
               </Button>
               <Button type="button" variant="outline" onClick={() => navigate("/dashboard")}>{t("common.cancel")}</Button>
