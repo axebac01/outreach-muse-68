@@ -165,6 +165,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Plan-gate: AI-svar bara för growth/scale
+    const { data: planRow } = await admin.rpc("get_user_plan", { user_uuid: msg.user_id });
+    const userPlan = (planRow as string | null) ?? "free";
+    if (userPlan !== "growth" && userPlan !== "scale") {
+      await admin.from("email_messages").update({
+        ai_analysis_error: "plan_required:growth",
+        ai_analyzed_at: new Date().toISOString(),
+      }).eq("id", message_id);
+      return new Response(JSON.stringify({ ok: true, skipped: true, reason: "plan_required", required_plan: "growth" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Fetch prior outbound in same thread
     const { data: priorOutbound } = await admin
       .from("email_messages")

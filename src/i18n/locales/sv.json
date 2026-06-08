@@ -575,6 +575,10 @@
       "timeout": "Förfrågan tog för lång tid. Försök igen.",
       "unauthorized": "Du är inte inloggad längre. Logga in på nytt."
     },
+    "plan": {
+      "emailAccountsLimit": "Din plan tillåter inte fler mejlkonton. Uppgradera för att lägga till fler.",
+      "campaignsLimit": "Din plan tillåter inte fler kampanjer. Uppgradera till Starter för obegränsat."
+    },
     "auth": {
       "invalidCredentials": "Fel mejladress eller lösenord.",
       "emailNotConfirmed": "Du måste bekräfta din mejladress innan du kan logga in. Kolla din inkorg.",

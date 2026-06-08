@@ -12,6 +12,8 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { Link } from "react-router-dom";
 import {
   useInboxThreads,
   useThreadMessages,
@@ -56,6 +58,8 @@ const Inbox = () => {
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const { limits: planLimits } = usePlanLimits();
+  const aiEnabled = planLimits?.inbox_ai ?? false;
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["email_accounts_simple", user?.id],
@@ -117,11 +121,11 @@ const Inbox = () => {
 
   // Auto-fill reply with AI suggestion when available and user hasn't typed
   useEffect(() => {
-    if (!lastInbound || replyTouched) return;
+    if (!lastInbound || replyTouched || !aiEnabled) return;
     if (lastInbound.suggested_reply && !reply) {
       setReply(lastInbound.suggested_reply);
     }
-  }, [lastInbound?.id, lastInbound?.suggested_reply, replyTouched]);
+  }, [lastInbound?.id, lastInbound?.suggested_reply, replyTouched, aiEnabled]);
 
   // Mark as read on open
   useEffect(() => {
@@ -409,11 +413,19 @@ const Inbox = () => {
                           <AlertCircle className="h-2.5 w-2.5" /> AI-fel
                         </Badge>
                       )}
-                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto"
-                        onClick={() => handleAnalyze(true)} disabled={analyzing}>
-                        {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                        Analysera om
-                      </Button>
+                      {aiEnabled ? (
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto"
+                          onClick={() => handleAnalyze(true)} disabled={analyzing}>
+                          {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                          Analysera om
+                        </Button>
+                      ) : (
+                        <Button asChild size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto">
+                          <Link to="/pricing">
+                            <Sparkles className="h-3 w-3" /> AI-svar (Growth)
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

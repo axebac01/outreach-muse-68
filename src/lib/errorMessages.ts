@@ -83,6 +83,14 @@ function matchFreeText(
 ): { key: string; opts?: Record<string, unknown> } | null {
   const m = raw.toLowerCase();
 
+  // Plan-gates (kastas av DB-triggers)
+  if (m.includes("plan_limit_exceeded:email_accounts")) {
+    return { key: "errors.plan.emailAccountsLimit" };
+  }
+  if (m.includes("plan_limit_exceeded:campaigns")) {
+    return { key: "errors.plan.campaignsLimit" };
+  }
+
   if (m.includes("failed to fetch") || m.includes("networkerror") || m === "load failed") {
     return { key: "errors.generic.network" };
   }
