@@ -113,6 +113,48 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_buckets: {
+        Row: {
+          amount_initial: number
+          amount_remaining: number
+          created_at: string
+          expires_at: string | null
+          granted_at: string
+          id: string
+          kind: string
+          metadata: Json
+          source_ref: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_initial: number
+          amount_remaining: number
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          kind: string
+          metadata?: Json
+          source_ref?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_initial?: number
+          amount_remaining?: number
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          kind?: string
+          metadata?: Json
+          source_ref?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_ledger: {
         Row: {
           balance_after: number
@@ -1479,8 +1521,11 @@ export type Database = {
       add_credits: {
         Args: {
           _amount: number
+          _expires_in_days?: number
+          _kind?: string
           _metadata?: Json
           _reason: string
+          _source_ref?: string
           _stripe_session_id?: string
           _user_id: string
         }
@@ -1494,6 +1539,7 @@ export type Database = {
         Args: { key: string; plaintext: string }
         Returns: string
       }
+      expire_credit_buckets: { Args: never; Returns: number }
       get_sent_today_by_account: {
         Args: { account_ids: string[] }
         Returns: {
@@ -1501,6 +1547,7 @@ export type Database = {
           sent_count: number
         }[]
       }
+      recalc_wallet_balance: { Args: { _user_id: string }; Returns: number }
       spend_credits: {
         Args: {
           _amount: number
