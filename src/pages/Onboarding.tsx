@@ -477,6 +477,10 @@ const Onboarding = () => {
             </>
           )}
 
+          {step.type === "plan" && (
+            <OnboardingPlanStep onSelect={handlePlanChoice} submitting={submitting} />
+          )}
+
           {step.type === "final" && (
             <FinalStep
               name={answers.name}
