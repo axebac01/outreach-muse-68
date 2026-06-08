@@ -1650,6 +1650,10 @@ export type Database = {
         Returns: string
       }
       expire_credit_buckets: { Args: never; Returns: number }
+      get_plan_limit: {
+        Args: { resource: string; user_uuid: string }
+        Returns: number
+      }
       get_sent_today_by_account: {
         Args: { account_ids: string[] }
         Returns: {
@@ -1657,6 +1661,7 @@ export type Database = {
           sent_count: number
         }[]
       }
+      get_user_plan: { Args: { user_uuid: string }; Returns: string }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
