@@ -62,16 +62,38 @@ const Pricing = () => {
       );
     }
     const planName = t(`pricing.plans.${plan}.name`);
+    const priceId = PRICE_ID_MAP[plan as "starter" | "growth" | "scale"][billing];
+    const currentPriceId = subscription?.price_id;
+    const isCurrent = isActive && currentPriceId === priceId;
+
+    if (isCurrent) {
+      return (
+        <Button className="w-full" variant="outline" size="lg" disabled>
+          Nuvarande plan
+        </Button>
+      );
+    }
+
+    const handleClick = () => {
+      if (!user) {
+        navigate(`/signup?next=${encodeURIComponent("/pricing")}`);
+        return;
+      }
+      if (!isPaymentsConfigured()) {
+        toast.error("Betalningar är inte konfigurerade än. Försök igen om en stund.");
+        return;
+      }
+      setCheckoutPriceId(priceId);
+    };
+
     return (
       <Button
         className="w-full"
         variant={plan === "growth" ? "hero" : "outline"}
         size="lg"
-        asChild
+        onClick={handleClick}
       >
-        <a href={`mailto:${SALES_EMAIL}?subject=${encodeURIComponent(`Aktivera ${planName} — MailLead.ai`)}`}>
-          {t("pricing.choosePlan", { plan: planName })}
-        </a>
+        {t("pricing.choosePlan", { plan: planName })}
       </Button>
     );
   };
