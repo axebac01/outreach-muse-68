@@ -71,7 +71,7 @@ export default function LeadsCredits() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Köp credits</h1>
             <p className="text-muted-foreground mt-1">
-              1 reveal av lead = 3 credits. Credits från topp-ups gäller i 12 månader.
+              1 credit = 1 verifierad mejladress. Credits från topp-ups gäller i 12 månader.
             </p>
           </div>
           <Card>
@@ -125,7 +125,7 @@ export default function LeadsCredits() {
                   <ul className="space-y-1.5 mt-4 text-sm">
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-primary shrink-0" />
-                      <span>~{Math.floor(pack.credits / 3).toLocaleString("sv-SE")} leads</span>
+                      <span>{pack.credits.toLocaleString("sv-SE")} verifierade leads</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-primary shrink-0" />
