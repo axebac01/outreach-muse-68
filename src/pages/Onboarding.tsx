@@ -288,16 +288,31 @@ const Onboarding = () => {
     setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   };
 
-  // Tillbaka från Stripe-checkout → toast + auto-advance
+  // Tillbaka från Stripe-checkout → toast + auto-advance med korrekt plan
   useEffect(() => {
-    if (searchParams.get("subscription") === "success" && step.type === "plan") {
+    if (searchParams.get("subscription") !== "success" || step.type !== "plan") return;
+    let cancelled = false;
+    (async () => {
+      // Försök hämta färsk subscription-rad (webhook kan ta någon sekund)
+      let resolved: PlanChoice = "growth";
+      for (let i = 0; i < 6; i++) {
+        const result = await refetchSubscription();
+        const row = result.data;
+        if (row?.price_id && PRICE_TO_PLAN[row.price_id]) {
+          resolved = PRICE_TO_PLAN[row.price_id];
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 800));
+      }
+      if (cancelled) return;
       toast.success("Tack! Ditt abonnemang är aktivt.");
-      handlePlanChoice("growth"); // exakt plan kommer från subscriptions-tabellen
+      handlePlanChoice(resolved);
       const next = new URLSearchParams(searchParams);
       next.delete("subscription");
       next.delete("session_id");
       setSearchParams(next, { replace: true });
-    }
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, step.type]);
 
