@@ -64,7 +64,7 @@ const Pricing = () => {
     <Layout>
       <SeoHead
         title="Priser — MailLead.ai"
-        description="Börja gratis med 50 credits. Toppa upp eller välj månadsplan från 290 kr/mån — du betalar bara för leads du faktiskt vill nå."
+        description="Börja gratis med 25 credits. Toppa upp eller välj månadsplan från 290 kr/mån — du betalar bara för leads du faktiskt vill nå."
         path="/pricing"
         jsonLd={{
           "@context": "https://schema.org",
