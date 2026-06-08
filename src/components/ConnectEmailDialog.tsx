@@ -361,7 +361,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           />
         )}
 
-        {view.kind === "custom" && !savedEmail && (
+        {!atAccountLimit && view.kind === "custom" && !savedEmail && (
           <div className="space-y-5">
             <Button
               type="button"
