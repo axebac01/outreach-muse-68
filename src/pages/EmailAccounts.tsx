@@ -74,10 +74,24 @@ const EmailAccounts = () => {
               {t("emailAccounts.subtitle")}
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} size="sm" className="gap-1.5 shrink-0">
+          <Button
+            onClick={() => setDialogOpen(true)}
+            size="sm"
+            className="gap-1.5 shrink-0"
+            disabled={atLimit}
+            title={atLimit ? "Du har nått taket för din plan" : undefined}
+          >
             <Plus className="h-4 w-4" /> {t("emailAccounts.connect")}
           </Button>
         </div>
+
+        {atLimit && planLimits && (
+          <div className="mb-6">
+            <PlanLimitBanner resource="email_accounts" currentPlan={planLimits.plan} />
+          </div>
+        )}
+
+
 
         {isLoading
           ? (
