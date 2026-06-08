@@ -321,7 +321,7 @@ const Pricing = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          {t("pricing.earlyAccessNote")} ·{" "}
+          Frågor?{" "}
           <a href={`mailto:${SALES_EMAIL}`} className="text-primary hover:underline">
             {SALES_EMAIL}
           </a>
