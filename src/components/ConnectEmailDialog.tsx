@@ -40,6 +40,9 @@ import {
   getVisibleProviders,
 } from "@/lib/emailProviders";
 import { toUserMessage } from "@/lib/errorMessages";
+import { usePlanLimits, canCreateMore } from "@/hooks/usePlanLimits";
+import { useEmailAccounts } from "@/hooks/useEmailAccounts";
+import { PlanLimitBanner } from "@/components/PlanLimitBanner";
 
 interface Props {
   open: boolean;
