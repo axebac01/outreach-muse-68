@@ -174,60 +174,140 @@
     "footer": "© 2026 MailLead.ai. All rights reserved."
   },
   "pricing": {
-    "title": "Simple, transparent pricing",
-    "subtitle": "Start free. Upgrade when you're ready to scale.",
+    "title": "Simple pricing. You only pay for leads you actually want to reach.",
+    "subtitle": "Start free with 50 credits. Top up or pick a plan when you scale.",
+    "billingMonthly": "Monthly",
+    "billingYearly": "Yearly",
+    "yearlyBadge": "Save 20%",
+    "perMonth": "/mo",
+    "billedYearly": "billed yearly",
     "popular": "Most popular",
-    "starterName": "Starter",
-    "starterPrice": "Free",
-    "starterDesc": "Try it free — no credit card needed",
-    "starterCta": "Start generating — it's free",
-    "growthName": "Growth",
-    "growthPrice": "€99",
-    "growthPeriod": "/month",
-    "growthDesc": "For teams serious about pipeline",
-    "growthCta": "Unlock unlimited outreach",
-    "growthNote": "That's less than one sales rep's hourly cost",
-    "starterFeatures": [
-      "1 campaign",
-      "10 leads per campaign",
-      "10 outreach generations/month",
-      "AI email generation",
-      "Full email sequences",
-      "Copy to clipboard"
-    ],
-    "growthFeatures": [
-      "Unlimited campaigns",
-      "Unlimited leads",
-      "Unlimited generations",
-      "AI email generation",
-      "Follow-up sequences",
-      "Priority support",
-      "Team collaboration",
-      "Export to CSV (coming soon)"
-    ],
-    "guarantee": "30-day money-back guarantee · No questions asked",
-    "compareTitle": "Compare plans",
-    "feature": "Feature",
-    "rows": {
-      "campaigns": "Campaigns",
-      "leadsPer": "Leads per campaign",
-      "generations": "AI generations / month",
-      "sequences": "Email sequences",
-      "regen": "Regeneration",
-      "support": "Priority support",
-      "team": "Team collaboration",
-      "unlimited": "Unlimited"
+    "contactCta": "Contact us",
+    "choosePlan": "Choose {{plan}}",
+    "startFree": "Start free",
+    "earlyAccess": "Early access",
+    "earlyAccessNote": "We're opening paid plans in waves. Email us and we'll activate your plan within 24h.",
+    "plans": {
+      "free": {
+        "name": "Free",
+        "desc": "Try the full engine — no credit card.",
+        "price": "Free",
+        "credits": "50 one-time credits",
+        "leadsHint": "≈ 16 leads"
+      },
+      "starter": {
+        "name": "Starter",
+        "desc": "For the solo founder building a first pipeline.",
+        "priceMonthly": "290 SEK",
+        "priceYearly": "230 SEK",
+        "credits": "500 credits/mo",
+        "leadsHint": "≈ 165 leads/mo"
+      },
+      "growth": {
+        "name": "Growth",
+        "desc": "For sales teams serious about outbound.",
+        "priceMonthly": "990 SEK",
+        "priceYearly": "790 SEK",
+        "credits": "2,000 credits/mo",
+        "leadsHint": "≈ 665 leads/mo"
+      },
+      "scale": {
+        "name": "Scale",
+        "desc": "For agencies and teams with multiple senders.",
+        "priceMonthly": "2,490 SEK",
+        "priceYearly": "1,990 SEK",
+        "credits": "6,000 credits/mo",
+        "leadsHint": "≈ 2,000 leads/mo"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "desc": "Custom volume, SSO, DPA and dedicated CSM.",
+        "price": "Contact",
+        "credits": "Tailored",
+        "leadsHint": "From 6,900 SEK/mo"
+      }
     },
+    "featuresLabel": "What's included",
+    "features": {
+      "free": [
+        "1 active campaign",
+        "1 connected sending account",
+        "AI emails & 2 follow-ups — unlimited",
+        "Unibox with reply detection",
+        "Community support"
+      ],
+      "starter": [
+        "3 active campaigns",
+        "3 connected sending accounts",
+        "500 credits/mo — rollover 60 days",
+        "Top up credits anytime",
+        "Scheduling & sending windows",
+        "CSV export",
+        "Email support 48h"
+      ],
+      "growth": [
+        "Unlimited campaigns",
+        "10 connected sending accounts",
+        "2,000 credits/mo — rollover 60 days",
+        "A/B testing of sequence steps",
+        "AI intent classification on replies",
+        "Custom tracking domain",
+        "3 team seats",
+        "Priority chat support 24h"
+      ],
+      "scale": [
+        "Everything in Growth, plus:",
+        "25 connected sending accounts",
+        "6,000 credits/mo",
+        "10 team seats",
+        "API + webhooks",
+        "Dedicated CSM",
+        "Advanced deliverability monitoring"
+      ],
+      "enterprise": [
+        "Custom credit volume",
+        "SSO / SAML",
+        "DPA & dedicated environment",
+        "On-prem IP pool (on request)",
+        "Tailored onboarding"
+      ]
+    },
+    "creditUsage": {
+      "title": "What a credit costs",
+      "subtitle": "No hidden fees. You only pay for verified B2B emails you actually reveal.",
+      "rows": [
+        { "action": "Reveal a verified B2B email", "cost": "3 credits" },
+        { "action": "AI-generated email + follow-ups", "cost": "Included" },
+        { "action": "Send emails via your account", "cost": "Included" },
+        { "action": "Import your own CSV", "cost": "Included" },
+        { "action": "Re-reveal (same lead)", "cost": "0" },
+        { "action": "Refund on bounced / bad data", "cost": "Automatic" }
+      ]
+    },
+    "topups": {
+      "title": "Need more? Top up credits anytime.",
+      "subtitle": "Top-up credits are valid for 12 months and consumed after plan credits.",
+      "perCredit": "SEK/credit",
+      "viewAll": "See all credit packs",
+      "packs": [
+        { "credits": "500", "price": "490 SEK", "perCredit": "0.98" },
+        { "credits": "2,000", "price": "1,690 SEK", "perCredit": "0.85", "badge": "Most popular" },
+        { "credits": "10,000", "price": "7,490 SEK", "perCredit": "0.75" },
+        { "credits": "25,000", "price": "16,990 SEK", "perCredit": "0.68" }
+      ]
+    },
+    "guarantee": "30-day money-back guarantee · GDPR-secure · EU servers",
     "faqTitle": "Frequently asked questions",
     "faqs": [
-      { "q": "Can I cancel anytime?", "a": "Yes — cancel anytime from your settings. No questions asked. If you're on Growth, you'll keep access until the end of your billing period." },
-      { "q": "What happens when I hit the free limit?", "a": "You can still view your existing campaigns and emails. To generate more outreach or create new campaigns, you'll need to upgrade to Growth." },
-      { "q": "Do you store my lead data?", "a": "Yes, your leads are stored securely so you can access your campaigns anytime. We never share or sell your data." },
-      { "q": "Can I try Growth features before paying?", "a": "The Starter plan gives you full access to the core AI engine. Growth simply removes the limits so you can scale." }
-    ],
-    "footerCtaPrefix": "Hit your free limit?",
-    "footerCtaLink": "Upgrade to keep generating outreach."
+      { "q": "What is a credit?", "a": "A credit is a unit we use to price data. Right now, revealing a verified B2B email costs 3 credits. AI generation and sending are free — you only pay for the data." },
+      { "q": "What happens if I don't use all my credits in a month?", "a": "Plan credits roll over for 60 days. Top-up credits are valid for 12 months. Top-up credits are always consumed after plan credits." },
+      { "q": "Can I top up credits without upgrading my plan?", "a": "Yes. You can buy credit packs even on the Free plan. You always get a better price per credit on a plan, but top-ups are flexible." },
+      { "q": "Can I cancel anytime?", "a": "Yes — cancel in Settings, no questions asked. On a yearly plan you keep access until the end of the period." },
+      { "q": "How does the money-back guarantee work?", "a": "If you're not satisfied within 30 days, we refund — no questions asked. Refunds are per unused credit." },
+      { "q": "Do you store my lead data?", "a": "Yes, your leads are stored securely in the EU. We never share or sell your data and you can delete anytime." }
+    ]
   },
+
   "auth": {
     "loginTitle": "Welcome back",
     "loginSub": "Log in to your MailLead.ai account",
