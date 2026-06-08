@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { useTranslation } from "react-i18next";
 import IntegrationsCard from "@/components/IntegrationsCard";
+import { SubscriptionSection } from "@/components/SubscriptionSection";
 
 const Settings = () => {
   const { user } = useAuth();
