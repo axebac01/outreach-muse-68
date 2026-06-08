@@ -12,6 +12,7 @@ const CREDIT_PACKAGES: Record<string, number> = {
   credits_500_sek: 500,
   credits_2000_sek: 2000,
   credits_10000_sek: 10000,
+  credits_25000_sek: 25000,
 };
 
 async function resolveOrCreateCustomer(
