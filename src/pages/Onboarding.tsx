@@ -83,6 +83,7 @@ const steps: Step[] = [
       { value: "fler", label: "Fler" },
     ],
   },
+  { type: "plan", key: "plan" },
   { type: "final", key: "final" },
 ];
 
