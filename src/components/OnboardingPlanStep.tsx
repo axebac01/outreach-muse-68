@@ -76,18 +76,20 @@ export function OnboardingPlanStep({ onSelect, submitting }: Props) {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const [checkoutPriceId, setCheckoutPriceId] = useState<string | null>(null);
   const [pendingPaidChoice, setPendingPaidChoice] = useState<PaidPlanKey | null>(null);
-  const { isActive, subscription } = useSubscription();
+  const { isActive, subscription, refetch } = useSubscription();
   const paymentsReady = isPaymentsConfigured();
 
   // Om användaren redan har aktiv plan (t.ex. återupptog onboarding efter checkout)
   if (isActive && subscription) {
+    const activeChoice: PlanChoice =
+      (subscription.price_id && PRICE_TO_PLAN[subscription.price_id]) || "free";
     return (
       <div className="text-center space-y-6">
         <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
           Du har redan ett abonnemang
         </h1>
         <p className="text-muted-foreground">Vi tar dig vidare till sista steget.</p>
-        <Button size="lg" onClick={() => onSelect("free")} disabled={submitting}>
+        <Button size="lg" onClick={() => onSelect(activeChoice)} disabled={submitting}>
           Fortsätt
         </Button>
       </div>
@@ -100,10 +102,13 @@ export function OnboardingPlanStep({ onSelect, submitting }: Props) {
     setCheckoutPriceId(PAID_PRICE_IDS[plan][billing]);
   };
 
-  const handleDialogChange = (open: boolean) => {
+  const handleDialogChange = async (open: boolean) => {
     if (!open) {
-      // Stängdes — om subscription nu är aktiv (webhook hann före), gå vidare
-      if (isActive && pendingPaidChoice) {
+      // Tvinga in färsk subscription-status (webhook hinner ibland före, ibland inte)
+      const result = await refetch();
+      const fresh = result.data;
+      const freshActive = !!fresh && ["active", "trialing", "past_due"].includes(fresh.status);
+      if (freshActive && pendingPaidChoice) {
         onSelect(pendingPaidChoice);
       }
       setCheckoutPriceId(null);
