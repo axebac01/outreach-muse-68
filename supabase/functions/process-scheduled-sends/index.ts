@@ -188,6 +188,14 @@ Deno.serve(async (req) => {
       sentTodayByAcc.set(r.email_account_id, Number(r.sent_count) || 0);
     }
 
+    // Plan-cap per user för daily sends
+    const planCapByUser = new Map<string, number>();
+    await Promise.all(userIds.map(async (uid) => {
+      const { data } = await admin.rpc("get_plan_limit", { user_uuid: uid, resource: "daily_sends_per_account" });
+      const v = Number(data);
+      planCapByUser.set(uid, Number.isFinite(v) && v > 0 ? v : 50);
+    }));
+
     // Per-run state
     const lastSentCache = new Map<string, number>();
     const pausedAccounts = new Set<string>();
