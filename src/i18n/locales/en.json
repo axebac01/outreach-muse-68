@@ -575,6 +575,10 @@
       "timeout": "The request took too long. Please try again.",
       "unauthorized": "You're not signed in anymore. Please sign in again."
     },
+    "plan": {
+      "emailAccountsLimit": "Your plan doesn't allow more email accounts. Upgrade to add more.",
+      "campaignsLimit": "Your plan doesn't allow more campaigns. Upgrade to Starter for unlimited."
+    },
     "auth": {
       "invalidCredentials": "Wrong email or password.",
       "emailNotConfirmed": "You need to confirm your email before signing in. Check your inbox.",
