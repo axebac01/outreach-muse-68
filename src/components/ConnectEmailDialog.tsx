@@ -203,6 +203,11 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
     setTested(false);
   };
 
+  const { limits } = usePlanLimits();
+  const { data: existingAccounts } = useEmailAccounts();
+  const accountCount = existingAccounts?.length ?? 0;
+  const atAccountLimit = !canCreateMore(limits, "email_accounts", accountCount);
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -213,7 +218,15 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           </DialogDescription>
         </DialogHeader>
 
-        {view.kind === "providers" && (
+        {atAccountLimit && limits && (
+          <PlanLimitBanner
+            resource="email_accounts"
+            currentPlan={limits.plan}
+            className="my-2"
+          />
+        )}
+
+        {!atAccountLimit && view.kind === "providers" && (
           <div className="space-y-2 pt-2">
             {/* Microsoft OAuth — one-click */}
             <button
