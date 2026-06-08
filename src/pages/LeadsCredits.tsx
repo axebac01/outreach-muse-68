@@ -19,29 +19,37 @@ interface Pack {
   description: string;
 }
 
+// 1 lead = 3 credits. Topp-ups prissatta så att planen alltid är bättre kr/credit.
 const PACKS: Pack[] = [
   {
     priceId: "credits_500_sek",
     credits: 500,
-    priceSek: 500,
-    perCredit: 1.0,
-    description: "Bra för att testa ~250 leads.",
+    priceSek: 490,
+    perCredit: 0.98,
+    description: "Snabb påfyllning. Räcker till ~165 leads.",
   },
   {
     priceId: "credits_2000_sek",
     credits: 2000,
-    priceSek: 1800,
-    perCredit: 0.9,
+    priceSek: 1690,
+    perCredit: 0.85,
     badge: "Populärast",
-    description: "Räcker till ~1 000 leads. 10% rabatt.",
+    description: "Räcker till ~665 leads. 15 % rabatt.",
   },
   {
     priceId: "credits_10000_sek",
     credits: 10000,
-    priceSek: 8000,
-    perCredit: 0.8,
+    priceSek: 7490,
+    perCredit: 0.75,
+    description: "Räcker till ~3 330 leads. 25 % rabatt.",
+  },
+  {
+    priceId: "credits_25000_sek",
+    credits: 25000,
+    priceSek: 16990,
+    perCredit: 0.68,
     badge: "Bästa pris",
-    description: "Räcker till ~5 000 leads. 20% rabatt.",
+    description: "Räcker till ~8 330 leads. 32 % rabatt — för byråer.",
   },
 ];
 
@@ -54,7 +62,7 @@ export default function LeadsCredits() {
   return (
     <Layout>
       <PaymentTestModeBanner />
-      <div className="container py-8 max-w-5xl">
+      <div className="container py-8 max-w-6xl">
         <Link to="/leads" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4" /> Tillbaka till Leads
         </Link>
@@ -63,7 +71,7 @@ export default function LeadsCredits() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Köp credits</h1>
             <p className="text-muted-foreground mt-1">
-              1 credit ≈ 1 kr. Varje avslöjad lead kostar 2 credits.
+              1 reveal av lead = 3 credits. Credits från topp-ups gäller i 12 månader.
             </p>
           </div>
           <Card>
@@ -86,12 +94,12 @@ export default function LeadsCredits() {
         )}
 
         {!selectedPriceId ? (
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             {PACKS.map((pack) => (
               <Card
                 key={pack.priceId}
                 className={`relative transition-all hover:border-primary/50 ${
-                  pack.badge ? "border-primary/40 shadow-md" : ""
+                  pack.badge === "Populärast" ? "border-primary/50 shadow-md" : ""
                 }`}
               >
                 {pack.badge && (
@@ -117,7 +125,7 @@ export default function LeadsCredits() {
                   <ul className="space-y-1.5 mt-4 text-sm">
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-primary shrink-0" />
-                      <span>~{Math.floor(pack.credits / 2)} leads</span>
+                      <span>~{Math.floor(pack.credits / 3).toLocaleString("sv-SE")} leads</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-primary shrink-0" />
@@ -152,6 +160,11 @@ export default function LeadsCredits() {
             </Card>
           </div>
         )}
+
+        <p className="text-xs text-muted-foreground mt-8 text-center">
+          Söker du ett månadsabonnemang med inkluderade credits? Se{" "}
+          <Link to="/pricing" className="text-primary hover:underline">priser & paket</Link>.
+        </p>
       </div>
     </Layout>
   );
