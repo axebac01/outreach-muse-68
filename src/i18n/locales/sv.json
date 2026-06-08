@@ -192,32 +192,32 @@
         "name": "Free",
         "desc": "Testa hela motorn — inget kreditkort.",
         "price": "0 kr",
-        "credits": "50 credits engångs",
-        "leadsHint": "≈ 16 leads"
+        "credits": "25 credits engångs",
+        "leadsHint": "25 leads"
       },
       "starter": {
         "name": "Starter",
         "desc": "För soloprenören som vill ha en första pipeline.",
         "priceMonthly": "290 kr",
         "priceYearly": "230 kr",
-        "credits": "500 credits/mån",
-        "leadsHint": "≈ 165 leads/mån"
+        "credits": "250 credits/mån",
+        "leadsHint": "250 leads/mån · 1,16 kr/lead"
       },
       "growth": {
         "name": "Growth",
         "desc": "För säljteam som menar allvar med outbound.",
         "priceMonthly": "990 kr",
         "priceYearly": "790 kr",
-        "credits": "2 000 credits/mån",
-        "leadsHint": "≈ 665 leads/mån"
+        "credits": "1 000 credits/mån",
+        "leadsHint": "1 000 leads/mån · 0,99 kr/lead"
       },
       "scale": {
         "name": "Scale",
         "desc": "För byråer och team med flera avsändare.",
         "priceMonthly": "2 490 kr",
         "priceYearly": "1 990 kr",
-        "credits": "6 000 credits/mån",
-        "leadsHint": "≈ 2 000 leads/mån"
+        "credits": "3 000 credits/mån",
+        "leadsHint": "3 000 leads/mån · 0,83 kr/lead"
       },
       "enterprise": {
         "name": "Enterprise",
@@ -239,7 +239,7 @@
       "starter": [
         "3 aktiva kampanjer",
         "3 anslutna sändarkonton",
-        "500 credits/mån — rullar över 60 dagar",
+        "250 credits/mån — rullar över 60 dagar",
         "Topp-up credits när du vill",
         "Schemaläggning & sändfönster",
         "CSV-export",
@@ -248,7 +248,7 @@
       "growth": [
         "Obegränsade kampanjer",
         "10 anslutna sändarkonton",
-        "2 000 credits/mån — rullar över 60 dagar",
+        "1 000 credits/mån — rullar över 60 dagar",
         "A/B-test av sekvenssteg",
         "AI-intent på svar (varm/kall/avregistrerad)",
         "Anpassad spårningsdomän",
@@ -258,7 +258,7 @@
       "scale": [
         "Allt i Growth, plus:",
         "25 anslutna sändarkonton",
-        "6 000 credits/mån",
+        "3 000 credits/mån",
         "10 team-platser",
         "API + webhooks",
         "Dedikerad CSM",
@@ -274,36 +274,40 @@
     },
     "creditUsage": {
       "title": "Vad en credit kostar",
-      "subtitle": "Inga dolda kostnader. Du betalar bara för verifierade B2B-mejl du faktiskt avslöjar.",
+      "subtitle": "1 credit = 1 verifierad mejladress. AI-skrivande, sekvenser och utskick ingår alltid.",
       "rows": [
-        { "action": "Reveal av verifierad B2B-mejl", "cost": "3 credits" },
+        { "action": "Verifierad B2B-mejladress", "cost": "1 credit" },
         { "action": "AI-genererat mejl + uppföljningar", "cost": "Ingår" },
-        { "action": "Skicka mejl via anslutet konto", "cost": "Ingår" },
+        { "action": "AI bygger hel kampanj/sekvens åt dig", "cost": "Ingår" },
+        { "action": "Skicka mejl & schemalägga", "cost": "Ingår" },
         { "action": "Importera egen CSV", "cost": "Ingår" },
         { "action": "Re-reveal (samma lead)", "cost": "0" },
-        { "action": "Refund vid bouncad / felaktig data", "cost": "Automatiskt" }
+        { "action": "Refund vid bouncad / felaktig data", "cost": "Automatiskt" },
+        { "action": "Direkt mobilnummer (kommer snart)", "cost": "5 credits" },
+        { "action": "Deep ICP-research per lead (kommer snart)", "cost": "3 credits" }
       ]
     },
     "topups": {
       "title": "Behöver du mer? Toppa upp credits när som helst.",
-      "subtitle": "Topp-up-credits gäller i 12 månader och konsumeras efter plan-credits.",
+      "subtitle": "Topp-up-credits gäller i 12 månader och konsumeras efter plan-credits. Plan ger alltid bättre pris per credit.",
       "perCredit": "kr/credit",
       "viewAll": "Se alla credit-paket",
       "packs": [
-        { "credits": "500", "price": "490 kr", "perCredit": "0,98" },
-        { "credits": "2 000", "price": "1 690 kr", "perCredit": "0,85", "badge": "Populärast" },
-        { "credits": "10 000", "price": "7 490 kr", "perCredit": "0,75" },
-        { "credits": "25 000", "price": "16 990 kr", "perCredit": "0,68" }
+        { "credits": "200", "price": "390 kr", "perCredit": "1,95" },
+        { "credits": "800", "price": "1 390 kr", "perCredit": "1,74", "badge": "Populärast" },
+        { "credits": "3 500", "price": "5 490 kr", "perCredit": "1,57" },
+        { "credits": "10 000", "price": "13 990 kr", "perCredit": "1,40" }
       ]
     },
     "guarantee": "30 dagars pengarna-tillbaka-garanti · GDPR-säker · Servrar i EU",
     "faqTitle": "Vanliga frågor",
     "faqs": [
-      { "q": "Vad är en credit?", "a": "En credit är en enhet vi använder för att prissätta data. Just nu kostar reveal av ett verifierat B2B-mejl 3 credits. AI-genereringen och själva utskicket är gratis — du betalar bara för datan." },
-      { "q": "Vad händer om jag inte använder alla credits en månad?", "a": "Plan-credits rullar över i 60 dagar. Topp-up-credits gäller i 12 månader. Topp-up-credits konsumeras alltid efter plan-credits." },
-      { "q": "Kan jag toppa upp credits utan att uppgradera plan?", "a": "Ja. Du kan köpa credit-paket även på Free-planen. Du får alltid bättre pris per credit på en plan, men topp-ups är flexibla." },
+      { "q": "Vad är en credit?", "a": "En credit motsvarar en verifierad B2B-mejladress. AI-skrivande, kampanjbyggande och utskick ingår alltid — du betalar bara för datan vi hämtar åt dig." },
+      { "q": "Vad händer om jag inte använder alla credits en månad?", "a": "Plan-credits rullar över i 60 dagar. Topp-up-credits gäller i 12 månader och konsumeras alltid efter plan-credits." },
+      { "q": "Kan jag toppa upp credits utan att uppgradera plan?", "a": "Ja. Du kan köpa credit-paket även på Free-planen. Plan ger alltid bättre pris per credit, men topp-ups är flexibla." },
+      { "q": "Kostar AI-mejl eller kampanjbyggande extra?", "a": "Nej. Obegränsat AI-skrivande, omgenerering, sekvenser och kampanjbyggande ingår i alla planer — även Free. Vi tar bara betalt för data." },
       { "q": "Kan jag avsluta när som helst?", "a": "Ja — avsluta i Inställningar utan frågor. Är du på årsplan har du tillgång till slutet av perioden." },
-      { "q": "Hur är pengarna-tillbaka-garantin?", "a": "Om du inte är nöjd inom 30 dagar betalar vi tillbaka — inga frågor. Refund av credits sker per credit du inte använt." },
+      { "q": "Hur är pengarna-tillbaka-garantin?", "a": "Om du inte är nöjd inom 30 dagar betalar vi tillbaka — inga frågor. Outnyttjade credits återbetalas per credit." },
       { "q": "Sparar ni mina leaddata?", "a": "Ja, dina leads sparas säkert i EU. Vi delar eller säljer aldrig dina data och du kan radera när som helst." }
     ]
   },
