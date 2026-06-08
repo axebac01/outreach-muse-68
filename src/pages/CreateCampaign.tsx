@@ -7,15 +7,35 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useCreateCampaign } from "@/hooks/useCampaigns";
-import { useUsage } from "@/hooks/useUsage";
-import UpgradeBanner from "@/components/UpgradeBanner";
+import { usePlanLimits, canCreateMore } from "@/hooks/usePlanLimits";
+import { PlanLimitBanner } from "@/components/PlanLimitBanner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "react-i18next";
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
   const createCampaign = useCreateCampaign();
-  const { canCreateCampaign } = useUsage();
+  const { user } = useAuth();
+  const { limits } = usePlanLimits();
   const { t } = useTranslation();
+
+  const { data: campaignCount = 0 } = useQuery({
+    queryKey: ["campaign_count", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("campaigns")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  const canCreate = canCreateMore(limits, "campaigns", campaignCount);
+
   const [form, setForm] = useState({
     name: "",
     target_audience: "",
@@ -28,7 +48,7 @@ const CreateCampaign = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canCreateCampaign) {
+    if (!canCreate) {
       toast.error(t("createCampaign.limitReached"));
       return;
     }
@@ -49,11 +69,12 @@ const CreateCampaign = () => {
           <h1 className="text-3xl font-bold">{t("createCampaign.title")}</h1>
           <p className="text-muted-foreground mt-1">{t("createCampaign.subtitle")}</p>
         </div>
-        {!canCreateCampaign && (
+        {!canCreate && limits && (
           <div className="mb-6">
-            <UpgradeBanner message={t("createCampaign.limitBanner")} />
+            <PlanLimitBanner resource="campaigns" currentPlan={limits.plan} />
           </div>
         )}
+
         <div className="rounded-xl border bg-card p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
