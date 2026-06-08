@@ -353,7 +353,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           </div>
         )}
 
-        {view.kind === "guide" && !savedEmail && (
+        {!atAccountLimit && view.kind === "guide" && !savedEmail && (
           <ProviderConnectGuide
             provider={view.provider}
             onBack={() => setView({ kind: "providers" })}
