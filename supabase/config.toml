@@ -35,3 +35,12 @@ verify_jwt = false
 
 [functions.leads-import]
 verify_jwt = false
+
+[functions.create-subscription-checkout]
+verify_jwt = false
+
+[functions.create-portal-session]
+verify_jwt = false
+
+[functions.refill-yearly-plan-credits]
+verify_jwt = false
