@@ -27,10 +27,16 @@ const EmailAccounts = () => {
   const { data: sentToday = {} } = useSentToday();
   const updateLimit = useUpdateSendingLimit();
   const del = useDeleteEmailAccount();
+  const { limits: planLimits } = usePlanLimits();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<EmailAccount | null>(null);
 
+  const accountCount = accounts?.length ?? 0;
+  const planCap = planLimits?.email_accounts ?? -1;
+  const atLimit = planCap >= 0 && accountCount >= planCap;
+
   const limitFor = (id: string) => limits.find((l) => l.email_account_id === id);
+
 
   const handleDelete = async (id: string) => {
     try {
