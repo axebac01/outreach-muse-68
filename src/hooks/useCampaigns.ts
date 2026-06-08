@@ -112,7 +112,16 @@ export const useCreateCampaign = () => {
         .insert({ ...campaign, user_id: user!.id })
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes("plan_limit_exceeded:campaigns")) {
+          const err = new Error(
+            "Du har nått taket för kampanjer på Free-planen. Uppgradera till Starter för fler.",
+          );
+          (err as any).code = "plan_limit_exceeded:campaigns";
+          throw err;
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
