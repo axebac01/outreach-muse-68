@@ -868,6 +868,27 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_credit_grants: {
+        Row: {
+          billing_interval: string
+          created_at: string
+          credits_per_month: number
+          price_id: string
+        }
+        Insert: {
+          billing_interval: string
+          created_at?: string
+          credits_per_month: number
+          price_id: string
+        }
+        Update: {
+          billing_interval?: string
+          created_at?: string
+          credits_per_month?: number
+          price_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_description: string | null
@@ -1235,6 +1256,92 @@ export type Database = {
           },
         ]
       }
+      subscription_credit_grants: {
+        Row: {
+          amount: number
+          granted_at: string
+          id: string
+          period_start: string
+          source: string
+          subscription_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          granted_at?: string
+          id?: string
+          period_start: string
+          source: string
+          subscription_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          granted_at?: string
+          id?: string
+          period_start?: string
+          source?: string
+          subscription_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_credit_grants_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          environment: string
+          id: string
+          price_id: string
+          product_id: string
+          status: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          price_id: string
+          product_id: string
+          status?: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          price_id?: string
+          product_id?: string
+          status?: string
+          stripe_customer_id?: string
+          stripe_subscription_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tracking_sites: {
         Row: {
           auto_tag_email_links: boolean
@@ -1546,6 +1653,10 @@ export type Database = {
           email_account_id: string
           sent_count: number
         }[]
+      }
+      has_active_subscription: {
+        Args: { check_env?: string; user_uuid: string }
+        Returns: boolean
       }
       recalc_wallet_balance: { Args: { _user_id: string }; Returns: number }
       spend_credits: {
