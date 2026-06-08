@@ -124,6 +124,7 @@ const profileFieldMap: Record<string, string> = {
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [stepIndex, setStepIndex] = useState(0);
