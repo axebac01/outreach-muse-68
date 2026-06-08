@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { apolloMatch } from "../_shared/apollo.ts";
 import { corsHeaders } from "../_shared/leadsCors.ts";
 
-const CREDITS_PER_REVEAL = 2;
+const CREDITS_PER_REVEAL = 3;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
