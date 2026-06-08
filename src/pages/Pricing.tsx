@@ -100,6 +100,13 @@ const Pricing = () => {
 
   return (
     <Layout>
+      <PaymentTestModeBanner />
+      <SubscriptionCheckoutDialog
+        open={!!checkoutPriceId}
+        onOpenChange={(o) => !o && setCheckoutPriceId(null)}
+        priceId={checkoutPriceId}
+        returnUrl={`${window.location.origin}/settings?subscription=success&session_id={CHECKOUT_SESSION_ID}`}
+      />
       <SeoHead
         title="Priser — MailLead.ai"
         description="Börja gratis med 25 credits. Toppa upp eller välj månadsplan från 290 kr/mån — du betalar bara för leads du faktiskt vill nå."
