@@ -15,6 +15,12 @@ const PAID_PRICE_IDS: Record<PaidPlanKey, { monthly: string; yearly: string }> =
   scale:   { monthly: "scale_monthly",   yearly: "scale_yearly" },
 };
 
+export const PRICE_TO_PLAN: Record<string, PlanChoice> = {
+  starter_monthly: "starter", starter_yearly: "starter",
+  growth_monthly:  "growth",  growth_yearly:  "growth",
+  scale_monthly:   "scale",   scale_yearly:   "scale",
+};
+
 const PLANS: Array<{
   key: PlanChoice;
   name: string;
