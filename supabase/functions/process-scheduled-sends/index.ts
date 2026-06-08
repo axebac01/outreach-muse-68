@@ -294,7 +294,9 @@ Deno.serve(async (req) => {
       }
 
       const limit = limitByAcc.get(row.email_account_id);
-      const cap = effectiveDailyCap(limit, acc.created_at, seq.daily_limit_per_account || 25, acc.provider);
+      const rawCap = effectiveDailyCap(limit, acc.created_at, seq.daily_limit_per_account || 25, acc.provider);
+      const planCap = planCapByUser.get(row.user_id) ?? 50;
+      const cap = Math.min(rawCap, planCap);
 
       const sentToday = sentTodayByAcc.get(row.email_account_id) ?? 0;
       if (sentToday >= cap) {
