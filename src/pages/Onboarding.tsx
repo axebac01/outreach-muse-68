@@ -379,7 +379,7 @@ const Onboarding = () => {
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div key={stepIndex} className={`w-full max-w-2xl text-center ${slideClass}`}>
+        <div key={stepIndex} className={`w-full ${step.type === "plan" ? "max-w-5xl" : "max-w-2xl"} text-center ${slideClass}`}>
           <div className="text-xs font-medium tracking-widest text-muted-foreground mb-6">
             {step.type === "final" ? "KLART" : `STEG ${stepIndex + 1} AV ${steps.length - 1}`}
           </div>
