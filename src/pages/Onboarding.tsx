@@ -9,7 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { OnboardingPlanStep, type PlanChoice } from "@/components/OnboardingPlanStep";
+import { OnboardingPlanStep, PRICE_TO_PLAN, type PlanChoice } from "@/components/OnboardingPlanStep";
+import { useSubscription } from "@/hooks/useSubscription";
 
 type ChoiceOption = { value: string; label: string };
 
