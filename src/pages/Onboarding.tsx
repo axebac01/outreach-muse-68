@@ -98,7 +98,7 @@ type CompanyData = {
 
 const STORAGE_KEY = "onboarding_progress_v2";
 const URL_REGEX = /^([a-z0-9-]+\.)+[a-z]{2,}(\/.*)?$/i;
-const SCRAPE_TIMEOUT_MS = 20000;
+const SCRAPE_TIMEOUT_MS = 45000;
 
 const normalizeUrl = (raw: string): string => {
   let u = raw.trim();
@@ -170,6 +170,41 @@ const Onboarding = () => {
   useEffect(() => {
     inputRef.current?.focus();
   }, [stepIndex]);
+
+  // Hydrera scrape-state från profiles (viktigt efter Stripe-redirect då lokal state nollställs)
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select(
+          "company_url,company_scrape_status,company_name,company_target_audience,company_value_prop,company_description",
+        )
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      const status = (data as any).company_scrape_status as string | null;
+      if (status === "done") {
+        setCompanyData({
+          company_name: (data as any).company_name ?? "",
+          company_target_audience: (data as any).company_target_audience ?? "",
+          company_value_prop: (data as any).company_value_prop ?? "",
+          company_description: (data as any).company_description ?? "",
+          company_scrape_status: "done",
+        });
+        setScrapeState("done");
+        if ((data as any).company_url) scrapedFor.current = (data as any).company_url;
+      } else if (status === "failed") {
+        setScrapeState((s) => (s === "idle" ? "failed" : s));
+        setScrapeReason((r) => r ?? "scrape_failed");
+        if ((data as any).company_url) scrapedFor.current = (data as any).company_url;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // Persist current step's answer to profile (best-effort, fire-and-forget)
   const persistAnswer = (key: string, value: string) => {
