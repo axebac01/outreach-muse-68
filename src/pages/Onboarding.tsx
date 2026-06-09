@@ -131,6 +131,7 @@ const Onboarding = () => {
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [skipName, setSkipName] = useState(false);
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [scrapeState, setScrapeState] = useState<"idle" | "loading" | "done" | "failed">("idle");
   const [scrapeReason, setScrapeReason] = useState<string | null>(null);
@@ -140,7 +141,11 @@ const Onboarding = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const scrapedFor = useRef<string>("");
 
-  const step = steps[stepIndex];
+  const steps = useMemo(
+    () => (skipName ? BASE_STEPS.filter((s) => s.key !== "name") : BASE_STEPS),
+    [skipName],
+  );
+  const step = steps[Math.min(stepIndex, steps.length - 1)];
   const progress = ((stepIndex + 1) / steps.length) * 100;
 
   // Restore from localStorage
