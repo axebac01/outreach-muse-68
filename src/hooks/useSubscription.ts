@@ -30,6 +30,7 @@ export function useSubscription() {
   const { user } = useAuth();
   const userId = user?.id;
   const env = isPaymentsConfigured() ? getStripeEnvironment() : null;
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["subscription", userId, env],
@@ -49,19 +50,19 @@ export function useSubscription() {
   });
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !env) return;
     const channel = supabase
-      .channel(`subscriptions:${userId}`)
+      .channel(`subscriptions:${userId}:${env}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${userId}` },
-        () => query.refetch(),
+        () => queryClient.invalidateQueries({ queryKey: ["subscription", userId, env] }),
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, query]);
+  }, [userId, env, queryClient]);
 
   return {
     subscription: query.data ?? null,
