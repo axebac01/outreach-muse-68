@@ -21,7 +21,7 @@ type Step =
   | { type: "plan"; key: "plan" }
   | { type: "final"; key: "final" };
 
-const steps: Step[] = [
+const BASE_STEPS: Step[] = [
   { type: "text", key: "name", question: "Vad heter du?", placeholder: "Ditt namn" },
   {
     type: "url",
@@ -131,6 +131,7 @@ const Onboarding = () => {
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [skipName, setSkipName] = useState(false);
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [scrapeState, setScrapeState] = useState<"idle" | "loading" | "done" | "failed">("idle");
   const [scrapeReason, setScrapeReason] = useState<string | null>(null);
@@ -140,7 +141,11 @@ const Onboarding = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const scrapedFor = useRef<string>("");
 
-  const step = steps[stepIndex];
+  const steps = useMemo(
+    () => (skipName ? BASE_STEPS.filter((s) => s.key !== "name") : BASE_STEPS),
+    [skipName],
+  );
+  const step = steps[Math.min(stepIndex, steps.length - 1)];
   const progress = ((stepIndex + 1) / steps.length) * 100;
 
   // Restore from localStorage
@@ -179,11 +184,16 @@ const Onboarding = () => {
       const { data } = await supabase
         .from("profiles")
         .select(
-          "company_url,company_scrape_status,company_name,company_target_audience,company_value_prop,company_description",
+          "full_name,company_url,company_scrape_status,company_name,company_target_audience,company_value_prop,company_description",
         )
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled || !data) return;
+      const fullName = ((data as any).full_name ?? "").trim();
+      if (fullName) {
+        setAnswers((a) => ({ ...a, name: a.name?.trim() ? a.name : fullName }));
+        setSkipName(true);
+      }
       const status = (data as any).company_scrape_status as string | null;
       if (status === "done") {
         setCompanyData({

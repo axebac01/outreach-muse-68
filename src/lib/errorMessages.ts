@@ -72,6 +72,8 @@ const SUPABASE_AUTH_MAP: Record<string, string> = {
   "user already registered": "errors.auth.userAlreadyExists",
   "user already exists": "errors.auth.userAlreadyExists",
   "password should be at least": "errors.auth.weakPassword",
+  "pwned": "errors.auth.leakedPassword",
+  "leaked password": "errors.auth.leakedPassword",
   "email rate limit exceeded": "errors.auth.rateLimited",
   "over_email_send_rate_limit": "errors.auth.rateLimited",
   "signup is disabled": "errors.auth.signupDisabled",
