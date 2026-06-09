@@ -21,7 +21,7 @@ type Step =
   | { type: "plan"; key: "plan" }
   | { type: "final"; key: "final" };
 
-const steps: Step[] = [
+const BASE_STEPS: Step[] = [
   { type: "text", key: "name", question: "Vad heter du?", placeholder: "Ditt namn" },
   {
     type: "url",
