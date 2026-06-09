@@ -603,6 +603,7 @@
       "emailNotConfirmed": "You need to confirm your email before signing in. Check your inbox.",
       "userAlreadyExists": "An account with that email already exists. Sign in instead.",
       "weakPassword": "Password is too weak. Use at least 8 characters with a mix of types.",
+      "leakedPassword": "This password has appeared in a known data breach. Please choose a different one.",
       "rateLimited": "Too many attempts. Please wait a few minutes before trying again.",
       "signupDisabled": "New signups are temporarily disabled.",
       "oauthCancelled": "You cancelled the sign-in.",

@@ -603,6 +603,7 @@
       "emailNotConfirmed": "Du måste bekräfta din mejladress innan du kan logga in. Kolla din inkorg.",
       "userAlreadyExists": "Ett konto med den mejladressen finns redan. Logga in istället.",
       "weakPassword": "Lösenordet är för svagt. Använd minst 8 tecken med blandade typer.",
+      "leakedPassword": "Det här lösenordet har läckt i en känd dataläcka. Välj ett annat lösenord.",
       "rateLimited": "För många försök. Vänta ett par minuter innan du provar igen.",
       "signupDisabled": "Nyregistrering är tillfälligt avstängt.",
       "oauthCancelled": "Du avbröt inloggningen.",
