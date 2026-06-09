@@ -333,6 +333,25 @@
     "login": "Logga in",
     "loginSuccess": "Inloggad!",
     "signupSuccess": "Konto skapat! Välkommen till MailLead.ai",
+    "confirmPassword": "Bekräfta lösenord",
+    "pwMismatch": "Lösenorden matchar inte",
+    "pwRule": {
+      "length": "Minst 8 tecken",
+      "upper": "Minst en stor bokstav",
+      "digit": "Minst en siffra"
+    },
+    "verify": {
+      "title": "Kolla din inkorg",
+      "sub": "Vi har skickat ett bekräftelsemejl till",
+      "instructions": "Klicka på länken i mejlet för att aktivera ditt konto.",
+      "openGmail": "Öppna Gmail",
+      "resend": "Skicka mejlet igen",
+      "resendIn": "Skicka igen om {{seconds}} s",
+      "sending": "Skickar...",
+      "resentToast": "Mejlet har skickats igen",
+      "spamHint": "Hittar du inte mejlet? Kolla skräpposten.",
+      "alreadyVerified": "Redan verifierad?"
+    },
     "testimonial": "\"MailLead.ai minskade vår förberedelsetid med 90 %. Vi bokade 12 möten första veckan.\"",
     "testimonialAuthor": "— Marcus R., Grundare på SalesSync"
   },

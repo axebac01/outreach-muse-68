@@ -333,6 +333,25 @@
     "login": "Log in",
     "loginSuccess": "Logged in successfully!",
     "signupSuccess": "Account created! Welcome to MailLead.ai",
+    "confirmPassword": "Confirm password",
+    "pwMismatch": "Passwords don't match",
+    "pwRule": {
+      "length": "At least 8 characters",
+      "upper": "At least one uppercase letter",
+      "digit": "At least one number"
+    },
+    "verify": {
+      "title": "Check your inbox",
+      "sub": "We've sent a confirmation email to",
+      "instructions": "Click the link in the email to activate your account.",
+      "openGmail": "Open Gmail",
+      "resend": "Resend email",
+      "resendIn": "Resend in {{seconds}}s",
+      "sending": "Sending...",
+      "resentToast": "Email sent again",
+      "spamHint": "Can't find the email? Check your spam folder.",
+      "alreadyVerified": "Already verified?"
+    },
     "testimonial": "\"MailLead.ai cut our outreach prep time by 90%. We booked 12 meetings in our first week.\"",
     "testimonialAuthor": "— Marcus R., Founder at SalesSync"
   },
