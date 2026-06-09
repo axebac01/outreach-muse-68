@@ -18,6 +18,7 @@ const RESOURCES = ["email_accounts", "campaigns", "daily_sends_per_account", "in
 export function usePlanLimits() {
   const { user } = useAuth();
   const userId = user?.id;
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["plan_limits", userId],
@@ -49,13 +50,13 @@ export function usePlanLimits() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${userId}` },
-        () => query.refetch(),
+        () => queryClient.invalidateQueries({ queryKey: ["plan_limits", userId] }),
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [userId, query]);
+  }, [userId, queryClient]);
 
   return {
     limits: query.data ?? null,
