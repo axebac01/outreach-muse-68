@@ -184,11 +184,16 @@ const Onboarding = () => {
       const { data } = await supabase
         .from("profiles")
         .select(
-          "company_url,company_scrape_status,company_name,company_target_audience,company_value_prop,company_description",
+          "full_name,company_url,company_scrape_status,company_name,company_target_audience,company_value_prop,company_description",
         )
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled || !data) return;
+      const fullName = ((data as any).full_name ?? "").trim();
+      if (fullName) {
+        setAnswers((a) => ({ ...a, name: a.name?.trim() ? a.name : fullName }));
+        setSkipName(true);
+      }
       const status = (data as any).company_scrape_status as string | null;
       if (status === "done") {
         setCompanyData({
