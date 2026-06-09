@@ -1,61 +1,57 @@
-# Fas 3.5 — Polish & verifiering inför test
+## Problem
 
-Tre konkreta fixar + en verifierings-runda. Inget nytt feature, bara stänga luckorna så testflödet inte kraschar.
+Efter onboarding kraschar appen med tom skärm och felet:
 
-## A1. Migrera `useUsage` → `usePlanLimits` på CreateCampaign
+```
+Uncaught Error: cannot add `postgres_changes` callbacks for realtime:subscriptions:<user-id> after `subscribe()`
+```
 
-**Problem:** `CreateCampaign.tsx` använder `useUsage().canCreateCampaign`. Den hooken läser `profile.plan` (legacy-fält) och har bara `starter`/`growth` i sin `LIMITS`-tabell — Free och Scale finns inte. En Free-user får default `starter` med 1 kampanj, vilket *råkar* funka, men det är en bugg som väntar på att hända.
+Kanalnamnet `subscriptions:<userId>` matchar `useSubscription.ts`. Samma buggmönster finns i `usePlanLimits.ts`.
 
-**Fix:**
-- `CreateCampaign.tsx`: byt ut `useUsage` mot `usePlanLimits` + en separat count-query för kampanjer (eller låt `usePlanLimits` returnera `currentCounts` också — enklare). Använd `canCreateMore(limits, "campaigns", count)`.
-- Behåll `UpgradeBanner` med samma i18n-text. Banner visas när `!canCreate`.
-- **Rör inte** `useUsage` i resten av kodbasen i denna runda — bara CreateCampaign. (Resten kan migreras i en senare polish-fas.)
+## Orsak
 
-## A2. Banner på `EmailAccounts.tsx`
+Båda hookarna har detta mönster:
 
-**Problem:** Listsidan visar ingen feedback när användaren nått taket. Knappen "Anslut konto" är fortfarande klickbar; dialogen visar bannern först när den öppnas.
+```ts
+const query = useQuery(...);
 
-**Fix:**
-- Lägg in `PlanLimitBanner` ovanför kontolistan om `accounts.length >= limits.email_accounts` (och limit ≠ -1).
-- Disable "Anslut konto"-knappen i samma villkor, med tooltip "Du har nått taket för din plan".
-- Banner-texten: "Du har använt X av Y mejlkonton på {plan}-planen. Uppgradera för att lägga till fler."
+useEffect(() => {
+  const channel = supabase.channel(`subscriptions:${userId}`)
+    .on("postgres_changes", ..., () => query.refetch())
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}, [userId, query]);   // ← query-objektet byter referens varje render
+```
 
-## A3. Verifiering — triggers + felöversättning
+Två problem:
+1. `query` är ny referens varje render → effekten river och bygger om kanalen hela tiden.
+2. Supabase-klienten cachar kanaler per topic. När en ny effekt-cykel triggas innan föregående cleanup hunnit köra klart returnerar `.channel("subscriptions:<id>")` samma kanal-objekt som redan är i state `joined`. Då kastar `.on()` exakt det felet vi ser.
 
-**Hur:** Direkt SQL-test mot DB som inloggad preview-user.
+Efter onboarding mountas Dashboard som drar in både `useSubscription` och flera komponenter som triggar re-render snabbt → race uppstår och kraschar hela trädet (tom vit skärm).
 
-1. Kör `SELECT public.get_user_plan(auth.uid())` — bekräfta att den returnerar `free` för testanvändaren.
-2. Kör `SELECT public.get_plan_limit(auth.uid(), 'email_accounts')` — ska returnera `1`.
-3. Skapa en andra `email_accounts`-rad via INSERT — bekräfta att `plan_limit_exceeded:email_accounts:1` kastas.
-4. I UI: trigga felet via "Anslut konto"-flödet. Bekräfta att toast visar svensk text från `errorMessages.ts`, inte raw `P0001`-meddelandet.
-5. Samma för `campaigns`.
+## Plan
 
-Om något steg misslyckas: fix on the spot i samma fas.
+Två filer, samma fix.
 
-## B4. Onboarding → första kampanj — smoke test
+### 1. `src/hooks/useSubscription.ts`
 
-**Hur:** Manuell genomgång (ingen kod):
-- Ny user (eller rensa befintlig profile) → `/signup` → onboarding → connect gmail → skapa kampanj → skicka test.
+- Använd `useQueryClient().invalidateQueries(["subscription", userId, env])` istället för `query.refetch()`.
+- Ta bort `query` från effekt-deps. Kvar blir `[userId, env, queryClient]` — alla stabila.
+- Säkerhetsnät: ge kanalen unikt namn `subscriptions:${userId}:${env}` så `useSubscription` och `usePlanLimits` aldrig kan kollidera ifall någon framtida hook också lyssnar på `subscriptions`-tabellen.
 
-Jag listar checkpoints användaren kan följa, och fixar bara om något konkret går sönder.
+### 2. `src/hooks/usePlanLimits.ts`
 
-## Filer som ändras
+- Samma fix: byt `query.refetch()` mot `queryClient.invalidateQueries(["plan_limits", userId])`.
+- Deps blir `[userId, queryClient]`.
+- Kanalnamn `plan_limits:${userId}` är redan unikt.
 
-- `src/pages/CreateCampaign.tsx` — byt `useUsage` → `usePlanLimits`
-- `src/pages/EmailAccounts.tsx` — lägg till banner + disable-knapp
-- `src/hooks/usePlanLimits.ts` — utöka med `currentCounts` (email_accounts, campaigns) via en extra query, så vi slipper räkna i två komponenter
-- `src/i18n/locales/sv.json` + `en.json` — eventuella nya banner-strängar
+### Verifiering
 
-## Vad jag INTE gör nu
+1. Logga ut → skapa nytt konto → kör hela onboardingen → landa på Dashboard utan tom skärm.
+2. Kolla console — inga `cannot add postgres_changes` -fel.
+3. Kontrollera att uppgradering/nedgradering av plan fortfarande triggar refetch (manuell sub-uppdatering via DB → UI ska ändras inom någon sekund).
 
-- Migrerar inte hela `useUsage` ut (används också i Leads/Dashboard — separat polish-fas).
-- Ändrar inte plan-limits-tabellen.
-- Lägger inte till nya tester/CI.
-- Rör inte Stripe go-live (separat fråga).
+## Inte i denna fix
 
-## Acceptanskriterier
-
-- Free-user på `/create-campaign` med 1 befintlig kampanj ser banner och har submit-knappen disabled.
-- Free-user på `/email-accounts` med 1 konto ser banner och har "Anslut"-knappen disabled.
-- Manuellt SQL-test bekräftar trigger fungerar.
-- Inget regressionsfel på Starter/Growth/Scale-användare (de ska kunna skapa fritt).
+- `useInbox.ts`, `useInbound.ts`, `useCreditBalance.ts` — använder redan `qc.invalidateQueries` + stabila deps. Lämnas orörda.
+- Övriga punkter (1, 2, 3 från listan) tas i separata pass.
