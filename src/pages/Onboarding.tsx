@@ -256,6 +256,17 @@ const Onboarding = () => {
       .catch(() => failWith("unknown"));
   };
 
+  // Säkerhetsnät: om vi landar på final-steget utan data och utan pågående scrape,
+  // starta scrape igen från sparad URL (kan hända efter Stripe-redirect).
+  useEffect(() => {
+    if (step.type !== "final") return;
+    if (scrapeState !== "idle") return;
+    const url = (answers.company_url ?? "").trim();
+    if (!url) return;
+    startScrape(url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step.type, scrapeState, answers.company_url]);
+
   const validateStep = (): boolean => {
     if (step.type === "url") {
       const v = (answers[step.key] ?? "").trim().replace(/^https?:\/\//i, "");
