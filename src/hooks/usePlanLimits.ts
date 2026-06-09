@@ -45,8 +45,9 @@ export function usePlanLimits() {
   // Re-fetch när subscriptions ändras (uppgradering/nedgradering)
   useEffect(() => {
     if (!userId) return;
+    const topic = `plan_limits:${userId}:${Math.random().toString(36).slice(2, 10)}`;
     const ch = supabase
-      .channel(`plan_limits:${userId}`)
+      .channel(topic)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${userId}` },

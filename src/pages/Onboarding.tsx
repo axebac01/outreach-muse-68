@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { OnboardingPlanStep, PRICE_TO_PLAN, type PlanChoice } from "@/components/OnboardingPlanStep";
-import { useSubscription } from "@/hooks/useSubscription";
+
 
 type ChoiceOption = { value: string; label: string };
 
@@ -128,7 +128,6 @@ const Onboarding = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { refetch: refetchSubscription } = useSubscription();
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -291,15 +290,24 @@ const Onboarding = () => {
   // Tillbaka från Stripe-checkout → toast + auto-advance med korrekt plan
   useEffect(() => {
     if (searchParams.get("subscription") !== "success" || step.type !== "plan") return;
+    if (!user) return;
     let cancelled = false;
     (async () => {
-      // Försök hämta färsk subscription-rad (webhook kan ta någon sekund)
+      // Försök hämta färsk subscription-rad (webhook kan ta någon sekund) direkt via DB
+      // för att undvika att mounta useSubscription() här (skulle dubblera realtime-topic).
       let resolved: PlanChoice = "growth";
       for (let i = 0; i < 6; i++) {
-        const result = await refetchSubscription();
-        const row = result.data;
+        const { data: row } = await supabase
+          .from("subscriptions")
+          .select("price_id,status,current_period_end")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
         if (row?.price_id && PRICE_TO_PLAN[row.price_id]) {
           resolved = PRICE_TO_PLAN[row.price_id];
+          // invalidera så övriga hooks plockar upp den nya raden
+          queryClient.invalidateQueries({ queryKey: ["subscription"] });
           break;
         }
         await new Promise((r) => setTimeout(r, 800));
@@ -314,7 +322,7 @@ const Onboarding = () => {
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, step.type]);
+  }, [searchParams, step.type, user?.id]);
 
   // keyboard shortcuts: 1-9 for choice, Esc/Backspace-on-empty for back
   useEffect(() => {
