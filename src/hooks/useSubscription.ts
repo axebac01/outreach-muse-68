@@ -51,8 +51,11 @@ export function useSubscription() {
 
   useEffect(() => {
     if (!userId || !env) return;
+    // Unikt topic per mount för att garanterat undvika dubbletter ifall hooken
+    // mountas från flera komponenter samtidigt (t.ex. onboarding + plan-steg).
+    const topic = `subscriptions:${userId}:${env}:${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
-      .channel(`subscriptions:${userId}:${env}`)
+      .channel(topic)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${userId}` },
