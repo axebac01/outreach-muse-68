@@ -1570,6 +1570,8 @@ export type Database = {
         Row: {
           auth_type: string | null
           created_at: string | null
+          deliverability_check: Json | null
+          deliverability_checked_at: string | null
           display_name: string | null
           email: string | null
           id: string | null
@@ -1578,6 +1580,8 @@ export type Database = {
           imap_secure: boolean | null
           imap_username: string | null
           last_synced_at: string | null
+          paused_at: string | null
+          paused_reason: string | null
           provider: string | null
           sender_name: string | null
           signature: string | null
@@ -1593,6 +1597,8 @@ export type Database = {
         Insert: {
           auth_type?: string | null
           created_at?: string | null
+          deliverability_check?: Json | null
+          deliverability_checked_at?: string | null
           display_name?: string | null
           email?: string | null
           id?: string | null
@@ -1601,6 +1607,8 @@ export type Database = {
           imap_secure?: boolean | null
           imap_username?: string | null
           last_synced_at?: string | null
+          paused_at?: string | null
+          paused_reason?: string | null
           provider?: string | null
           sender_name?: string | null
           signature?: string | null
@@ -1616,6 +1624,8 @@ export type Database = {
         Update: {
           auth_type?: string | null
           created_at?: string | null
+          deliverability_check?: Json | null
+          deliverability_checked_at?: string | null
           display_name?: string | null
           email?: string | null
           id?: string | null
@@ -1624,6 +1634,8 @@ export type Database = {
           imap_secure?: boolean | null
           imap_username?: string | null
           last_synced_at?: string | null
+          paused_at?: string | null
+          paused_reason?: string | null
           provider?: string | null
           sender_name?: string | null
           signature?: string | null
