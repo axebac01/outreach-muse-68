@@ -7,9 +7,11 @@ import { useTranslation } from "react-i18next";
 import {
   useEmailAccounts,
   useDeleteEmailAccount,
+  useReactivateEmailAccount,
   type EmailAccount,
 } from "@/hooks/useEmailAccounts";
 import { useSendingLimits, useSentToday, useUpdateSendingLimit, effectiveCap } from "@/hooks/useSendingLimits";
+
 import ConnectEmailDialog from "@/components/ConnectEmailDialog";
 import EditSignatureDialog from "@/components/EditSignatureDialog";
 import DeliverabilityCheck from "@/components/DeliverabilityCheck";
