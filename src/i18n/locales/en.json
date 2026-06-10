@@ -249,20 +249,16 @@
         "Unlimited campaigns",
         "10 connected sending accounts",
         "1,000 credits/mo — rollover 60 days",
-        "A/B testing of sequence steps",
         "AI intent classification on replies",
-        "Custom tracking domain",
-        "3 team seats",
+        "Inbound tracking on your website",
         "Priority chat support 24h"
       ],
       "scale": [
         "Everything in Growth, plus:",
         "25 connected sending accounts",
         "3,000 credits/mo",
-        "10 team seats",
-        "API + webhooks",
-        "Dedicated CSM",
-        "Advanced deliverability monitoring"
+        "Personal onboarding",
+        "Dedicated point of contact"
       ],
       "enterprise": [
         "Custom credit volume",
@@ -333,6 +329,9 @@
     "login": "Log in",
     "loginSuccess": "Logged in successfully!",
     "signupSuccess": "Account created! Welcome to MailLead.ai",
+    "continueWithGoogle": "Continue with Google",
+    "orDivider": "or",
+    "googleError": "Could not sign in with Google. Please try again.",
     "confirmPassword": "Confirm password",
     "pwMismatch": "Passwords don't match",
     "pwRule": {

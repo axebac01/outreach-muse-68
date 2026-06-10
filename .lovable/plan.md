@@ -1,87 +1,67 @@
-# UX-fixar för onboarding & signup
+## Mål
+Eliminera de brutna löftena i pricing/UI på minuter, så vi inte säljer features som inte finns. Ingen ny funktionalitet byggs — vi städar copy och plockar bort/ersätter rader. Övriga risker (Stripe go-live, realtime-bugg, deliverability) hanteras i separata steg efteråt.
 
-Vi tar de tre kvarvarande punkterna från listan (punkt 4 är redan löst). Ordning: enklast först, mest UI-arbete sist.
+## Ändringar — pricing-features (`src/i18n/locales/sv.json` + `en.json`)
 
-## 1. Hoppa över namnsteget i onboardingen om namnet redan finns
+**Free** — oförändrad.
 
-**Problem:** Användaren fyller i namn vid signup, sen frågar onboardingen samma sak igen.
+**Starter** — oförändrad. (Verifiera separat att CSV-export faktiskt finns; om inte, stryk raden.)
 
-**Lösning i `src/pages/Onboarding.tsx`:**
-- Vid mount, läs `profile.full_name` (vi hämtar redan profilen för hydrering av scrape-state — utöka samma query).
-- Om `full_name` finns och är icke-tomt:
-  - Sätt `answers.name = full_name` i state och localStorage.
-  - Filtrera bort `name`-steget från `steps`-arrayen (gör `steps` till en `useMemo` som returnerar listan utan `name`-steget när namnet är förifyllt).
-- Effekten: användaren landar direkt på URL-steget. Vid submit används redan `answers.name` så `full_name` skrivs ändå till `profiles` (no-op om samma värde).
+**Growth** — ta bort eller märk:
+- ~~"A/B-test av sekvenssteg"~~ → **borttagen**
+- ~~"Anpassad spårningsdomän"~~ → **borttagen**
+- ~~"3 team-platser"~~ → **borttagen**
+- Behåll: obegränsade kampanjer, 10 sändarkonton, 1 000 credits/mån, AI-intent på svar, prio support
+- Lägg till en realistisk rad istället: "Inbound-signaler när kampanjen är live" eller liknande befintlig funktion (verifieras i koden innan vi skriver)
 
-Inget behov av att röra databasen — `full_name` sätts redan via `options.data` vid `supabase.auth.signUp` och triggern lägger den i `profiles`.
+**Scale** — ta bort eller märk:
+- ~~"API + webhooks"~~ → **borttagen**
+- ~~"10 team-platser"~~ → **borttagen**
+- ~~"Avancerad deliverability-monitoring"~~ → ersätts med "Bounce-skydd & auto-paus" (om/när vi bygger nätet i punkt 5 nedan) — tills dess **borttagen**
+- Behåll: 25 sändarkonton, 3 000 credits, dedikerad CSM
+- Notera: "Dedikerad CSM" är OK manuellt vid launch-volym.
 
-## 2. Tydlig "verifiera din mejl"-skärm efter signup
+**Enterprise** — behåll som är. SSO/SAML, DPA, on-prem IP-pool säljs case-by-case, inte automatiskt.
 
-**Problem:** Efter signup landar man på inloggningsskärmen utan tydligt meddelande om att bekräftelsemejl skickats. Toast räcker inte.
+**Credit-usage-tabellen** — behåll "(kommer snart)"-raderna för mobilnummer och deep ICP-research, de är tydligt markerade.
 
-**Lösning:**
-- Ny komponent/sida `src/pages/VerifyEmail.tsx` (eller en `?verify=1`-state på Signup-sidan). Förslag: separat route `/verify-email` som tar emot `?email=...` query.
-- Innehåll:
-  - Stor ikon (Mail), rubrik "Kolla din inkorg", text "Vi har skickat ett bekräftelsemejl till **{email}**. Klicka på länken för att aktivera kontot."
-  - Två knappar: "Öppna Gmail" (länk `https://mail.google.com`), "Skicka igen" (kallar `supabase.auth.resend({ type: 'signup', email })` med 60 s cooldown).
-  - Liten text: "Hittar du inte mejlet? Kolla skräpposten."
-- `Signup.tsx`: efter lyckad `signUp` → `navigate('/verify-email?email=' + encodeURIComponent(email))` istället för `/onboarding`.
-- Lägg till route i `App.tsx` under `PublicOnlyRoute`.
-- Översättningar i `sv.json`/`en.json` under `auth.verify.*`.
+## Ändringar — övrig copy
 
-Note: Vi rör inte auto-confirm-inställningen i Supabase. Mejlbekräftelse är redan på.
+**`src/i18n/locales/sv.json` rad 52** (`auth.googleDesc`):
+- Ta bort raden helt, eller byt till "Mer inloggningsmetoder kommer snart." Vi vill inte säga "Google kommer snart" när vi inte planerar att aktivera den just nu.
+- Alternativ: aktivera Google sign-in för app-login (10 min med `supabase--configure_social_auth`). **Föreslag: vi aktiverar Google sign-in samtidigt** — det är trivialt, redan stött via Lovable Cloud, och tar bort ett brutet löfte istället för att gömma det. Lägger till en `<Button>` på `Login.tsx` och `Signup.tsx` som anropar `supabase.auth.signInWithOAuth({ provider: 'google' })`.
 
-## 3. Lösenordskrav + bekräfta lösenord
-
-**Problem:** Inget krav på lösenordsstyrka, ingen bekräftelse — ovanligt för en SaaS-produkt.
-
-**Lösning i `src/pages/Signup.tsx`:**
-- Lägg till `confirmPassword`-fält direkt under `password`-fältet.
-- Definiera regler (visas som live-checklista under password-fältet med ✓/○):
-  - Minst 8 tecken
-  - Minst en stor bokstav
-  - Minst en siffra
-- Validering via zod-schema (vi har redan zod i projektet):
-  ```ts
-  const passwordSchema = z.string()
-    .min(8, "Minst 8 tecken")
-    .regex(/[A-Z]/, "Minst en stor bokstav")
-    .regex(/[0-9]/, "Minst en siffra");
-  const signupSchema = z.object({
-    name: z.string().trim().min(1).max(100),
-    email: z.string().trim().email().max(255),
-    password: passwordSchema,
-    confirmPassword: z.string(),
-  }).refine(d => d.password === d.confirmPassword, {
-    message: "Lösenorden matchar inte",
-    path: ["confirmPassword"],
-  });
-  ```
-- Liten `PasswordChecklist`-komponent (inline i Signup.tsx, ingen separat fil) som visar reglerna och bockar av live medan användaren skriver.
-- Submit-knapp disabled tills schema passerar.
-- Använd `react-hook-form` eller enkel `useState` + manuell validering — vi väljer det enklare: manuell validering eftersom Signup-formuläret är litet.
-
-Aktivera HIBP (Have I Been Pwned) lösenordskontroll i Supabase auth-config. Använder `supabase--configure_auth` med `password_hibp_enabled: true`. Om ett läckt lösenord används får användaren tydligt fel från `supabase.auth.signUp` som vi översätter i `errorMessages.ts`.
+**`src/components/AuroraLanding.tsx`** — verifiera att inget i hero/features-sektionen påstår något vi inte har (A/B-test, custom domain, team). Snabbskum, inga ändringar förväntade utöver det vi redan vet.
 
 ## Tekniska detaljer
 
-**Filer som ändras:**
-- `src/pages/Onboarding.tsx` — punkt 1 (steps-filtrering + förfyll namn)
-- `src/pages/Signup.tsx` — punkt 3 (lösenordsregler, bekräfta) + punkt 2 (navigera till /verify-email)
-- `src/pages/VerifyEmail.tsx` — ny (punkt 2)
-- `src/App.tsx` — ny route (punkt 2)
-- `src/i18n/locales/sv.json` + `en.json` — nya nycklar för verify + password-rules
-- `src/lib/errorMessages.ts` — mappa eventuellt HIBP-fel
+Filer som ändras:
+- `src/i18n/locales/sv.json` — rader 231–273 (features-block) + rad 52 (googleDesc)
+- `src/i18n/locales/en.json` — motsvarande nycklar
+- `src/pages/Login.tsx`, `src/pages/Signup.tsx` — Google-knapp + i18n-nyckel `auth.continueWithGoogle`
+- Aktivera Google-provider via `supabase--configure_social_auth({ providers: ["google"] })`
 
-**Backend:**
-- `supabase--configure_auth` med `password_hibp_enabled: true`. Inga andra ändringar.
+Inga DB-ändringar, inga edge functions, ingen Stripe-konfig.
+
+## Vad som INTE ingår i denna plan (separata uppdrag efteråt)
+
+1. **Stripe go-live** — `payments--get_go_live_status` för att se vad som är kvar; du måste själv slutföra steg 1–3 i Stripe-dashboarden.
+2. **Realtime-bugg för subscriptions-kanaler** — väntar på sub-agent-rapporter (`sub_05rhq9s4`, `sub_c8qat7s7`); fixas separat när vi har orsak.
+3. **Deliverability-säkerhetsnät** — bounce-tröskel + SPF/DKIM-check vid OAuth-koppling. Större ändring, kräver egen plan.
+4. **Legal-check** — DPA-mall + uppdaterad subprocessors-sida. Manuell uppgift, ingen kod.
 
 ## Verifiering
 
-1. **Punkt 1:** Skapa nytt konto med namn → onboarding visar URL-steget direkt, inte namn-steget. `profiles.full_name` är fortfarande korrekt efter submit.
-2. **Punkt 2:** Efter signup → landar på /verify-email med rätt email visad → "Skicka igen" funkar och har 60 s cooldown → länk i mejl tar till app.
-3. **Punkt 3:** Försök svaga lösenord → submit disabled + checklist tydlig. Olika lösenord i bekräfta → felmeddelande. Läckt lösenord (`password123`) → tydligt fel från HIBP.
+1. Öppna `/pricing` — Growth och Scale visar bara features vi faktiskt har.
+2. Inloggad användare ser ingen "Google kommer snart"-text någonstans.
+3. På `/login` och `/signup` finns en "Fortsätt med Google"-knapp som funkar end-to-end (testas i preview).
+4. `npm`-byggsteget passerar utan typfel.
 
-## Ordning vid implementation
+## Ordning
 
-Bygger i ordning 1 → 2 → 3 (snabbast vinst först, mest UI-arbete sist). Säg till om du vill ta dem en i taget istället för alla i samma omgång.
+1. Städa `sv.json` + `en.json` (features + googleDesc)
+2. Aktivera Google OAuth via `configure_social_auth`
+3. Lägg till Google-knapp i `Login.tsx` + `Signup.tsx`
+4. Verifiera i preview att Google-flödet funkar
+
+Säg till om du vill skippa Google-aktiveringen och bara ta bort copyn — då blir det ännu snabbare.
