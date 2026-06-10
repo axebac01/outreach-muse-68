@@ -32,6 +32,20 @@ const Login = () => {
     navigate("/dashboard");
   };
 
+  const handleGoogle = async () => {
+    setLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: `${window.location.origin}/dashboard`,
+    });
+    if (result.error) {
+      setLoading(false);
+      toast.error(t("auth.googleError"));
+      return;
+    }
+    if (result.redirected) return;
+    navigate("/dashboard");
+  };
+
   return (
     <Layout>
       <SeoHead
