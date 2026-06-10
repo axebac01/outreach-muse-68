@@ -8,6 +8,8 @@ import {
   fetchMicrosoftUserInfo,
   verifyState,
 } from "../_shared/oauth.ts";
+import { runDeliverabilityCheck } from "../_shared/deliverability.ts";
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
