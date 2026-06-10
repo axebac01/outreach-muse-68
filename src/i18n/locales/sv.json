@@ -39,6 +39,12 @@
     "oauthSoonDesc": "Outlook/Microsoft 365 ansluts med ett klick (OAuth) — säkrast och enklast. Har du Gmail eller en egen domän går det utmärkt att ansluta via app-lösenord eller SMTP/IMAP.",
     "reconnect": "Återanslut",
     "reconnectHint": "Din anslutning har gått ut eller återkallats. Klicka för att logga in igen.",
+    "reactivate": "Återaktivera",
+    "reactivated": "Kontot är aktivt igen",
+    "pausedBounceTitle": "Konto auto-pausat — för hög bounce-rate",
+    "pausedBounceDesc": "Vi har pausat utskick från det här kontot för att skydda din avsändarreputation. Rensa din lead-lista och återaktivera när du är redo.",
+    "deliverabilityWarnTitle": "DNS-poster saknas",
+    "deliverabilityWarnMissing": "saknas för din domän. Fixa dem innan din nästa stora kampanj — annars riskerar du att hamna i spam.",
     "providerPicker": {
       "title": "Anslut mejlkonto",
       "subtitle": "Välj din mejlleverantör nedan. Vi visar steg-för-steg hur du kopplar in den säkert.",

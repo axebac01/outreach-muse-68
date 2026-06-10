@@ -1,67 +1,78 @@
 ## Mål
-Eliminera de brutna löftena i pricing/UI på minuter, så vi inte säljer features som inte finns. Ingen ny funktionalitet byggs — vi städar copy och plockar bort/ersätter rader. Övriga risker (Stripe go-live, realtime-bugg, deliverability) hanteras i separata steg efteråt.
+Säkerhetsnät så att skarpa kampanjer inte raserar avsändar-reputation. Två delar:
 
-## Ändringar — pricing-features (`src/i18n/locales/sv.json` + `en.json`)
+1. **Bounce-skydd:** auto-pausa email-konton som börjar bounca för mycket.
+2. **SPF/DKIM/DMARC-koll:** kör automatiskt när ett konto kopplas, så användaren ser varningar innan första kampanjen.
 
-**Free** — oförändrad.
+Inga marknadsföringslöften ändras — vi bygger något som faktiskt fungerar och kan därför också sätta tillbaka "Bounce-skydd & auto-paus" som Scale-feature efteråt.
 
-**Starter** — oförändrad. (Verifiera separat att CSV-export faktiskt finns; om inte, stryk raden.)
+## Del 1 — Bounce-skydd med auto-paus
 
-**Growth** — ta bort eller märk:
-- ~~"A/B-test av sekvenssteg"~~ → **borttagen**
-- ~~"Anpassad spårningsdomän"~~ → **borttagen**
-- ~~"3 team-platser"~~ → **borttagen**
-- Behåll: obegränsade kampanjer, 10 sändarkonton, 1 000 credits/mån, AI-intent på svar, prio support
-- Lägg till en realistisk rad istället: "Inbound-signaler när kampanjen är live" eller liknande befintlig funktion (verifieras i koden innan vi skriver)
+### Databas
+Migration som lägger till på `email_accounts`:
+- `paused_reason text` (null när konto är aktivt; sätts till t.ex. `high_bounce_rate`)
+- `paused_at timestamptz`
 
-**Scale** — ta bort eller märk:
-- ~~"API + webhooks"~~ → **borttagen**
-- ~~"10 team-platser"~~ → **borttagen**
-- ~~"Avancerad deliverability-monitoring"~~ → ersätts med "Bounce-skydd & auto-paus" (om/när vi bygger nätet i punkt 5 nedan) — tills dess **borttagen**
-- Behåll: 25 sändarkonton, 3 000 credits, dedikerad CSM
-- Notera: "Dedikerad CSM" är OK manuellt vid launch-volym.
+Lägg till ny enum-status `paused_bounce` (vi använder befintliga `status`-kolumnen).
 
-**Enterprise** — behåll som är. SSO/SAML, DPA, on-prem IP-pool säljs case-by-case, inte automatiskt.
+### Trigger på `bounces` INSERT
+Efter varje ny bounce, räkna senaste 24 h sändningar + bounces för det konto som mejlet skickades från. Logik:
 
-**Credit-usage-tabellen** — behåll "(kommer snart)"-raderna för mobilnummer och deep ICP-research, de är tydligt markerade.
+- Hämta `email_account_id` från senaste outbound `email_messages` till `bounces.email` för samma user (senaste 7 dagar).
+- Räkna sent vs hard bounces för det kontot senaste 24 h.
+- **Tröskel:** minst 20 sändningar OCH bounce-rate ≥ 8% → sätt `email_accounts.status = 'paused_bounce'`, `paused_reason = 'high_bounce_rate'`, `paused_at = now()`.
+- Det befintliga flödet pausar redan `scheduled_sends` när konto inte är `active` (`rearm_paused_sends_on_account_active`-triggern återupptar när admin manuellt sätter aktiv igen).
 
-## Ändringar — övrig copy
+### UI
+- `ReconnectBanner.tsx` (eller ny `BounceAlertBanner`) visar varning på `/email-accounts` om något konto har `status = 'paused_bounce'`. Förklarar varför och knapp "Återaktivera" som sätter tillbaka till `active` (triggern rearm:ar sends automatiskt).
+- i18n-strängar på sv/en.
 
-**`src/i18n/locales/sv.json` rad 52** (`auth.googleDesc`):
-- Ta bort raden helt, eller byt till "Mer inloggningsmetoder kommer snart." Vi vill inte säga "Google kommer snart" när vi inte planerar att aktivera den just nu.
-- Alternativ: aktivera Google sign-in för app-login (10 min med `supabase--configure_social_auth`). **Föreslag: vi aktiverar Google sign-in samtidigt** — det är trivialt, redan stött via Lovable Cloud, och tar bort ett brutet löfte istället för att gömma det. Lägger till en `<Button>` på `Login.tsx` och `Signup.tsx` som anropar `supabase.auth.signInWithOAuth({ provider: 'google' })`.
+### Tysta krav
+- Triggern är `SECURITY DEFINER` med `search_path = public`.
+- Inga refunds berörs (bibehåller `bounces_auto_refund`).
 
-**`src/components/AuroraLanding.tsx`** — verifiera att inget i hero/features-sektionen påstår något vi inte har (A/B-test, custom domain, team). Snabbskum, inga ändringar förväntade utöver det vi redan vet.
+## Del 2 — SPF/DKIM/DMARC vid koppling
+
+### Backend
+- `check-deliverability` finns redan. Kör den automatiskt:
+  - I slutet av `oauth-callback/index.ts` efter att `email_accounts` skapats.
+  - I slutet av `connect-smtp-account/index.ts` efter insert.
+- Resultat sparas på email_accounts i en ny JSONB-kolumn `deliverability_check` (status per record + tid).
+- Migration lägger till `deliverability_check jsonb` + `deliverability_checked_at timestamptz`.
+
+### UI
+- `DeliverabilityCheck.tsx` finns. På `/email-accounts` visa ett varningstecken (gult) på rader där `deliverability_check.spf|dkim|dmarc` saknar OK — klick öppnar befintlig komponent.
+- Ingen tvångsblock — bara varning så användaren kan fixa DNS innan stor kampanj.
 
 ## Tekniska detaljer
 
 Filer som ändras:
-- `src/i18n/locales/sv.json` — rader 231–273 (features-block) + rad 52 (googleDesc)
-- `src/i18n/locales/en.json` — motsvarande nycklar
-- `src/pages/Login.tsx`, `src/pages/Signup.tsx` — Google-knapp + i18n-nyckel `auth.continueWithGoogle`
-- Aktivera Google-provider via `supabase--configure_social_auth({ providers: ["google"] })`
+- **Ny migration:** kolumner + trigger-funktion + trigger på `bounces`.
+- `supabase/functions/oauth-callback/index.ts` — anropa `check-deliverability` internt efter account create (eller inline samma DNS-checks).
+- `supabase/functions/connect-smtp-account/index.ts` — samma.
+- `src/pages/EmailAccounts.tsx` + ny eller utökad banner-komponent.
+- `src/i18n/locales/sv.json` + `en.json` — nya strängar.
+- Återinför "Bounce-skydd & auto-paus" som Scale-feature i sv/en.
 
-Inga DB-ändringar, inga edge functions, ingen Stripe-konfig.
-
-## Vad som INTE ingår i denna plan (separata uppdrag efteråt)
-
-1. **Stripe go-live** — `payments--get_go_live_status` för att se vad som är kvar; du måste själv slutföra steg 1–3 i Stripe-dashboarden.
-2. **Realtime-bugg för subscriptions-kanaler** — väntar på sub-agent-rapporter (`sub_05rhq9s4`, `sub_c8qat7s7`); fixas separat när vi har orsak.
-3. **Deliverability-säkerhetsnät** — bounce-tröskel + SPF/DKIM-check vid OAuth-koppling. Större ändring, kräver egen plan.
-4. **Legal-check** — DPA-mall + uppdaterad subprocessors-sida. Manuell uppgift, ingen kod.
+Inga ändringar i Stripe-flödet, inga edge functions raderas.
 
 ## Verifiering
 
-1. Öppna `/pricing` — Growth och Scale visar bara features vi faktiskt har.
-2. Inloggad användare ser ingen "Google kommer snart"-text någonstans.
-3. På `/login` och `/signup` finns en "Fortsätt med Google"-knapp som funkar end-to-end (testas i preview).
-4. `npm`-byggsteget passerar utan typfel.
+1. Migration applicerad utan fel.
+2. Manuell test: insert 25 bounces för ett konto via SQL → konto sätts till `paused_bounce`, banner syns på `/email-accounts`, klick på "Återaktivera" → status tillbaka till `active`, scheduled sends rearm:as.
+3. Koppla nytt SMTP-konto med domän utan SPF → varningsikon syns direkt på listan.
+4. `npm`-build passerar.
+
+## Vad som INTE ingår
+- Reputation-monitoring via externa tjänster (Postmaster Tools, etc.) — för stort.
+- Per-mottagare suppression list (utöver befintliga `unsubscribes` och `bounces`).
+- Soft bounce-hantering — vi auto-pausar bara på hard bounces (befintlig `hard = true`-logik).
 
 ## Ordning
+1. Migration (kolumner + trigger).
+2. Edge function-ändringar.
+3. UI + i18n.
+4. Återinför Scale-feature i pricing-locale.
+5. Manuell verifiering.
 
-1. Städa `sv.json` + `en.json` (features + googleDesc)
-2. Aktivera Google OAuth via `configure_social_auth`
-3. Lägg till Google-knapp i `Login.tsx` + `Signup.tsx`
-4. Verifiera i preview att Google-flödet funkar
-
-Säg till om du vill skippa Google-aktiveringen och bara ta bort copyn — då blir det ännu snabbare.
+Vill du köra hela paketet, eller bara Del 1 (bounce-skydd) först?

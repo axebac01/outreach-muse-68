@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { runDeliverabilityCheck } from "../_shared/deliverability.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -198,9 +200,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Kör SPF/DKIM/DMARC-koll i bakgrunden — failar tyst.
+    try {
+      const check = await runDeliverabilityCheck(email, "smtp");
+      if (check) {
+        await admin
+          .from("email_accounts")
+          .update({
+            deliverability_check: check,
+            deliverability_checked_at: new Date().toISOString(),
+          })
+          .eq("id", inserted.id);
+      }
+    } catch (e) {
+      console.warn("deliverability check failed", e);
+    }
+
     return new Response(JSON.stringify({ id: inserted.id, ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err: any) {
     console.error("connect-smtp-account error", err);
     return new Response(
