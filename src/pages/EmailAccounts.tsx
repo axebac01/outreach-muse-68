@@ -67,6 +67,16 @@ const EmailAccounts = () => {
     }
   };
 
+  const handleReactivate = async (id: string) => {
+    try {
+      await reactivate.mutateAsync(id);
+      toast.success(t("emailAccounts.reactivated"));
+    } catch (e) {
+      toast.error(toUserMessage(e, t));
+    }
+  };
+
+
 
   return (
     <Layout>
