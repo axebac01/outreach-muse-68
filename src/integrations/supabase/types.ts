@@ -295,6 +295,8 @@ export type Database = {
           access_token_enc: string | null
           auth_type: string
           created_at: string
+          deliverability_check: Json | null
+          deliverability_checked_at: string | null
           display_name: string | null
           email: string
           history_id: string | null
@@ -308,6 +310,8 @@ export type Database = {
           last_send_at: string | null
           last_synced_at: string | null
           oauth_scopes: string | null
+          paused_at: string | null
+          paused_reason: string | null
           provider: string
           provider_account_id: string | null
           provider_delta_link: string | null
@@ -329,6 +333,8 @@ export type Database = {
           access_token_enc?: string | null
           auth_type: string
           created_at?: string
+          deliverability_check?: Json | null
+          deliverability_checked_at?: string | null
           display_name?: string | null
           email: string
           history_id?: string | null
@@ -342,6 +348,8 @@ export type Database = {
           last_send_at?: string | null
           last_synced_at?: string | null
           oauth_scopes?: string | null
+          paused_at?: string | null
+          paused_reason?: string | null
           provider: string
           provider_account_id?: string | null
           provider_delta_link?: string | null
@@ -363,6 +371,8 @@ export type Database = {
           access_token_enc?: string | null
           auth_type?: string
           created_at?: string
+          deliverability_check?: Json | null
+          deliverability_checked_at?: string | null
           display_name?: string | null
           email?: string
           history_id?: string | null
@@ -376,6 +386,8 @@ export type Database = {
           last_send_at?: string | null
           last_synced_at?: string | null
           oauth_scopes?: string | null
+          paused_at?: string | null
+          paused_reason?: string | null
           provider?: string
           provider_account_id?: string | null
           provider_delta_link?: string | null
