@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, AlertTriangle, XCircle, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 type CheckResult = {
   status: "ok" | "missing";
@@ -39,10 +40,11 @@ function Row({ label, result }: { label: string; result: CheckResult }) {
   );
 }
 
-export default function DeliverabilityCheck({ email, provider }: { email: string; provider: string }) {
+export default function DeliverabilityCheck({ email, provider, accountId }: { email: string; provider: string; accountId?: string }) {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<DnsReport | null>(null);
   const domain = email.split("@")[1] ?? "";
+  const qc = useQueryClient();
 
   const run = async () => {
     setLoading(true);
@@ -52,12 +54,26 @@ export default function DeliverabilityCheck({ email, provider }: { email: string
       });
       if (error) throw error;
       setReport(data as DnsReport);
+      // Persistera resultatet på kontot så att banner-varningen uppdateras
+      // och status-fältet `deliverability_check` stämmer överens med vad
+      // användaren just såg.
+      if (accountId && data) {
+        await supabase
+          .from("email_accounts")
+          .update({
+            deliverability_check: data,
+            deliverability_checked_at: new Date().toISOString(),
+          })
+          .eq("id", accountId);
+        qc.invalidateQueries({ queryKey: ["email_accounts"] });
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "DNS-kontroll misslyckades");
     } finally {
       setLoading(false);
     }
   };
+
 
   if (!report) {
     return (

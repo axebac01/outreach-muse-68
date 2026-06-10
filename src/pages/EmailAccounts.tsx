@@ -271,7 +271,7 @@ const EmailAccounts = () => {
                     </label>
                   </div>
 
-                  <DeliverabilityCheck email={acc.email} provider={acc.provider} />
+                  <DeliverabilityCheck email={acc.email} provider={acc.provider} accountId={acc.id} />
                 </div>
               );})}
             </div>
