@@ -80,6 +80,9 @@ export const useDeleteEmailAccount = () => {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["email_accounts"] }),
   });
+};
+
+
 export const useReactivateEmailAccount = () => {
   const qc = useQueryClient();
   return useMutation({
