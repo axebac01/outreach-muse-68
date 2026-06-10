@@ -3,6 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { withSaveStatus } from "./useSaveStatus";
 
+export type DeliverabilityCheckResult = {
+  domain: string;
+  spf: { status: "ok" | "missing" };
+  dkim: { status: "ok" | "missing" };
+  dmarc: { status: "ok" | "missing" };
+  score: "good" | "warn" | "bad";
+  checked_at: string;
+};
+
 export type EmailAccount = {
   id: string;
   email: string;
@@ -19,6 +28,10 @@ export type EmailAccount = {
   signature: string | null;
   sender_name: string | null;
   created_at: string;
+  paused_reason: string | null;
+  paused_at: string | null;
+  deliverability_check: DeliverabilityCheckResult | null;
+  deliverability_checked_at: string | null;
 };
 
 export const useEmailAccounts = () => {
@@ -29,15 +42,16 @@ export const useEmailAccounts = () => {
       const { data, error } = await supabase
         .from("email_accounts_safe")
         .select(
-          "id,email,display_name,provider,auth_type,status,status_message,last_synced_at,smtp_host,smtp_port,imap_host,imap_port,signature,sender_name,created_at",
+          "id,email,display_name,provider,auth_type,status,status_message,last_synced_at,smtp_host,smtp_port,imap_host,imap_port,signature,sender_name,created_at,paused_reason,paused_at,deliverability_check,deliverability_checked_at",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as EmailAccount[];
+      return (data ?? []) as unknown as EmailAccount[];
     },
     enabled: ready && !!user?.id,
   });
 };
+
 
 export const useUpdateEmailAccount = () => {
   const qc = useQueryClient();
