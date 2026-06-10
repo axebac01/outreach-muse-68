@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check, Circle, Mail, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { useTranslation } from "react-i18next";
 import { toUserMessage } from "@/lib/errorMessages";
 import { z } from "zod";
