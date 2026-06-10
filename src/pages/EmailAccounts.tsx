@@ -29,6 +29,8 @@ const EmailAccounts = () => {
   const { data: sentToday = {} } = useSentToday();
   const updateLimit = useUpdateSendingLimit();
   const del = useDeleteEmailAccount();
+  const reactivate = useReactivateEmailAccount();
+
   const { limits: planLimits } = usePlanLimits();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<EmailAccount | null>(null);
