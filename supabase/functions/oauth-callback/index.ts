@@ -135,20 +135,29 @@ Deno.serve(async (req) => {
       .eq("email_account_id", id)
       .eq("status", "paused_account_error");
 
-    // Kör SPF/DKIM/DMARC-koll i bakgrunden — failar tyst.
-    try {
-      const check = await runDeliverabilityCheck(userInfo.email, providerKey);
-      if (check) {
-        await admin
-          .from("email_accounts")
-          .update({
-            deliverability_check: check,
-            deliverability_checked_at: new Date().toISOString(),
-          })
-          .eq("id", id);
+    // Kör SPF/DKIM/DMARC-koll i bakgrunden — blockerar inte svaret.
+    const deliverabilityTask = (async () => {
+      try {
+        const check = await runDeliverabilityCheck(userInfo.email, providerKey);
+        if (check) {
+          await admin
+            .from("email_accounts")
+            .update({
+              deliverability_check: check,
+              deliverability_checked_at: new Date().toISOString(),
+            })
+            .eq("id", id);
+        }
+      } catch (e) {
+        console.warn("deliverability check failed", e);
       }
-    } catch (e) {
-      console.warn("deliverability check failed", e);
+    })();
+    // @ts-ignore EdgeRuntime is provided by Supabase edge runtime
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(deliverabilityTask);
+    } else {
+      await deliverabilityTask;
     }
 
 
