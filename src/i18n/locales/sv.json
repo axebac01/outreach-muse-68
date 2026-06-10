@@ -329,6 +329,9 @@
     "login": "Logga in",
     "loginSuccess": "Inloggad!",
     "signupSuccess": "Konto skapat! Välkommen till MailLead.ai",
+    "continueWithGoogle": "Fortsätt med Google",
+    "orDivider": "eller",
+    "googleError": "Kunde inte logga in med Google. Försök igen.",
     "confirmPassword": "Bekräfta lösenord",
     "pwMismatch": "Lösenorden matchar inte",
     "pwRule": {
