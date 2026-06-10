@@ -163,10 +163,10 @@ export default function AuroraLanding() {
         {/* HERO */}
         <section className="hero"><div className="wrap">
           <span className="badge"><span className="ping" /> Ansluten till 3 inkorgar · skickar nu</span>
-          <h1 className="hh">Outbound som känns <span className="em">skriven för hand</span></h1>
-          <p className="hsub">MailLead.ai genererar personliga kalla mejl och uppföljningar för varje lead — och samlar svaren i en inkorg.</p>
+          <h1 className="hh">Hitta nya B2B-kunder med AI-drivna utskick</h1>
+          <p className="hsub">Köp e-postadresser, skapa smarta kampanjer och följ upp automatiskt med MailLead.ai — ett enkelt verktyg för digital kundbearbetning.</p>
           <div className="hcta">
-            <Link to="/signup" className="btn btn-pri btn-lg magnet">Skapa ditt första mejl – gratis</Link>
+            <Link to="/signup" className="btn btn-pri btn-lg magnet">Kom igång med MailLead.ai</Link>
             <a href={`mailto:${LEGAL.contactEmail}?subject=Boka%20demo%20av%20MailLead.ai`} className="btn btn-glass btn-lg">Boka demo</a>
           </div>
           <p className="hnote">Inget kreditkort krävs · Gratis upp till 10 leads</p>
