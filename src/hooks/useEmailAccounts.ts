@@ -80,4 +80,22 @@ export const useDeleteEmailAccount = () => {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["email_accounts"] }),
   });
+export const useReactivateEmailAccount = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("email_accounts")
+        .update({
+          status: "active",
+          status_message: null,
+          paused_reason: null,
+          paused_at: null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["email_accounts"] }),
+  });
 };
+
