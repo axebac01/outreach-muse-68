@@ -384,7 +384,7 @@ const CSS = `
 #ml-aurora .badge .ping::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--ping);animation:mlPing 1.8s var(--ease) infinite;}
 @keyframes mlPing{0%{transform:scale(1);opacity:.7}80%,100%{transform:scale(3.4);opacity:0}}
 #ml-aurora .hh{font-weight:800;font-size:clamp(3rem,6.4vw,5.2rem);line-height:1;letter-spacing:-.035em;margin:26px auto 0;max-width:15ch;text-wrap:balance;color:var(--hh);}
-#ml-aurora .hh .em{background:var(--em-g);-webkit-background-clip:text;background-clip:text;color:transparent;}
+#ml-aurora .hh .em{background:var(--em-g);-webkit-background-clip:text;background-clip:text;color:transparent;font-style:normal;}
 #ml-aurora .hsub{font-size:20px;line-height:1.5;color:var(--tx2);max-width:40ch;margin:22px auto 0;}
 #ml-aurora .hcta{display:flex;gap:13px;justify-content:center;margin-top:32px;flex-wrap:wrap;}
 #ml-aurora .magnet{will-change:transform;} #ml-aurora .hnote{font-size:13px;color:var(--tx3);margin-top:15px;}
