@@ -180,7 +180,19 @@ const EmailAccounts = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-auto">
-                      {acc.auth_type === "oauth" && acc.status !== "active" && (
+                      {acc.status === "paused_bounce" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => handleReactivate(acc.id)}
+                          disabled={reactivate.isPending}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">{t("emailAccounts.reactivate")}</span>
+                        </Button>
+                      )}
+                      {acc.auth_type === "oauth" && acc.status !== "active" && acc.status !== "paused_bounce" && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -201,6 +213,35 @@ const EmailAccounts = () => {
                     </div>
 
                   </div>
+
+                  {acc.status === "paused_bounce" && (
+                    <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-medium">{t("emailAccounts.pausedBounceTitle")}</div>
+                        <div className="text-xs mt-0.5 text-destructive/90">
+                          {acc.status_message || t("emailAccounts.pausedBounceDesc")}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {acc.deliverability_check && acc.deliverability_check.score !== "good" && (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-900 dark:text-amber-200 flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <div className="font-medium">{t("emailAccounts.deliverabilityWarnTitle")}</div>
+                        <div className="text-xs">
+                          {[
+                            acc.deliverability_check.spf?.status !== "ok" && "SPF",
+                            acc.deliverability_check.dkim?.status !== "ok" && "DKIM",
+                            acc.deliverability_check.dmarc?.status !== "ok" && "DMARC",
+                          ].filter(Boolean).join(", ")} {t("emailAccounts.deliverabilityWarnMissing")}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
 
                   <div className="rounded-lg bg-muted/40 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 text-xs">
                     <div className="flex items-center gap-2 flex-wrap">
