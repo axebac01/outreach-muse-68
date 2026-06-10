@@ -329,6 +329,9 @@
     "login": "Log in",
     "loginSuccess": "Logged in successfully!",
     "signupSuccess": "Account created! Welcome to MailLead.ai",
+    "continueWithGoogle": "Continue with Google",
+    "orDivider": "or",
+    "googleError": "Could not sign in with Google. Please try again.",
     "confirmPassword": "Confirm password",
     "pwMismatch": "Passwords don't match",
     "pwRule": {
