@@ -73,6 +73,20 @@ const Signup = () => {
     navigate(`/verify-email?email=${encodeURIComponent(email)}`);
   };
 
+  const handleGoogle = async () => {
+    setLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: `${window.location.origin}/onboarding`,
+    });
+    if (result.error) {
+      setLoading(false);
+      toast.error(t("auth.googleError"));
+      return;
+    }
+    if (result.redirected) return;
+    navigate("/onboarding");
+  };
+
   const Rule = ({ ok, label }: { ok: boolean; label: string }) => (
     <li className={`flex items-center gap-2 text-xs ${ok ? "text-foreground" : "text-muted-foreground"}`}>
       {ok ? (
