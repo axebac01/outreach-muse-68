@@ -39,6 +39,12 @@
     "oauthSoonDesc": "Outlook/Microsoft 365 connects in one click (OAuth) — safest and easiest. Have Gmail or your own domain? Connect with an app password or SMTP/IMAP.",
     "reconnect": "Reconnect",
     "reconnectHint": "Your connection has expired or been revoked. Click to sign in again.",
+    "reactivate": "Reactivate",
+    "reactivated": "Account is active again",
+    "pausedBounceTitle": "Account auto-paused — bounce rate too high",
+    "pausedBounceDesc": "We've paused sending from this account to protect your sender reputation. Clean up your lead list and reactivate when you're ready.",
+    "deliverabilityWarnTitle": "DNS records missing",
+    "deliverabilityWarnMissing": "missing for your domain. Fix them before your next large campaign or you risk landing in spam.",
     "providerPicker": {
       "title": "Connect email account",
       "subtitle": "Pick your email provider below. We'll walk you through connecting it securely.",
