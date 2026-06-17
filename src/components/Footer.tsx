@@ -16,9 +16,13 @@ const Footer = () => (
           Resurser
         </div>
         <ul className="space-y-1">
+          <li><Link to="/blogg" className="hover:underline">Blogg</Link></li>
           <li><Link to="/kalla-mejl" className="hover:underline">Guide: Kalla mejl</Link></li>
+          <li><Link to="/cold-email-mall" className="hover:underline">Cold email-mallar</Link></li>
           <li><Link to="/b2b-leads-sverige" className="hover:underline">Köp B2B-leads i Sverige</Link></li>
           <li><Link to="/e-postutskick-foretag" className="hover:underline">E-postutskick till företag</Link></li>
+          <li><Link to="/jamfor/maillead-vs-apollo" className="hover:underline">Jämför: vs Apollo</Link></li>
+          <li><Link to="/jamfor/maillead-vs-lemlist" className="hover:underline">Jämför: vs Lemlist</Link></li>
         </ul>
       </div>
       <div className="space-y-2">

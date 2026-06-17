@@ -17,6 +17,8 @@ import EpostutskickForetag from "./pages/seo/EpostutskickForetag";
 import MailleadVsApollo from "./pages/seo/MailleadVsApollo";
 import MailleadVsLemlist from "./pages/seo/MailleadVsLemlist";
 import ColdEmailMall from "./pages/seo/ColdEmailMall";
+import BlogIndex from "./pages/blog/BlogIndex";
+import BlogPost from "./pages/blog/BlogPost";
 import { SOFT_LAUNCH_MODE } from "@/config/launch";
 import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
@@ -72,6 +74,8 @@ const App = () => (
             <Route path="/cold-email-mall" element={<ColdEmailMall />} />
             <Route path="/jamfor/maillead-vs-apollo" element={<MailleadVsApollo />} />
             <Route path="/jamfor/maillead-vs-lemlist" element={<MailleadVsLemlist />} />
+            <Route path="/blogg" element={<BlogIndex />} />
+            <Route path="/blogg/:slug" element={<BlogPost />} />
 
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

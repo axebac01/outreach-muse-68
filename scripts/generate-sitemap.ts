@@ -12,6 +12,13 @@ interface SitemapEntry {
   priority?: string;
 }
 
+// Keep blog slugs in sync with src/data/blogPosts.tsx
+const BLOG_SLUGS: { slug: string; publishedAt: string }[] = [
+  { slug: "outbound-trender-2026", publishedAt: "2026-06-10" },
+  { slug: "bygga-outbound-fran-noll", publishedAt: "2026-06-05" },
+  { slug: "gdpr-cold-email-sverige-2026", publishedAt: "2026-05-28" },
+];
+
 const today = new Date().toISOString().split("T")[0];
 
 const entries: SitemapEntry[] = [
@@ -23,7 +30,13 @@ const entries: SitemapEntry[] = [
   { path: "/cold-email-mall", changefreq: "monthly", priority: "0.7", lastmod: today },
   { path: "/jamfor/maillead-vs-apollo", changefreq: "monthly", priority: "0.7", lastmod: today },
   { path: "/jamfor/maillead-vs-lemlist", changefreq: "monthly", priority: "0.7", lastmod: today },
-  { path: "/e-postutskick-foretag", changefreq: "monthly", priority: "0.7", lastmod: today },
+  { path: "/blogg", changefreq: "weekly", priority: "0.7", lastmod: today },
+  ...BLOG_SLUGS.map((p) => ({
+    path: `/blogg/${p.slug}`,
+    changefreq: "monthly" as const,
+    priority: "0.6",
+    lastmod: p.publishedAt,
+  })),
   { path: "/login", changefreq: "yearly", priority: "0.3" },
   { path: "/legal/privacy", changefreq: "monthly", priority: "0.4" },
   { path: "/legal/terms", changefreq: "monthly", priority: "0.4" },
