@@ -3,13 +3,23 @@ import { LEGAL } from "@/config/legal";
 
 const Footer = () => (
   <footer className="border-t bg-muted/30">
-    <div className="container py-8 grid gap-6 md:grid-cols-3 text-sm">
+    <div className="container py-8 grid gap-6 md:grid-cols-4 text-sm">
       <div className="space-y-2">
         <div className="font-semibold">{LEGAL.productName}</div>
         <p className="text-muted-foreground text-xs">
           {LEGAL.companyName} · Org.nr {LEGAL.orgNumber}
         </p>
         <p className="text-muted-foreground text-xs">{LEGAL.address}</p>
+      </div>
+      <div className="space-y-2">
+        <div className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">
+          Resurser
+        </div>
+        <ul className="space-y-1">
+          <li><Link to="/kalla-mejl" className="hover:underline">Guide: Kalla mejl</Link></li>
+          <li><Link to="/b2b-leads-sverige" className="hover:underline">Köp B2B-leads i Sverige</Link></li>
+          <li><Link to="/e-postutskick-foretag" className="hover:underline">E-postutskick till företag</Link></li>
+        </ul>
       </div>
       <div className="space-y-2">
         <div className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">
