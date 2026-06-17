@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { LANDING_FAQS } from "@/data/landingFaqs";
 import { LEGAL } from "@/config/legal";
+import { SOFT_LAUNCH_MODE, WAITLIST_PATH } from "@/config/launch";
 import ProductStory from "@/components/landing/ProductStory";
 
 const TYPE_TEXT =
@@ -156,20 +157,31 @@ export default function AuroraLanding() {
               {mounted ? (isDark ? <Sun size={18} /> : <Moon size={18} />) : null}
             </button>
             <Link to="/login" className="btn btn-ghost">Logga in</Link>
-            <Link to="/signup" className="btn btn-glass">Prova gratis</Link>
+            <Link to={SOFT_LAUNCH_MODE ? WAITLIST_PATH : "/signup"} className="btn btn-glass">
+              {SOFT_LAUNCH_MODE ? "Säkra plats" : "Prova gratis"}
+            </Link>
           </div>
         </div></nav>
 
         {/* HERO */}
         <section className="hero"><div className="wrap">
-          <span className="badge"><span className="ping" /> Ansluten till 3 inkorgar · skickar nu</span>
+          <span className="badge">
+            <span className="ping" />
+            {SOFT_LAUNCH_MODE ? "Soft launch · vi öppnar 15 augusti" : "Ansluten till 3 inkorgar · skickar nu"}
+          </span>
           <h1 className="hh">Hitta nya B2B-kunder med <em className="em">AI-drivna utskick</em></h1>
           <p className="hsub">Köp e-postadresser, skapa smarta kampanjer och följ upp automatiskt med MailLead.ai — ett enkelt verktyg för digital kundbearbetning.</p>
           <div className="hcta">
-            <Link to="/signup" className="btn btn-pri btn-lg magnet">Kom igång med MailLead.ai</Link>
+            <Link to={SOFT_LAUNCH_MODE ? WAITLIST_PATH : "/signup"} className="btn btn-pri btn-lg magnet">
+              {SOFT_LAUNCH_MODE ? "Säkra din plats inför launch" : "Kom igång med MailLead.ai"}
+            </Link>
             <a href={`mailto:${LEGAL.contactEmail}?subject=Boka%20demo%20av%20MailLead.ai`} className="btn btn-glass btn-lg">Boka demo</a>
           </div>
-          <p className="hnote">Inget kreditkort krävs · Gratis upp till 10 leads</p>
+          <p className="hnote">
+            {SOFT_LAUNCH_MODE
+              ? "Tidiga användare får 50 extra gratis-credits vid launch"
+              : "Inget kreditkort krävs · Gratis upp till 10 leads"}
+          </p>
 
 
           <div className="stage reveal"><div className="glass" ref={glassRef}>

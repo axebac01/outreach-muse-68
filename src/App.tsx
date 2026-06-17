@@ -10,6 +10,11 @@ import PublicOnlyRoute from "@/components/PublicOnlyRoute";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Waitlist from "./pages/Waitlist";
+import KallaMejl from "./pages/seo/KallaMejl";
+import B2bLeadsSverige from "./pages/seo/B2bLeadsSverige";
+import EpostutskickForetag from "./pages/seo/EpostutskickForetag";
+import { SOFT_LAUNCH_MODE } from "@/config/launch";
 import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import CreateCampaign from "./pages/CreateCampaign";
@@ -49,7 +54,19 @@ const App = () => (
           <Routes>
             <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
             <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-            <Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />
+            <Route
+              path="/signup"
+              element={
+                SOFT_LAUNCH_MODE
+                  ? <Navigate to="/waitlist" replace />
+                  : <PublicOnlyRoute><Signup /></PublicOnlyRoute>
+              }
+            />
+            <Route path="/waitlist" element={<Waitlist />} />
+            <Route path="/kalla-mejl" element={<KallaMejl />} />
+            <Route path="/b2b-leads-sverige" element={<B2bLeadsSverige />} />
+            <Route path="/e-postutskick-foretag" element={<EpostutskickForetag />} />
+
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><OnboardingGate><Dashboard /></OnboardingGate></ProtectedRoute>} />
