@@ -24,6 +24,8 @@ const today = new Date().toISOString().split("T")[0];
 const entries: SitemapEntry[] = [
   { path: "/", changefreq: "weekly", priority: "1.0", lastmod: today },
   { path: "/pricing", changefreq: "monthly", priority: "0.8", lastmod: today },
+  { path: "/signup", changefreq: "monthly", priority: "0.6", lastmod: today },
+  { path: "/waitlist", changefreq: "monthly", priority: "0.6", lastmod: today },
   { path: "/kalla-mejl", changefreq: "monthly", priority: "0.7", lastmod: today },
   { path: "/b2b-leads-sverige", changefreq: "monthly", priority: "0.7", lastmod: today },
   { path: "/e-postutskick-foretag", changefreq: "monthly", priority: "0.7", lastmod: today },
