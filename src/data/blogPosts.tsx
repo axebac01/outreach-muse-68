@@ -270,7 +270,7 @@ export const BLOG_POSTS: BlogPost[] = [
         ),
       },
       {
-        h2: "Vad är "rimligt att förvänta sig"?",
+        h2: 'Vad är "rimligt att förvänta sig"?',
         body: (
           <p>
             En VD eller försäljningschef kan rimligen förvänta sig att bli

@@ -74,6 +74,8 @@ const App = () => (
             <Route path="/cold-email-mall" element={<ColdEmailMall />} />
             <Route path="/jamfor/maillead-vs-apollo" element={<MailleadVsApollo />} />
             <Route path="/jamfor/maillead-vs-lemlist" element={<MailleadVsLemlist />} />
+            <Route path="/blogg" element={<BlogIndex />} />
+            <Route path="/blogg/:slug" element={<BlogPost />} />
 
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
