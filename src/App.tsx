@@ -17,6 +17,8 @@ import EpostutskickForetag from "./pages/seo/EpostutskickForetag";
 import MailleadVsApollo from "./pages/seo/MailleadVsApollo";
 import MailleadVsLemlist from "./pages/seo/MailleadVsLemlist";
 import ColdEmailMall from "./pages/seo/ColdEmailMall";
+import BlogIndex from "./pages/blog/BlogIndex";
+import BlogPost from "./pages/blog/BlogPost";
 import { SOFT_LAUNCH_MODE } from "@/config/launch";
 import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
