@@ -712,24 +712,33 @@ export type Database = {
       }
       launch_interest: {
         Row: {
+          company: string | null
           created_at: string
           email: string
           feature: string
+          full_name: string | null
           id: string
+          source: string
           user_id: string | null
         }
         Insert: {
+          company?: string | null
           created_at?: string
           email: string
           feature: string
+          full_name?: string | null
           id?: string
+          source?: string
           user_id?: string | null
         }
         Update: {
+          company?: string | null
           created_at?: string
           email?: string
           feature?: string
+          full_name?: string | null
           id?: string
+          source?: string
           user_id?: string | null
         }
         Relationships: []

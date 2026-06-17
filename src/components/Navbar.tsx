@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useUnsavedChangesGuard } from "@/hooks/useSaveStatus";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SOFT_LAUNCH_MODE, WAITLIST_PATH } from "@/config/launch";
 
 const Navbar = () => {
   const location = useLocation();
@@ -61,7 +62,11 @@ const Navbar = () => {
               ) : (
                 <>
                   <Button variant="ghost" asChild><Link to="/login">{t("nav.login")}</Link></Button>
-                  <Button asChild><Link to="/signup">{t("nav.signup")}</Link></Button>
+                  <Button asChild>
+                    <Link to={SOFT_LAUNCH_MODE ? WAITLIST_PATH : "/signup"}>
+                      {SOFT_LAUNCH_MODE ? "Säkra plats" : t("nav.signup")}
+                    </Link>
+                  </Button>
                 </>
               )}
             </div>
@@ -89,7 +94,11 @@ const Navbar = () => {
                   ) : (
                     <>
                       <Button variant="ghost" asChild><Link to="/login" onClick={() => setMobileOpen(false)}>{t("nav.login")}</Link></Button>
-                      <Button asChild><Link to="/signup" onClick={() => setMobileOpen(false)}>{t("nav.signupShort")}</Link></Button>
+                      <Button asChild>
+                        <Link to={SOFT_LAUNCH_MODE ? WAITLIST_PATH : "/signup"} onClick={() => setMobileOpen(false)}>
+                          {SOFT_LAUNCH_MODE ? "Säkra plats" : t("nav.signupShort")}
+                        </Link>
+                      </Button>
                     </>
                   )}
                 </div>
