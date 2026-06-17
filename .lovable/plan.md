@@ -1,111 +1,62 @@
-# Soft launch-plan: väntelista + SEO mot 15 augusti 2026
+# Förbättra SEO ytterligare — plan
 
-## Översikt
-Tre delar som körs i ordning, alla enkla att rulla tillbaka i augusti:
-1. **Väntelista istället för signup** (med countdown till 15 aug)
-2. **SEO-grund** på landing + nya sidor
-3. **2–3 SEO-landningssidor** för long-tail trafik
-
-Login fortsätter fungera som vanligt — bara `/signup` styrs om.
+Semrush hittade ingen data för maillead.ai ännu (för ny domän). Det betyder att vi måste fokusera på **grundbygget** som hjälper Google upptäcka, förstå och lita på sidan. Här är förbättringar grupperade efter impact. Säg vilka du vill att jag kör — vi kan ta allt eller plocka.
 
 ---
 
-## Del 1 — Väntelista & countdown
+## A. Tekniska quick wins (1 implementations-pass, hög impact)
 
-### Ny sida `/waitlist`
-Egen route med samma Aurora-tema som landing. Innehåll:
-- Hero med samma rubrik-stil (`.hh` + `.em`-gradient): "Vi öppnar **15 augusti**"
-- Kort underrubrik: "MailLead.ai går live för alla i augusti. Säkra din plats nu — tidiga användare får 50 extra gratis-credits vid launch."
-- **Countdown-komponent** mot `2026-08-15T09:00:00+02:00` — fyra cirklar (dagar/timmar/min/sek) med samma orange gradient som `.em` runt siffrorna, glas-effekt som matchar `.glass` i hero.
-- **Formulär**: namn, e-post, företag (alla required, zod-validerade, max-längder). Submit-knapp `.btn-pri` "Säkra min plats".
-- Efter submit: success-state med samma countdown kvar + "Vi mejlar dig 15 augusti".
-- Liten footer-rad: "Är du redan registrerad? [Logga in](/login)".
+1. **OG-bild** — vi har `og-image.jpg` refererad i `index.html` men jag har inte verifierat att filen finns/ser bra ut. Genererar en ny premium OG-bild (1200×630) med produktnamn + ny hero-rubrik om filen saknas eller är generisk.
+2. **`<html lang>` per språk** — sätts korrekt till `sv` redan, bra. Lägger till `hreflang="sv-SE"` på alla SEO-sidor.
+3. **Robots.txt + sitemap-direktiv** — lägger till `Sitemap: https://maillead.ai/sitemap.xml` i robots.txt så Google hittar den snabbare.
+4. **Sitemap-generator istället för statisk fil** — `scripts/generate-sitemap.ts` som körs via `predev`/`prebuild`. Då blir det omöjligt att glömma uppdatera sitemap när vi lägger till routes.
+5. **Lazy-loading & bildoptimering** — inventera alla `<img>` på landing, lägg till `loading="lazy"` + `decoding="async"` på allt under fold. Hero-bild förblir eager.
+6. **Preconnect till Supabase/fonts** — `<link rel="preconnect">` i `index.html` för snabbare LCP.
 
-### Datamodell
-`launch_interest`-tabellen finns redan men saknar fält. **Migration** lägger till:
-- `full_name text`
-- `company text`
-- `source text` (default `'waitlist_2026_august'`) — så vi enkelt kan filtrera vid launch
-- Behåller `email + feature` unique-constraint; vi skickar `feature = 'waitlist'`
+## B. Innehåll & nya SEO-sidor (medel impact, störst långsiktig effekt)
 
-RLS-policyn för anon insert finns redan och fungerar oförändrat.
+7. **2–3 fler long-tail-sidor** — t.ex.:
+   - `/cold-email-mall` (mall + nedladdningsbar variant — bra länkbete)
+   - `/leadgenerering-b2b` (bredare term än "b2b-leads")
+   - `/jamfor/maillead-vs-apollo` eller `/jamfor/maillead-vs-lemlist` (jämförelser rankar lätt och konverterar)
+8. **Pricing-sidans SEO** — `/pricing` har idag bara `<SeoHead>` antagligen tunn. Förstärka med JSON-LD `Product` + `Offer` så Google kan visa rikt resultat.
+9. **FAQ-utbyggnad på landing** — fler frågor → mer FAQ-rich snippets i SERP.
+10. **Blogg-grund** — `/blogg` med 3 startartiklar. Stor satsning, säg till om du vill det istället för minimalt.
 
-### Omdirigering av `/signup`
-- `src/App.tsx`: byt `<Route path="/signup" element={<PublicOnlyRoute><Signup /></PublicOnlyRoute>} />` mot `<Navigate to="/waitlist" replace />` bakom en feature-flag.
-- **Feature-flag**: ny konstant i `src/config/launch.ts`:
-  ```ts
-  export const SOFT_LAUNCH_MODE = true; // sätt false 15 aug
-  export const LAUNCH_DATE = new Date("2026-08-15T09:00:00+02:00");
-  ```
-  All UI som behöver veta läge läser från denna fil. Att gå live = ändra `true` → `false`.
-- I `AuroraLanding.tsx`: knappar `/signup` → `/waitlist` när flaggan är på. Hero-CTA-text → "Säkra din plats inför launch".
-- `/login` rörs **inte** — befintliga konton (du + testare) loggar in som vanligt.
-- `Signup.tsx`-filen finns kvar oförändrad, så återgång = bara flippa flaggan.
+## C. Auktoritet & indexering (en gång, kontinuerlig effekt)
 
-### Navbar
-"Prova gratis"-knappen → "Säkra plats" när `SOFT_LAUNCH_MODE` är på.
+11. **Google Search Console-verifiering** — jag kan verifiera maillead.ai automatiskt via META-taggen (vi har Google-connectorn). Då börjar vi se faktisk söktrafik, klick och rankings direkt.
+12. **Skicka in sitemap till GSC** efter verifiering.
+13. **Bing Webmaster Tools** — samma men för Bing (de driver också ChatGPT-search).
+14. **Strukturerad data utökad** — lägg till `BreadcrumbList` på fler sidor, `Organization.sameAs` med sociala länkar (om vi har), `WebSite` med `SearchAction` för sitelinks searchbox.
+
+## D. UX-signaler som påverkar SEO (medel impact)
+
+15. **Core Web Vitals-pass** — mät LCP/CLS/INP på landing, fixa det som är rött. Sannolikt: hero-bild prio, font-display: swap.
+16. **Intern länkstruktur** — säkerställ att varje sida länkar till 2–3 andra relevanta sidor (vi har detta delvis i SEO-sidornas "Läs vidare", men landing skulle vinna på en "Resurser"-sektion).
 
 ---
 
-## Del 2 — SEO-grund
+## Rekommendation: kör A + C nu, B i nästa pass
 
-### On-page basics
-- **`index.html`**: behålls som sitewide fallback. Uppdaterad `<title>`/`<meta description>`/`og:*` så de matchar nya hero-copyn ("Hitta nya B2B-kunder med AI-drivna utskick").
-- **Per-route head**: `react-helmet-async` är redan installerat (`SeoHead`-komponenten används). Lägg till `<SeoHead>` på `/waitlist` (noindex tills launch — vi vill inte rangera på den), `/pricing`, och de nya SEO-sidorna.
-- **Canonical/og:url**: säkerställ att alla sidor self-refererar via `SeoHead path`.
-- **Sitemap**: `public/sitemap.xml` uppdateras med nya routes. (Statisk fil idag — vi rör inte mekanismen.)
-- **robots.txt**: oförändrad (`Allow: /`).
+**Pass 1 (A + C — ca 15 min implementation):**
+- OG-bild + lang/hreflang + robots-sitemap + sitemap-generator
+- Lazy-loading + preconnect
+- Verifiera i Google Search Console + skicka in sitemap
+- Utöka JSON-LD (BreadcrumbList, WebSite SearchAction)
 
-### Kör SEO-scannern
-Efter on-page-fixar: `seo_chat--trigger_scan`, åtgärda findings (typiskt H1-duplikat, alt-text, meta-längd), markera fixed.
+**Pass 2 (B — när du har tid):**
+- 2 fler SEO-sidor (jämförelse + cold-email-mall)
+- FAQ-utbyggnad
+- Pricing JSON-LD
 
----
-
-## Del 3 — SEO-landningssidor
-
-Tre svenska long-tail-sidor som siktar på sökintention vi vet matchar produkten:
-
-1. **`/kalla-mejl`** — "Kalla mejl som B2B-säljare: guide + verktyg 2026"
-2. **`/b2b-leads-sverige`** — "Köp B2B-leads i Sverige — så funkar det"
-3. **`/e-postutskick-foretag`** — "E-postutskick till företag: regler, mallar & verktyg"
-
-### Struktur per sida
-- Återanvänd `Layout` + Aurora-stil för konsekvens.
-- ~600–900 ord, semantisk H1/H2/H3, FAQ-block (samma `LANDING_FAQS`-mönster med JSON-LD).
-- CTA i slutet → `/waitlist` (eller `/signup` efter 15 aug — feature-flag).
-- `SeoHead` med unik titel/description/canonical + Article + FAQPage JSON-LD.
-- Internlänkning från landing (footer eller en "Resurser"-rad) och mellan sidorna.
-
-### Innehållskälla
-Vi skriver copyn direkt i komponenterna (ingen CMS). Detta är ett medvetet val för soft launch — snabbt att skeppa, ingen extra infrastruktur.
+**Pass 3 (om vi vill gå tungt):**
+- Bloggstruktur med 3 startartiklar
 
 ---
 
-## Återgång 15 augusti
-En ändring: `SOFT_LAUNCH_MODE = false` i `src/config/launch.ts`.
-Effekt: `/signup` återöppnas, alla CTA går tillbaka till "Prova gratis"/`/signup`, waitlist-sidan finns kvar på `/waitlist` (kan tas bort senare). SEO-sidorna stannar kvar — de är värdefulla efter launch också.
+## Vad behöver jag från dig
 
----
-
-## Filer som ändras / skapas
-**Nya:**
-- `src/config/launch.ts` (feature-flag + datum)
-- `src/components/Countdown.tsx`
-- `src/pages/Waitlist.tsx`
-- `src/pages/seo/KallaMejl.tsx`
-- `src/pages/seo/B2bLeadsSverige.tsx`
-- `src/pages/seo/EpostutskickForetag.tsx`
-- `supabase/migrations/<ts>_launch_interest_extend.sql`
-
-**Ändras:**
-- `src/App.tsx` (routes + soft-launch-redirect)
-- `src/components/AuroraLanding.tsx` (CTA-texter/länkar via flagga)
-- `src/components/Navbar.tsx` om relevant
-- `index.html` (titel/desc/og)
-- `public/sitemap.xml`
-- `src/integrations/supabase/types.ts` (auto-genererad efter migration)
-
-## Frågor som inte behövs nu (jag antar)
-- Countdown-design: matchar `.em` orange gradient + `.glass`-stil.
-- Waitlist noindex: ja (vi vill inte att Google rangerar väntelistan över hemsidan).
-- Bekräftelsemejl till anmälda: nej i v1 — bara success-state på sidan. Kan läggas till senare via edge-function om du vill.
+- **Vilka pass kör vi?** A+C räcker långt för soft launch. B ger trafik på 2–4 månaders sikt.
+- **Konkurrenter att jämföras med?** Säg t.ex. "Apollo, Lemlist, Instantly" så bygger jag rätt jämförelsesidor.
+- **OG-bild — generera ny?** Eller har du en designad redan?
