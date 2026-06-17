@@ -36,4 +36,20 @@ export const LANDING_FAQS: LandingFaq[] = [
     q: "Kan jag testa Growth innan jag betalar?",
     a: "Starter-planen ger dig full tillgång till AI-motorn. Growth tar bara bort gränserna så att du kan skala.",
   },
+  {
+    q: "Hur snabbt kan jag komma igång?",
+    a: "Under 10 minuter: koppla din Gmail- eller Outlook-inkorg, importera eller köp leads, och låt AI:n skriva första sekvensen. Första utskicket kan gå samma dag.",
+  },
+  {
+    q: "Behöver jag värma upp min inkorg?",
+    a: "Om du är ny eller använder en ny domän: ja, 2–4 veckor. MailLead.ai pausar automatiskt om vi ser tecken på dålig leveransbarhet och hjälper dig värma upp gradvis.",
+  },
+  {
+    q: "Hur mycket kostar leads?",
+    a: "Free-planen inkluderar 25 leads-credits. Därefter från 1,40 kr per lead i större paket. Du betalar bara för leads du verkligen vill nå — inga månadskostnader för data du inte använder.",
+  },
+  {
+    q: "Vilka branscher passar MailLead bäst för?",
+    a: "Allt B2B där beslutsfattaren har en arbets-e-postadress: SaaS, konsultverksamhet, rekrytering, byråer, industriförsäljning. Vi rekommenderar inte rena B2C-utskick.",
+  },
 ];

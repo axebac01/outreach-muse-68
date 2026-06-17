@@ -111,15 +111,42 @@ const Pricing = () => {
         title="Priser — MailLead.ai"
         description="Börja gratis med 25 credits. Toppa upp eller välj månadsplan från 290 kr/mån — du betalar bara för leads du faktiskt vill nå."
         path="/pricing"
-        jsonLd={{
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: faqs.map((f) => ({
-            "@type": "Question",
-            name: f.q,
-            acceptedAnswer: { "@type": "Answer", text: f.a },
-          })),
-        }}
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: faqs.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: "MailLead.ai",
+            description:
+              "AI-driven plattform för B2B-utskick: leads, smarta kampanjer och automatisk uppföljning.",
+            brand: { "@type": "Brand", name: "MailLead" },
+            offers: {
+              "@type": "AggregateOffer",
+              priceCurrency: "SEK",
+              lowPrice: "0",
+              highPrice: "2490",
+              offerCount: "4",
+              availability: "https://schema.org/PreOrder",
+              url: "https://maillead.ai/pricing",
+            },
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Start", item: "https://maillead.ai/" },
+              { "@type": "ListItem", position: 2, name: "Priser", item: "https://maillead.ai/pricing" },
+            ],
+          },
+        ]}
       />
       <div className="container py-20">
         {/* Header */}

@@ -14,6 +14,9 @@ import Waitlist from "./pages/Waitlist";
 import KallaMejl from "./pages/seo/KallaMejl";
 import B2bLeadsSverige from "./pages/seo/B2bLeadsSverige";
 import EpostutskickForetag from "./pages/seo/EpostutskickForetag";
+import MailleadVsApollo from "./pages/seo/MailleadVsApollo";
+import MailleadVsLemlist from "./pages/seo/MailleadVsLemlist";
+import ColdEmailMall from "./pages/seo/ColdEmailMall";
 import { SOFT_LAUNCH_MODE } from "@/config/launch";
 import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
@@ -66,6 +69,9 @@ const App = () => (
             <Route path="/kalla-mejl" element={<KallaMejl />} />
             <Route path="/b2b-leads-sverige" element={<B2bLeadsSverige />} />
             <Route path="/e-postutskick-foretag" element={<EpostutskickForetag />} />
+            <Route path="/cold-email-mall" element={<ColdEmailMall />} />
+            <Route path="/jamfor/maillead-vs-apollo" element={<MailleadVsApollo />} />
+            <Route path="/jamfor/maillead-vs-lemlist" element={<MailleadVsLemlist />} />
 
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
