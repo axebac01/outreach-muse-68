@@ -146,7 +146,7 @@ export default function MyLeadsTab() {
       {!isLoading && leads.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-16 text-center">
-            <Inbox className="h-10 w-10 mx-auto text-muted-foreground/40 mb-4" />
+            <Inbox className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-semibold text-lg">Inga köpta leads än</h3>
             <p className="text-muted-foreground text-sm mt-1 max-w-md mx-auto">
               När du avslöjar leads i Sök-fliken sparas de här så du kan importera dem

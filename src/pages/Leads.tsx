@@ -823,7 +823,7 @@ export default function Leads() {
             {!searchTriggered && (
               <Card className="border-dashed">
                 <CardContent className="py-16 text-center">
-                  <Sparkles className="h-10 w-10 mx-auto text-muted-foreground/40 mb-4" />
+                  <Sparkles className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
                   <h3 className="font-semibold text-lg">Börja söka bland leads</h3>
                   <p className="text-muted-foreground text-sm mt-1 max-w-md mx-auto">
                     Sätt dina filter till vänster. Du betalar bara {CREDITS_PER_REVEAL} credits per lead du

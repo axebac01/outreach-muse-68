@@ -58,7 +58,7 @@ export default function LeadsCreditsReturn() {
               </>
             )}
             {sessionId && (
-              <p className="text-xs text-muted-foreground/60 mt-6 font-mono break-all">
+              <p className="text-xs text-muted-foreground mt-6 font-mono break-all">
                 {sessionId}
               </p>
             )}
