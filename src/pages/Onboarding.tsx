@@ -184,16 +184,27 @@ const Onboarding = () => {
       const { data } = await supabase
         .from("profiles")
         .select(
-          "full_name,company_url,company_scrape_status,company_name,company_target_audience,company_value_prop,company_description",
+          "full_name,onboarding_completed,company_url,company_scrape_status,company_name,company_target_audience,company_value_prop,company_description",
         )
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled || !data) return;
+      // Redan klar med onboardingen? Gå direkt in i appen istället för att börja om.
+      if ((data as any).onboarding_completed) {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch {
+          /* noop */
+        }
+        navigate("/dashboard", { replace: true });
+        return;
+      }
       const fullName = ((data as any).full_name ?? "").trim();
       if (fullName) {
         setAnswers((a) => ({ ...a, name: a.name?.trim() ? a.name : fullName }));
         setSkipName(true);
       }
+
       const status = (data as any).company_scrape_status as string | null;
       if (status === "done") {
         setCompanyData({
@@ -423,14 +434,20 @@ const Onboarding = () => {
       toast.error("Kunde inte spara. Försök igen.");
       return;
     }
+    // Uppdatera cachen direkt så OnboardingGate inte ser gammal (ofärdig) profil
+    // och skickar tillbaka hit under tiden refetchen pågår.
+    queryClient.setQueryData(["profile", user.id], (old: any) =>
+      old ? { ...old, ...payload } : old,
+    );
+    await queryClient.refetchQueries({ queryKey: ["profile", user.id] });
+    navigate("/dashboard", { replace: true });
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* noop */
     }
-    queryClient.invalidateQueries({ queryKey: ["profile"] });
-    navigate("/dashboard");
   };
+
 
   const slideClass =
     direction === 1
