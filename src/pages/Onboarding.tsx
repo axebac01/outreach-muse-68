@@ -423,14 +423,20 @@ const Onboarding = () => {
       toast.error("Kunde inte spara. Försök igen.");
       return;
     }
+    // Uppdatera cachen direkt så OnboardingGate inte ser gammal (ofärdig) profil
+    // och skickar tillbaka hit under tiden refetchen pågår.
+    queryClient.setQueryData(["profile", user.id], (old: any) =>
+      old ? { ...old, ...payload } : old,
+    );
+    await queryClient.refetchQueries({ queryKey: ["profile", user.id] });
+    navigate("/dashboard", { replace: true });
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* noop */
     }
-    queryClient.invalidateQueries({ queryKey: ["profile"] });
-    navigate("/dashboard");
   };
+
 
   const slideClass =
     direction === 1
