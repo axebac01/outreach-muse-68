@@ -655,55 +655,85 @@ const FinalStep = ({
 
   // done
   const cd = companyData ?? {};
-  const lines = [
-    `Vi hittade ${cd.company_name || "ditt företag"}.`,
-    cd.company_target_audience && cd.company_value_prop
-      ? `Ett bolag som hjälper ${cd.company_target_audience} att ${cd.company_value_prop}.`
-      : cd.company_description || "",
-    "Vi skriver mejl som låter som att de kommer från er.",
-  ].filter(Boolean);
+  const clean = (v?: string | null, max = 220) => {
+    if (!v) return "";
+    let s = v.trim().replace(/[.\s]+$/, "");
+    if (s.length > max) s = s.slice(0, max).replace(/\s+\S*$/, "") + "…";
+    return s;
+  };
+  const lower = (v: string) => (v ? v.charAt(0).toLowerCase() + v.slice(1) : v);
+
+  const audience = clean(cd.company_target_audience, 140);
+  const valueProp = lower(clean(cd.company_value_prop, 180));
+  const description = clean(cd.company_description, 240);
+  const hasFacts = !!(audience || valueProp);
+
+  const facts: Array<{ label: string; value: string }> = hasFacts
+    ? [
+        ...(audience ? [{ label: "Målgrupp", value: audience }] : []),
+        ...(valueProp ? [{ label: "Det ni erbjuder", value: valueProp }] : []),
+      ]
+    : description
+      ? [{ label: "Om företaget", value: description }]
+      : [];
+
+  const anim = (delay: number) => ({
+    animationDelay: `${delay}ms`,
+    animationFillMode: "both" as const,
+    animationDuration: "500ms",
+  });
 
   return (
-    <div className="space-y-10">
-      {domain && (
-        <div
-          className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95"
-          style={{ animationDuration: "500ms", animationFillMode: "both" }}
-        >
-          <div className="h-16 w-16 rounded-2xl bg-card border shadow-sm flex items-center justify-center overflow-hidden">
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
-              alt={cd.company_name || domain}
-              className="h-10 w-10 object-contain"
-              onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-            />
+    <div className="mx-auto w-full max-w-xl space-y-8 text-center">
+      <div className="space-y-4">
+        {domain && (
+          <div
+            className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95"
+            style={anim(100)}
+          >
+            <div className="h-14 w-14 rounded-2xl bg-card border shadow-sm flex items-center justify-center overflow-hidden">
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
+                alt={cd.company_name || domain}
+                className="h-8 w-8 object-contain"
+                onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">{domain}</span>
           </div>
-          <span className="text-xs text-muted-foreground">{domain}</span>
+        )}
+        <h1
+          className="text-2xl md:text-3xl font-semibold tracking-tight animate-in fade-in slide-in-from-bottom-2"
+          style={anim(300)}
+        >
+          Vi hittade {cd.company_name || "ditt företag"}.
+        </h1>
+      </div>
+
+      {facts.length > 0 && (
+        <div
+          className="rounded-2xl border bg-card/60 p-5 text-left divide-y animate-in fade-in slide-in-from-bottom-2"
+          style={anim(550)}
+        >
+          {facts.map((f) => (
+            <div key={f.label} className="py-3 first:pt-0 last:pb-0 space-y-1">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+                {f.label}
+              </div>
+              <p className="text-sm md:text-base leading-relaxed">{f.value}</p>
+            </div>
+          ))}
         </div>
       )}
-      <div className="space-y-4">
-        {lines.map((line, i) => (
-          <p
-            key={i}
-            className="text-2xl md:text-4xl font-semibold tracking-tight leading-tight animate-in fade-in slide-in-from-bottom-3"
-            style={{
-              animationDelay: `${i * 450 + 200}ms`,
-              animationFillMode: "both",
-              animationDuration: "600ms",
-            }}
-          >
-            {line}
-          </p>
-        ))}
-      </div>
-      <div
-        className="animate-in fade-in"
-        style={{
-          animationDelay: `${lines.length * 450 + 400}ms`,
-          animationFillMode: "both",
-          animationDuration: "500ms",
-        }}
+
+      <p
+        className="text-sm text-muted-foreground animate-in fade-in"
+        style={anim(750)}
       >
+        Vi skriver mejl som låter som att de kommer från er.
+      </p>
+
+      <div className="animate-in fade-in" style={anim(900)}>
         <Button size="lg" onClick={onFinish} disabled={submitting} className="gap-2">
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Perfekt {name}, kör igång
@@ -713,6 +743,7 @@ const FinalStep = ({
     </div>
   );
 };
+
 
 const LOADER_STEPS = [
   "Läser hemsidan…",
