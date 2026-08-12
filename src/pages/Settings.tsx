@@ -20,7 +20,7 @@ const Settings = () => {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
-  const { plan, campaignCount, monthlyOutreach, limits } = useUsage();
+  const { campaignCount, monthlyOutreach, limits } = useUsage();
   const { t } = useTranslation();
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
@@ -29,7 +29,7 @@ const Settings = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { subscription, isActive, refetch } = useSubscription();
+  const { subscription, refetch } = useSubscription();
   const [upgradeState, setUpgradeState] = useState<"idle" | "pending" | "confirmed" | "timeout">(
     params.get("subscription") === "success" ? "pending" : "idle",
   );
