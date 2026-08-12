@@ -2,16 +2,19 @@ import Layout from "@/components/Layout";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
 import { useUsage } from "@/hooks/useUsage";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { User, BarChart3, Pencil, Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { useTranslation } from "react-i18next";
 import IntegrationsCard from "@/components/IntegrationsCard";
 import { SubscriptionSection } from "@/components/SubscriptionSection";
+import { UpgradeSuccessCard } from "@/components/UpgradeSuccessCard";
 
 const Settings = () => {
   const { user } = useAuth();
@@ -21,6 +24,53 @@ const Settings = () => {
   const { t } = useTranslation();
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
+
+  // --- Uppgraderingsbekräftelse efter Stripe-checkout ---
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { subscription, isActive, refetch } = useSubscription();
+  const [upgradeState, setUpgradeState] = useState<"idle" | "pending" | "confirmed" | "timeout">(
+    params.get("subscription") === "success" ? "pending" : "idle",
+  );
+  const cleared = useRef(false);
+
+  // Rensa query-parametern så kortet inte kommer tillbaka vid reload
+  useEffect(() => {
+    if (params.get("subscription") === "success" && !cleared.current) {
+      cleared.current = true;
+      navigate("/settings", { replace: true });
+    }
+  }, [params, navigate]);
+
+  // Polla tills webhooken hunnit skriva prenumerationen
+  useEffect(() => {
+    if (upgradeState !== "pending") return;
+    let attempts = 0;
+    const tick = async () => {
+      attempts += 1;
+      const { data } = await refetch();
+      const end = data?.current_period_end ? new Date(data.current_period_end).getTime() : null;
+      const active =
+        !!data &&
+        ["active", "trialing", "past_due"].includes(data.status) &&
+        (!end || end > Date.now());
+      if (active) {
+        queryClient.invalidateQueries({ queryKey: ["plan_limits"] });
+        queryClient.invalidateQueries({ queryKey: ["credit-wallet"] });
+        queryClient.invalidateQueries({ queryKey: ["usage"] });
+        setUpgradeState("confirmed");
+        clearInterval(id);
+      } else if (attempts >= 15) {
+        setUpgradeState("timeout");
+        clearInterval(id);
+      }
+    };
+    const id = setInterval(tick, 2000);
+    tick();
+    return () => clearInterval(id);
+  }, [upgradeState, refetch, queryClient]);
+
 
   const handleEditName = () => {
     setNameValue(profile?.full_name || "");
