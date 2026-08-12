@@ -96,6 +96,14 @@ const Settings = () => {
         <h1 className="text-3xl font-bold mb-10">{t("settings.title")}</h1>
 
         <div className="space-y-6">
+          {upgradeState !== "idle" && (
+            <UpgradeSuccessCard
+              state={upgradeState}
+              priceId={subscription?.price_id}
+              onDismiss={() => setUpgradeState("idle")}
+            />
+          )}
+
           <div className="rounded-xl border bg-card p-6 space-y-4 card-hover">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
