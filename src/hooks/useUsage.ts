@@ -1,19 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { useProfile } from "./useProfile";
+import { usePlanLimits, type PlanKey } from "./usePlanLimits";
 
-const LIMITS = {
-  starter: { campaigns: 1, leadsPerCampaign: 10, outreachPerMonth: 10 },
-  growth: { campaigns: 10, leadsPerCampaign: 2000, outreachPerMonth: 5000 },
+// Månatlig outreach-volym per plan (dagligt tak per konto × ~22 arbetsdagar).
+// Free är den enda planen med ett hårt tak i UI:t.
+const OUTREACH_PER_MONTH: Record<PlanKey, number> = {
+  free: 100,
+  starter: Infinity,
+  growth: Infinity,
+  scale: Infinity,
+};
+
+const LEADS_PER_CAMPAIGN: Record<PlanKey, number> = {
+  free: 25,
+  starter: 2000,
+  growth: 10000,
+  scale: Infinity,
 };
 
 export const useUsage = () => {
   const { user } = useAuth();
-  const { data: profile } = useProfile();
+  const { limits: planLimits, isLoading: limitsLoading } = usePlanLimits();
 
-  const plan = (profile?.plan as "starter" | "growth") || "starter";
-  const limits = LIMITS[plan];
+  const plan: PlanKey = planLimits?.plan ?? "free";
+
+  const limits = {
+    campaigns: planLimits && planLimits.campaigns < 0 ? Infinity : (planLimits?.campaigns ?? 1),
+    leadsPerCampaign: LEADS_PER_CAMPAIGN[plan],
+    outreachPerMonth: OUTREACH_PER_MONTH[plan],
+  };
 
   const campaignCountQuery = useQuery({
     queryKey: ["usage", "campaigns", user?.id],
@@ -47,13 +63,19 @@ export const useUsage = () => {
     enabled: !!user,
   });
 
+  const campaignCount = campaignCountQuery.data ?? 0;
+  const monthlyOutreach = monthlyOutreachQuery.data ?? 0;
+
   return {
     plan,
     limits,
-    campaignCount: campaignCountQuery.data ?? 0,
-    monthlyOutreach: monthlyOutreachQuery.data ?? 0,
-    canCreateCampaign: (campaignCountQuery.data ?? 0) < limits.campaigns,
-    canGenerateOutreach: (monthlyOutreachQuery.data ?? 0) < limits.outreachPerMonth,
+    isLoading: limitsLoading,
+    campaignCount,
+    monthlyOutreach,
+    // Optimistisk innan plangränserna hunnit laddas — annars blockeras
+    // betalande användare felaktigt en kort stund.
+    canCreateCampaign: limitsLoading || campaignCount < limits.campaigns,
+    canGenerateOutreach: monthlyOutreach < limits.outreachPerMonth,
     canAddLead: (count: number) => count < limits.leadsPerCampaign,
   };
 };
