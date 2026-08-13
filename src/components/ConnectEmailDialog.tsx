@@ -57,7 +57,10 @@ type View =
 type TestResult = {
   state: "idle" | "testing" | "ok" | "error";
   message?: string;
+  detail?: string;
+  authFailed?: boolean;
 };
+
 
 
 const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
