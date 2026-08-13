@@ -39,7 +39,7 @@ import {
   detectProviderByEmail,
   getVisibleProviders,
 } from "@/lib/emailProviders";
-import { toUserMessage, unwrapFunctionError } from "@/lib/errorMessages";
+import { toUserMessage, unwrapFunctionError, extractErrorInfo, isAuthFailure } from "@/lib/errorMessages";
 import { usePlanLimits, canCreateMore } from "@/hooks/usePlanLimits";
 import { useEmailAccounts } from "@/hooks/useEmailAccounts";
 import { PlanLimitBanner } from "@/components/PlanLimitBanner";
@@ -57,7 +57,10 @@ type View =
 type TestResult = {
   state: "idle" | "testing" | "ok" | "error";
   message?: string;
+  detail?: string;
+  authFailed?: boolean;
 };
+
 
 
 const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
@@ -157,6 +160,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
     fn: string,
     body: Record<string, unknown>,
     fallbackKey: string,
+    host: string,
   ): Promise<TestResult> => {
     try {
       const { data, error } = await supabase.functions.invoke(fn, { body });
@@ -167,9 +171,16 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
       if (data?.error) throw data.error;
       return { state: "ok" };
     } catch (e: unknown) {
-      return { state: "error", message: toUserMessage(e, t, fallbackKey) };
+      const { detail } = extractErrorInfo(e);
+      return {
+        state: "error",
+        message: toUserMessage(e, t, fallbackKey, { host }),
+        detail,
+        authFailed: isAuthFailure(e),
+      };
     }
   };
+
 
   const runTest = async (): Promise<{ smtp: TestResult; imap: TestResult }> => {
     setTesting(true);
@@ -186,6 +197,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           from_email: form.email,
         },
         "errors.smtp.genericNoDetail",
+        form.smtp_host,
       );
       const imapPromise: Promise<TestResult> = resolvedImap.host
         ? invokeCheck(
@@ -198,7 +210,9 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               imap_password: resolvedImap.password,
             },
             "errors.imap.generic",
+            resolvedImap.host,
           )
+
         : Promise.resolve<TestResult>({
             state: "error",
             message: t("emailAccounts.custom.noImapWarning"),
@@ -668,9 +682,28 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                               ? result.message ?? t("emailAccounts.testFailed")
                               : ""}
                       </span>
+                      {result.state === "error" && result.detail && (
+                        <span className="block text-[11px] text-muted-foreground mt-0.5 font-mono break-all">
+                          {result.detail}
+                        </span>
+                      )}
                     </span>
                   </div>
                 ))}
+                {(tests.smtp.authFailed || tests.imap.authFailed) && (
+                  <div className="pt-1 text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-foreground">
+                      {t("emailAccounts.custom.authChecklistTitle")}
+                    </p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li>{t("emailAccounts.custom.authChecklistUsername")}</li>
+                      <li>{t("emailAccounts.custom.authChecklistPassword")}</li>
+                      <li>{t("emailAccounts.custom.authChecklistEnabled")}</li>
+                      <li>{t("emailAccounts.custom.authChecklistPort")}</li>
+                    </ul>
+                  </div>
+                )}
+
                 {tests.smtp.state === "ok" && tests.imap.state === "error" && (
                   <p className="text-xs text-muted-foreground pt-1">
                     {t("emailAccounts.custom.imapFailedButSaveable")}

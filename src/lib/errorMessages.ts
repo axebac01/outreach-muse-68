@@ -211,22 +211,41 @@ function sanitize(msg: string, fallback: string): string {
   return cleaned;
 }
 
+/**
+ * Vissa felkoder har leverantörsspecifika råd. Gmail/Outlook kräver
+ * app-lösenord, medan vanliga webbhotell använder samma lösenord som
+ * webbmailen — då är app-lösenordstexten missvisande.
+ */
+function authFailedKey(code: string, host?: string): string | null {
+  if (code !== "smtp_auth_failed" && code !== "imap_auth_failed") return null;
+  const h = (host ?? "").toLowerCase();
+  const isGoogle = h.includes("gmail") || h.includes("google");
+  const isMicrosoft = h.includes("outlook") || h.includes("hotmail") || h.includes("office365");
+  if (isGoogle || isMicrosoft) return null; // behåll befintlig app-lösenordstext
+  return code === "smtp_auth_failed"
+    ? "errors.smtp.authFailedGeneric"
+    : "errors.imap.authFailedGeneric";
+}
+
 export function toUserMessage(
   err: unknown,
   tArg?: TFunction,
   fallbackKey?: string,
+  opts?: { host?: string },
 ): string {
   const t = (tArg ?? (i18n.t.bind(i18n) as unknown as TFunction));
   const unknownMsg = t("errors.generic.unknown");
-  const render = (key: string, opts?: Record<string, unknown>) =>
-    sanitize(String(t(key, opts ?? {})), unknownMsg);
+  const render = (key: string, o?: Record<string, unknown>) =>
+    sanitize(String(t(key, o ?? {})), unknownMsg);
 
   if (err == null) return render(fallbackKey ?? "errors.generic.unknown");
 
   const structured = extractStructured(err);
   if (structured?.code && KNOWN_CODES[structured.code]) {
-    return render(KNOWN_CODES[structured.code], { detail: structured.detail ?? "" });
+    const key = authFailedKey(structured.code, opts?.host) ?? KNOWN_CODES[structured.code];
+    return render(key, { detail: structured.detail ?? "" });
   }
+
 
   let raw = "";
   if (typeof err === "string") raw = err;
@@ -236,7 +255,12 @@ export function toUserMessage(
 
   if (raw) {
     const match = matchFreeText(raw);
-    if (match) return render(match.key, match.opts);
+    if (match) {
+      const key = match.key === "errors.smtp.authFailed"
+        ? (authFailedKey("smtp_auth_failed", opts?.host) ?? match.key)
+        : match.key;
+      return render(key, match.opts);
+    }
   }
 
   if (fallbackKey) return render(fallbackKey, { detail: raw ? trimDetail(raw) : "" });
@@ -244,4 +268,20 @@ export function toUserMessage(
   if (raw) return render("errors.generic.withDetail", { detail: trimDetail(raw) });
   return unknownMsg;
 }
+
+/** Plockar ut felkod och teknisk detalj för visning i UI. */
+export function extractErrorInfo(err: unknown): { code?: string; detail?: string } {
+  const s = extractStructured(err);
+  const detail = s?.detail ?? (err instanceof Error ? err.message : typeof err === "string" ? err : undefined);
+  return { code: s?.code, detail: detail ? trimDetail(detail, 200) : undefined };
+}
+
+/** True när felet beror på avvisad inloggning (SMTP eller IMAP). */
+export function isAuthFailure(err: unknown): boolean {
+  const { code, detail } = extractErrorInfo(err);
+  if (code === "smtp_auth_failed" || code === "imap_auth_failed") return true;
+  const m = (detail ?? "").toLowerCase();
+  return m.includes("535") || m.includes("authenticationfailed") || m.includes("authentication failed");
+}
+
 

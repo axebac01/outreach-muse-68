@@ -88,7 +88,12 @@
       "testRunning": "Testing…",
       "testPassed": "Works",
       "imapFailedButSaveable": "You can still save — sending works, but we can't read replies until IMAP is correct.",
-      "saveAnyway": "Save anyway"
+      "saveAnyway": "Save anyway",
+      "authChecklistTitle": "Check the following:",
+      "authChecklistUsername": "The username is your full email address, not just the part before @.",
+      "authChecklistPassword": "The password is the same one you use for webmail — not your hosting account password.",
+      "authChecklistEnabled": "SMTP/IMAP is enabled for the mailbox at your provider.",
+      "authChecklistPort": "Try port 587 (STARTTLS) if 465 (SSL) is rejected."
     },
     "success": {
       "title": "Email account connected",
@@ -711,7 +716,8 @@
       "appPasswordRequired": "Gmail requires an app password (not your normal password). Generate one at myaccount.google.com/apppasswords.",
       "generic": "SMTP test failed: {{detail}}",
       "hostNotAllowed": "The server could not be reached (private or unknown address). Check the host name.",
-      "genericNoDetail": "The SMTP test failed. Check host, port, username and password."
+      "genericNoDetail": "The SMTP test failed. Check host, port, username and password.",
+      "authFailedGeneric": "The mail server rejected the login. Check that the username is your full email address and that the password is the same one you use for webmail. Some providers require SMTP to be enabled for the mailbox."
     },
     "send": {
       "gmailAuthExpired": "Gmail token expired. Reconnect the account under Email accounts.",
@@ -764,7 +770,8 @@
       "tlsFailed": "TLS/SSL handshake with IMAP failed. Use port 993 with SSL.",
       "tlsRequired": "IMAP requires an encrypted connection. Use port 993 with SSL.",
       "timeout": "The IMAP server didn't respond in time. Please try again.",
-      "generic": "The IMAP test failed. Check host, port, username and password."
+      "generic": "The IMAP test failed. Check host, port, username and password.",
+      "authFailedGeneric": "The mail server rejected the IMAP login. Check that the username is your full email address and that the password matches your webmail password. Some providers require IMAP to be enabled for the mailbox."
     }
   }
 }
