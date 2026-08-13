@@ -54,11 +54,11 @@ type View =
   | { kind: "guide"; provider: EmailProvider }
   | { kind: "custom" };
 
-type TestResult =
-  | { state: "idle" }
-  | { state: "testing" }
-  | { state: "ok" }
-  | { state: "error"; message?: string };
+type TestResult = {
+  state: "idle" | "testing" | "ok" | "error";
+  message?: string;
+};
+
 
 const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const { t } = useTranslation();
