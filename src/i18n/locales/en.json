@@ -77,7 +77,18 @@
       "sameAsSmtpToggle": "Use the same settings for IMAP",
       "noImapWarning": "IMAP is required. Without it we cannot detect when a lead replies, which would let follow-ups keep going after a reply. Fill in IMAP values or enable \"Use the same settings\".",
       "detectedProvider": "This looks like a {{provider}} account. Want to use the guide instead?",
-      "useGuide": "Use {{provider}} guide"
+      "useGuide": "Use {{provider}} guide",
+      "usernameHint": "Usually the same as your email address. Some providers use a separate account name — check with your email provider.",
+      "smtpExplain": "SMTP is used to send your outreach.",
+      "imapExplain": "IMAP is used to read replies in your inbox, so follow-ups stop when a lead replies.",
+      "sameAsSmtpHint": "We guess the IMAP host is imap. + your domain. If that's wrong, turn the toggle off and fill it in manually.",
+      "testTitle": "Test results",
+      "testSmtpLabel": "Outgoing (SMTP)",
+      "testImapLabel": "Incoming (IMAP)",
+      "testRunning": "Testing…",
+      "testPassed": "Works",
+      "imapFailedButSaveable": "You can still save — sending works, but we can't read replies until IMAP is correct.",
+      "saveAnyway": "Save anyway"
     },
     "success": {
       "title": "Email account connected",
@@ -278,15 +289,42 @@
       "title": "What a credit costs",
       "subtitle": "1 credit = 1 verified email. AI writing, sequences and sending are always included.",
       "rows": [
-        { "action": "Verified B2B email", "cost": "1 credit" },
-        { "action": "AI-generated email + follow-ups", "cost": "Included" },
-        { "action": "AI builds a full campaign/sequence for you", "cost": "Included" },
-        { "action": "Sending & scheduling", "cost": "Included" },
-        { "action": "Import your own CSV", "cost": "Included" },
-        { "action": "Re-reveal (same lead)", "cost": "0" },
-        { "action": "Refund on bounced / bad data", "cost": "Automatic" },
-        { "action": "Direct mobile number (coming soon)", "cost": "5 credits" },
-        { "action": "Deep ICP research per lead (coming soon)", "cost": "3 credits" }
+        {
+          "action": "Verified B2B email",
+          "cost": "1 credit"
+        },
+        {
+          "action": "AI-generated email + follow-ups",
+          "cost": "Included"
+        },
+        {
+          "action": "AI builds a full campaign/sequence for you",
+          "cost": "Included"
+        },
+        {
+          "action": "Sending & scheduling",
+          "cost": "Included"
+        },
+        {
+          "action": "Import your own CSV",
+          "cost": "Included"
+        },
+        {
+          "action": "Re-reveal (same lead)",
+          "cost": "0"
+        },
+        {
+          "action": "Refund on bounced / bad data",
+          "cost": "Automatic"
+        },
+        {
+          "action": "Direct mobile number (coming soon)",
+          "cost": "5 credits"
+        },
+        {
+          "action": "Deep ICP research per lead (coming soon)",
+          "cost": "3 credits"
+        }
       ]
     },
     "topups": {
@@ -295,25 +333,62 @@
       "perCredit": "SEK/credit",
       "viewAll": "See all credit packs",
       "packs": [
-        { "credits": "200", "price": "390 SEK", "perCredit": "1.95" },
-        { "credits": "800", "price": "1,390 SEK", "perCredit": "1.74", "badge": "Most popular" },
-        { "credits": "3,500", "price": "5,490 SEK", "perCredit": "1.57" },
-        { "credits": "10,000", "price": "13,990 SEK", "perCredit": "1.40" }
+        {
+          "credits": "200",
+          "price": "390 SEK",
+          "perCredit": "1.95"
+        },
+        {
+          "credits": "800",
+          "price": "1,390 SEK",
+          "perCredit": "1.74",
+          "badge": "Most popular"
+        },
+        {
+          "credits": "3,500",
+          "price": "5,490 SEK",
+          "perCredit": "1.57"
+        },
+        {
+          "credits": "10,000",
+          "price": "13,990 SEK",
+          "perCredit": "1.40"
+        }
       ]
     },
     "guarantee": "30-day money-back guarantee · GDPR-secure · EU servers",
     "faqTitle": "Frequently asked questions",
     "faqs": [
-      { "q": "What is a credit?", "a": "One credit equals one verified B2B email. AI writing, campaign building and sending are always included — you only pay for the data we fetch for you." },
-      { "q": "What happens if I don't use all my credits in a month?", "a": "Plan credits roll over for 60 days. Top-up credits are valid for 12 months and are always consumed after plan credits." },
-      { "q": "Can I top up credits without upgrading my plan?", "a": "Yes. You can buy credit packs even on the Free plan. Plans always have a better per-credit price, but top-ups are flexible." },
-      { "q": "Do AI emails or campaign building cost extra?", "a": "No. Unlimited AI writing, regeneration, sequences and campaign building are included in all plans — even Free. We only charge for data." },
-      { "q": "Can I cancel anytime?", "a": "Yes — cancel in Settings, no questions asked. On a yearly plan you keep access until the end of the period." },
-      { "q": "How does the money-back guarantee work?", "a": "If you're not satisfied within 30 days, we refund — no questions asked. Unused credits are refunded per credit." },
-      { "q": "Do you store my lead data?", "a": "Yes, your leads are stored securely in the EU. We never share or sell your data and you can delete anytime." }
+      {
+        "q": "What is a credit?",
+        "a": "One credit equals one verified B2B email. AI writing, campaign building and sending are always included — you only pay for the data we fetch for you."
+      },
+      {
+        "q": "What happens if I don't use all my credits in a month?",
+        "a": "Plan credits roll over for 60 days. Top-up credits are valid for 12 months and are always consumed after plan credits."
+      },
+      {
+        "q": "Can I top up credits without upgrading my plan?",
+        "a": "Yes. You can buy credit packs even on the Free plan. Plans always have a better per-credit price, but top-ups are flexible."
+      },
+      {
+        "q": "Do AI emails or campaign building cost extra?",
+        "a": "No. Unlimited AI writing, regeneration, sequences and campaign building are included in all plans — even Free. We only charge for data."
+      },
+      {
+        "q": "Can I cancel anytime?",
+        "a": "Yes — cancel in Settings, no questions asked. On a yearly plan you keep access until the end of the period."
+      },
+      {
+        "q": "How does the money-back guarantee work?",
+        "a": "If you're not satisfied within 30 days, we refund — no questions asked. Unused credits are refunded per credit."
+      },
+      {
+        "q": "Do you store my lead data?",
+        "a": "Yes, your leads are stored securely in the EU. We never share or sell your data and you can delete anytime."
+      }
     ]
   },
-
   "auth": {
     "loginTitle": "Welcome back",
     "loginSub": "Log in to your MailLead.ai account",
@@ -382,7 +457,12 @@
   "analytics": {
     "title": "Analytics",
     "subtitle": "Summary across all your campaigns",
-    "range": { "24h": "24h", "7d": "7 days", "30d": "30 days", "all": "All time" },
+    "range": {
+      "24h": "24h",
+      "7d": "7 days",
+      "30d": "30 days",
+      "all": "All time"
+    },
     "sent": "Sent",
     "replies": "Replies",
     "replyRate": "reply rate",
@@ -447,7 +527,13 @@
       "nextMonday": "Next Monday",
       "clear": "Clear",
       "days": {
-        "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun"
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
       }
     },
     "sending": {
@@ -623,7 +709,9 @@
       "timeout": "The mail server didn't respond in time. Please try again.",
       "personalOutlookBlocked": "Microsoft disabled SMTP for personal Outlook/Hotmail accounts in 2024. Use 'Connect with Microsoft' (OAuth) instead.",
       "appPasswordRequired": "Gmail requires an app password (not your normal password). Generate one at myaccount.google.com/apppasswords.",
-      "generic": "SMTP test failed: {{detail}}"
+      "generic": "SMTP test failed: {{detail}}",
+      "hostNotAllowed": "The server could not be reached (private or unknown address). Check the host name.",
+      "genericNoDetail": "The SMTP test failed. Check host, port, username and password."
     },
     "send": {
       "gmailAuthExpired": "Gmail token expired. Reconnect the account under Email accounts.",
@@ -666,6 +754,17 @@
       "invalidUrl": "Enter a valid URL (starting with https://).",
       "tooShort": "Must be at least {{min}} characters.",
       "tooLong": "Must be at most {{max}} characters."
+    },
+    "imap": {
+      "missingFields": "Fill in all IMAP fields (host, port, username, password).",
+      "authFailed": "IMAP rejected the login. Check username and password — some providers require a separate app password for IMAP.",
+      "connectionRefused": "Couldn't reach the IMAP server. Check host and port (usually 993).",
+      "hostNotFound": "Can't find the IMAP server. Check the spelling (usually imap.yourdomain.com).",
+      "hostNotAllowed": "The IMAP server could not be reached (private or unknown address). Check the host name.",
+      "tlsFailed": "TLS/SSL handshake with IMAP failed. Use port 993 with SSL.",
+      "tlsRequired": "IMAP requires an encrypted connection. Use port 993 with SSL.",
+      "timeout": "The IMAP server didn't respond in time. Please try again.",
+      "generic": "The IMAP test failed. Check host, port, username and password."
     }
   }
 }

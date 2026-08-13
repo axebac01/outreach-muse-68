@@ -28,6 +28,18 @@ const KNOWN_CODES: Record<string, string> = {
   smtp_timeout: "errors.smtp.timeout",
   smtp_personal_outlook_blocked: "errors.smtp.personalOutlookBlocked",
   smtp_app_password_required: "errors.smtp.appPasswordRequired",
+  smtp_host_not_allowed: "errors.smtp.hostNotAllowed",
+  smtp_generic: "errors.smtp.genericNoDetail",
+  // IMAP
+  imap_missing_fields: "errors.imap.missingFields",
+  imap_auth_failed: "errors.imap.authFailed",
+  imap_connection_refused: "errors.imap.connectionRefused",
+  imap_host_not_found: "errors.imap.hostNotFound",
+  imap_host_not_allowed: "errors.imap.hostNotAllowed",
+  imap_tls_failed: "errors.imap.tlsFailed",
+  imap_tls_required: "errors.imap.tlsRequired",
+  imap_timeout: "errors.imap.timeout",
+  imap_generic: "errors.imap.generic",
   // Send
   gmail_auth_expired: "errors.send.gmailAuthExpired",
   outlook_auth_expired: "errors.send.outlookAuthExpired",
@@ -166,18 +178,54 @@ function extractStructured(err: unknown): StructuredError | null {
   return null;
 }
 
+/**
+ * supabase.functions.invoke kastar ett FunctionsHttpError vid non-2xx utan att
+ * läsa svarskroppen — den strukturerade felkoden går då förlorad. Den här
+ * hjälpfunktionen packar upp kroppen ur `error.context` (ett Response-objekt)
+ * så att toUserMessage kan mappa koden till ett begripligt meddelande.
+ */
+export async function unwrapFunctionError(err: unknown): Promise<unknown> {
+  const ctx = (err as any)?.context;
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const res = typeof ctx.clone === "function" ? ctx.clone() : ctx;
+      const body = await res.json();
+      if (body?.error) return body.error;
+      if (body && typeof body === "object") return body;
+    } catch {
+      /* ignore — kroppen var inte JSON */
+    }
+  }
+  return err;
+}
+
+/** Rensar bort platshållare som aldrig fylldes i (t.ex. ": {{detail}}"). */
+function sanitize(msg: string, fallback: string): string {
+  const cleaned = msg
+    .replace(/\{\{\s*\w+\s*\}\}/g, "")
+    .replace(/\[\[\s*\w+\s*\]\]/g, "")
+    .replace(/[:\-–]\s*$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (!cleaned || cleaned === ":") return fallback;
+  return cleaned;
+}
+
 export function toUserMessage(
   err: unknown,
   tArg?: TFunction,
   fallbackKey?: string,
 ): string {
   const t = (tArg ?? (i18n.t.bind(i18n) as unknown as TFunction));
+  const unknownMsg = t("errors.generic.unknown");
+  const render = (key: string, opts?: Record<string, unknown>) =>
+    sanitize(String(t(key, opts ?? {})), unknownMsg);
 
-  if (err == null) return t(fallbackKey ?? "errors.generic.unknown");
+  if (err == null) return render(fallbackKey ?? "errors.generic.unknown");
 
   const structured = extractStructured(err);
   if (structured?.code && KNOWN_CODES[structured.code]) {
-    return t(KNOWN_CODES[structured.code], { detail: structured.detail ?? "" });
+    return render(KNOWN_CODES[structured.code], { detail: structured.detail ?? "" });
   }
 
   let raw = "";
@@ -188,11 +236,12 @@ export function toUserMessage(
 
   if (raw) {
     const match = matchFreeText(raw);
-    if (match) return t(match.key, match.opts);
+    if (match) return render(match.key, match.opts);
   }
 
-  if (fallbackKey) return t(fallbackKey);
+  if (fallbackKey) return render(fallbackKey, { detail: raw ? trimDetail(raw) : "" });
 
-  if (raw) return t("errors.generic.withDetail", { detail: trimDetail(raw) });
-  return t("errors.generic.unknown");
+  if (raw) return render("errors.generic.withDetail", { detail: trimDetail(raw) });
+  return unknownMsg;
 }
+

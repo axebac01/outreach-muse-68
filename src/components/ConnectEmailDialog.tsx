@@ -39,7 +39,7 @@ import {
   detectProviderByEmail,
   getVisibleProviders,
 } from "@/lib/emailProviders";
-import { toUserMessage } from "@/lib/errorMessages";
+import { toUserMessage, unwrapFunctionError } from "@/lib/errorMessages";
 import { usePlanLimits, canCreateMore } from "@/hooks/usePlanLimits";
 import { useEmailAccounts } from "@/hooks/useEmailAccounts";
 import { PlanLimitBanner } from "@/components/PlanLimitBanner";
@@ -54,17 +54,28 @@ type View =
   | { kind: "guide"; provider: EmailProvider }
   | { kind: "custom" };
 
+type TestResult = {
+  state: "idle" | "testing" | "ok" | "error";
+  message?: string;
+};
+
+
 const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tested, setTested] = useState(false);
+  const [tests, setTests] = useState<{ smtp: TestResult; imap: TestResult }>({
+    smtp: { state: "idle" },
+    imap: { state: "idle" },
+  });
   const [oauthLoading, setOauthLoading] = useState<null | "microsoft">(null);
   const [view, setView] = useState<View>({ kind: "providers" });
   const [savedEmail, setSavedEmail] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
   const [sameAsSmtp, setSameAsSmtp] = useState(true);
+
 
   const handleOpenChange = (v: boolean) => {
     if (!v) {
@@ -109,8 +120,10 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
 
   const update = (k: string, v: any) => {
     setTested(false);
+    setTests({ smtp: { state: "idle" }, imap: { state: "idle" } });
     setForm((f) => ({ ...f, [k]: v }));
   };
+
 
   // Resolved IMAP values (mirroring SMTP when toggle is on).
   const resolvedImap = useMemo(() => {
@@ -118,13 +131,21 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
       return {
         host: form.imap_host,
         port: form.imap_port,
+        username: form.imap_username || form.smtp_username || form.email,
         password: form.imap_password || form.smtp_password,
         secure: form.imap_secure,
       };
     }
     const host = form.smtp_host.replace(/^smtp\./i, "imap.");
-    return { host, port: 993, password: form.smtp_password, secure: true };
+    return {
+      host,
+      port: 993,
+      username: form.smtp_username || form.email,
+      password: form.smtp_password,
+      secure: true,
+    };
   }, [sameAsSmtp, form]);
+
 
   // Detect provider from email domain (for "use guide instead" prompt).
   const detected = useMemo(
@@ -132,11 +153,31 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
     [form.email],
   );
 
-  const runTest = async (): Promise<boolean> => {
-    setTesting(true);
+  const invokeCheck = async (
+    fn: string,
+    body: Record<string, unknown>,
+    fallbackKey: string,
+  ): Promise<TestResult> => {
     try {
-      const { data, error } = await supabase.functions.invoke("test-smtp", {
-        body: {
+      const { data, error } = await supabase.functions.invoke(fn, { body });
+      if (error) {
+        const unwrapped = await unwrapFunctionError(error);
+        throw unwrapped;
+      }
+      if (data?.error) throw data.error;
+      return { state: "ok" };
+    } catch (e: unknown) {
+      return { state: "error", message: toUserMessage(e, t, fallbackKey) };
+    }
+  };
+
+  const runTest = async (): Promise<{ smtp: TestResult; imap: TestResult }> => {
+    setTesting(true);
+    setTests({ smtp: { state: "testing" }, imap: { state: "testing" } });
+    try {
+      const smtpPromise = invokeCheck(
+        "test-smtp",
+        {
           smtp_host: form.smtp_host,
           smtp_port: form.smtp_port,
           smtp_secure: form.smtp_secure,
@@ -144,27 +185,52 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           smtp_password: form.smtp_password,
           from_email: form.email,
         },
-      });
-      if (error || data?.error) throw data?.error ?? error;
-      setTested(true);
-      return true;
-    } catch (e: any) {
-      toast.error(toUserMessage(e, t, "errors.smtp.generic"));
-      return false;
+        "errors.smtp.genericNoDetail",
+      );
+      const imapPromise: Promise<TestResult> = resolvedImap.host
+        ? invokeCheck(
+            "test-imap",
+            {
+              imap_host: resolvedImap.host,
+              imap_port: resolvedImap.port,
+              imap_secure: resolvedImap.secure,
+              imap_username: resolvedImap.username || form.email,
+              imap_password: resolvedImap.password,
+            },
+            "errors.imap.generic",
+          )
+        : Promise.resolve<TestResult>({
+            state: "error",
+            message: t("emailAccounts.custom.noImapWarning"),
+          });
+
+      const [smtp, imap] = await Promise.all([smtpPromise, imapPromise]);
+      setTests({ smtp, imap });
+      setTested(smtp.state === "ok");
+      return { smtp, imap };
     } finally {
       setTesting(false);
     }
   };
 
   const handleTest = async () => {
-    const ok = await runTest();
-    if (ok) toast.success(t("emailAccounts.testOk"));
+    const { smtp, imap } = await runTest();
+    if (smtp.state === "ok" && imap.state === "ok") {
+      toast.success(t("emailAccounts.testOk"));
+    } else if (smtp.state !== "ok") {
+      toast.error(smtp.message ?? t("emailAccounts.testFailed"));
+    } else {
+      toast.warning(imap.message ?? t("emailAccounts.testFailed"));
+    }
   };
 
   const handleSave = async () => {
     if (!tested) {
-      const ok = await runTest();
-      if (!ok) return;
+      const { smtp } = await runTest();
+      if (smtp.state !== "ok") {
+        toast.error(smtp.message ?? t("emailAccounts.testFailed"));
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -182,21 +248,23 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
             imap_host: resolvedImap.host || null,
             imap_port: resolvedImap.port || null,
             imap_secure: resolvedImap.secure,
-            imap_username: form.imap_username || form.email,
+            imap_username: resolvedImap.username || form.email,
             imap_password: resolvedImap.password || null,
           },
         },
       );
-      if (error || data?.error) throw data?.error ?? error;
+      if (error) throw await unwrapFunctionError(error);
+      if (data?.error) throw data.error;
       toast.success(t("emailAccounts.connected"));
       qc.invalidateQueries({ queryKey: ["email_accounts"] });
       setSavedEmail(form.email);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(toUserMessage(e, t, "emailAccounts.connectFailed"));
     } finally {
       setSaving(false);
     }
   };
+
 
   const onPortChange = (port: number) => {
     setForm((f) => ({ ...f, smtp_port: port, smtp_secure: port === 465 }));
@@ -410,6 +478,9 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
 
             <div className="rounded-lg border p-4 space-y-3">
               <p className="font-medium text-sm">SMTP ({t("emailAccounts.outgoing")})</p>
+              <p className="text-xs text-muted-foreground -mt-2">
+                {t("emailAccounts.custom.smtpExplain")}
+              </p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <Label>{t("emailAccounts.host")}</Label>
@@ -445,8 +516,11 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                   <Input
                     value={form.smtp_username}
                     onChange={(e) => update("smtp_username", e.target.value)}
-                    placeholder={form.email}
+                    placeholder={form.email || "namn@dindomän.se"}
                   />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {t("emailAccounts.custom.usernameHint")}
+                  </p>
                 </div>
                 <div>
                   <Label>{t("emailAccounts.password")}</Label>
@@ -486,6 +560,9 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                   {t("emailAccounts.custom.sameAsSmtpToggle")}
                 </label>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {t("emailAccounts.custom.imapExplain")}
+              </p>
               {!sameAsSmtp && (
                 <>
                   <div className="grid grid-cols-3 gap-3">
@@ -509,14 +586,27 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                       />
                     </div>
                   </div>
-                  <div>
-                    <Label>{t("emailAccounts.password")}</Label>
-                    <Input
-                      type="password"
-                      value={form.imap_password}
-                      onChange={(e) => update("imap_password", e.target.value)}
-                      placeholder={t("emailAccounts.sameAsSmtp")}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>{t("emailAccounts.username")}</Label>
+                      <Input
+                        value={form.imap_username}
+                        onChange={(e) => update("imap_username", e.target.value)}
+                        placeholder={form.smtp_username || form.email}
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        {t("emailAccounts.custom.usernameHint")}
+                      </p>
+                    </div>
+                    <div>
+                      <Label>{t("emailAccounts.password")}</Label>
+                      <Input
+                        type="password"
+                        value={form.imap_password}
+                        onChange={(e) => update("imap_password", e.target.value)}
+                        placeholder={t("emailAccounts.sameAsSmtp")}
+                      />
+                    </div>
                   </div>
                   {!form.imap_host && (
                     <div className="flex items-start gap-2 text-xs text-warning">
@@ -527,13 +617,68 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                 </>
               )}
               {sameAsSmtp && (
-                <p className="text-xs text-muted-foreground">
-                  {resolvedImap.host
-                    ? `${resolvedImap.host}:${resolvedImap.port}`
-                    : t("emailAccounts.custom.imapHostHint")}
-                </p>
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    {resolvedImap.host
+                      ? `${resolvedImap.host}:${resolvedImap.port}`
+                      : t("emailAccounts.custom.imapHostHint")}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("emailAccounts.custom.sameAsSmtpHint")}
+                  </p>
+                </>
               )}
             </div>
+
+            {(tests.smtp.state !== "idle" || tests.imap.state !== "idle") && (
+              <div className="rounded-lg border p-4 space-y-2">
+                <p className="font-medium text-sm">
+                  {t("emailAccounts.custom.testTitle")}
+                </p>
+                {([
+                  ["testSmtpLabel", tests.smtp],
+                  ["testImapLabel", tests.imap],
+                ] as const).map(([labelKey, result]) => (
+                  <div key={labelKey} className="flex items-start gap-2 text-sm">
+                    {result.state === "testing" && (
+                      <Loader2 className="h-4 w-4 animate-spin shrink-0 mt-0.5 text-muted-foreground" />
+                    )}
+                    {result.state === "ok" && (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-success" />
+                    )}
+                    {result.state === "error" && (
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-destructive" />
+                    )}
+                    <span>
+                      <span className="font-medium">
+                        {t(`emailAccounts.custom.${labelKey}`)}:
+                      </span>{" "}
+                      <span
+                        className={
+                          result.state === "error"
+                            ? "text-destructive"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {result.state === "testing"
+                          ? t("emailAccounts.custom.testRunning")
+                          : result.state === "ok"
+                            ? t("emailAccounts.custom.testPassed")
+                            : result.state === "error"
+                              ? result.message ?? t("emailAccounts.testFailed")
+                              : ""}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+                {tests.smtp.state === "ok" && tests.imap.state === "error" && (
+                  <p className="text-xs text-muted-foreground pt-1">
+                    {t("emailAccounts.custom.imapFailedButSaveable")}
+                  </p>
+                )}
+              </div>
+            )}
+
 
             <div className="flex justify-between gap-2 pt-2">
               <Button
@@ -550,6 +695,8 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               >
                 {saving || (testing && !tested) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : tests.smtp.state === "ok" && tests.imap.state === "error" ? (
+                  t("emailAccounts.custom.saveAnyway")
                 ) : (
                   t("emailAccounts.save")
                 )}
