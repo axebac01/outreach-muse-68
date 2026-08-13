@@ -120,8 +120,10 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
 
   const update = (k: string, v: any) => {
     setTested(false);
+    setTests({ smtp: { state: "idle" }, imap: { state: "idle" } });
     setForm((f) => ({ ...f, [k]: v }));
   };
+
 
   // Resolved IMAP values (mirroring SMTP when toggle is on).
   const resolvedImap = useMemo(() => {
@@ -693,6 +695,8 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               >
                 {saving || (testing && !tested) ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : tests.smtp.state === "ok" && tests.imap.state === "error" ? (
+                  t("emailAccounts.custom.saveAnyway")
                 ) : (
                   t("emailAccounts.save")
                 )}
