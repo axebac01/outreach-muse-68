@@ -476,6 +476,9 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
 
             <div className="rounded-lg border p-4 space-y-3">
               <p className="font-medium text-sm">SMTP ({t("emailAccounts.outgoing")})</p>
+              <p className="text-xs text-muted-foreground -mt-2">
+                {t("emailAccounts.custom.smtpExplain")}
+              </p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <Label>{t("emailAccounts.host")}</Label>
@@ -511,8 +514,11 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                   <Input
                     value={form.smtp_username}
                     onChange={(e) => update("smtp_username", e.target.value)}
-                    placeholder={form.email}
+                    placeholder={form.email || "namn@dindomän.se"}
                   />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {t("emailAccounts.custom.usernameHint")}
+                  </p>
                 </div>
                 <div>
                   <Label>{t("emailAccounts.password")}</Label>
