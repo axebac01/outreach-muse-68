@@ -39,7 +39,7 @@ import {
   detectProviderByEmail,
   getVisibleProviders,
 } from "@/lib/emailProviders";
-import { toUserMessage } from "@/lib/errorMessages";
+import { toUserMessage, unwrapFunctionError } from "@/lib/errorMessages";
 import { usePlanLimits, canCreateMore } from "@/hooks/usePlanLimits";
 import { useEmailAccounts } from "@/hooks/useEmailAccounts";
 import { PlanLimitBanner } from "@/components/PlanLimitBanner";
@@ -54,17 +54,28 @@ type View =
   | { kind: "guide"; provider: EmailProvider }
   | { kind: "custom" };
 
+type TestResult =
+  | { state: "idle" }
+  | { state: "testing" }
+  | { state: "ok" }
+  | { state: "error"; message?: string };
+
 const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tested, setTested] = useState(false);
+  const [tests, setTests] = useState<{ smtp: TestResult; imap: TestResult }>({
+    smtp: { state: "idle" },
+    imap: { state: "idle" },
+  });
   const [oauthLoading, setOauthLoading] = useState<null | "microsoft">(null);
   const [view, setView] = useState<View>({ kind: "providers" });
   const [savedEmail, setSavedEmail] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
   const [sameAsSmtp, setSameAsSmtp] = useState(true);
+
 
   const handleOpenChange = (v: boolean) => {
     if (!v) {
@@ -118,13 +129,21 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
       return {
         host: form.imap_host,
         port: form.imap_port,
+        username: form.imap_username || form.smtp_username || form.email,
         password: form.imap_password || form.smtp_password,
         secure: form.imap_secure,
       };
     }
     const host = form.smtp_host.replace(/^smtp\./i, "imap.");
-    return { host, port: 993, password: form.smtp_password, secure: true };
+    return {
+      host,
+      port: 993,
+      username: form.smtp_username || form.email,
+      password: form.smtp_password,
+      secure: true,
+    };
   }, [sameAsSmtp, form]);
+
 
   // Detect provider from email domain (for "use guide instead" prompt).
   const detected = useMemo(
