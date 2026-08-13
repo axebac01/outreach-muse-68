@@ -682,9 +682,28 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                               ? result.message ?? t("emailAccounts.testFailed")
                               : ""}
                       </span>
+                      {result.state === "error" && result.detail && (
+                        <span className="block text-[11px] text-muted-foreground mt-0.5 font-mono break-all">
+                          {result.detail}
+                        </span>
+                      )}
                     </span>
                   </div>
                 ))}
+                {(tests.smtp.authFailed || tests.imap.authFailed) && (
+                  <div className="pt-1 text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-foreground">
+                      {t("emailAccounts.custom.authChecklistTitle")}
+                    </p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li>{t("emailAccounts.custom.authChecklistUsername")}</li>
+                      <li>{t("emailAccounts.custom.authChecklistPassword")}</li>
+                      <li>{t("emailAccounts.custom.authChecklistEnabled")}</li>
+                      <li>{t("emailAccounts.custom.authChecklistPort")}</li>
+                    </ul>
+                  </div>
+                )}
+
                 {tests.smtp.state === "ok" && tests.imap.state === "error" && (
                   <p className="text-xs text-muted-foreground pt-1">
                     {t("emailAccounts.custom.imapFailedButSaveable")}
