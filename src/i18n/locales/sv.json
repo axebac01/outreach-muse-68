@@ -88,7 +88,12 @@
       "testRunning": "Testar…",
       "testPassed": "Fungerar",
       "imapFailedButSaveable": "Du kan spara ändå — utskick fungerar, men vi kan inte läsa svar förrän IMAP är korrekt.",
-      "saveAnyway": "Spara ändå"
+      "saveAnyway": "Spara ändå",
+      "authChecklistTitle": "Kontrollera det här:",
+      "authChecklistUsername": "Användarnamnet är hela mejladressen, inte bara delen före @.",
+      "authChecklistPassword": "Lösenordet är samma som i webbmailen — inte kontolösenordet hos webbhotellet.",
+      "authChecklistEnabled": "SMTP/IMAP är påslaget för postlådan hos din leverantör.",
+      "authChecklistPort": "Prova port 587 (STARTTLS) om 465 (SSL) nekas."
     },
     "success": {
       "title": "Mejlkonto anslutet",
@@ -711,7 +716,8 @@
       "appPasswordRequired": "Gmail kräver ett app-lösenord (inte ditt vanliga lösenord). Generera ett på myaccount.google.com/apppasswords.",
       "generic": "SMTP-test misslyckades: {{detail}}",
       "hostNotAllowed": "Servern kunde inte nås (privat eller okänd adress). Kontrollera serveradressen.",
-      "genericNoDetail": "SMTP-testet misslyckades. Kontrollera server, port, användarnamn och lösenord."
+      "genericNoDetail": "SMTP-testet misslyckades. Kontrollera server, port, användarnamn och lösenord.",
+      "authFailedGeneric": "Mejlservern nekade inloggningen. Kontrollera att användarnamnet är hela mejladressen och att lösenordet är samma som du loggar in med i webbmailen. Vissa leverantörer kräver att SMTP aktiveras för postlådan."
     },
     "send": {
       "gmailAuthExpired": "Gmail-token har gått ut. Återanslut kontot under E-postkonton.",
@@ -764,7 +770,8 @@
       "tlsFailed": "TLS/SSL-handskakning mot IMAP misslyckades. Använd port 993 med SSL.",
       "tlsRequired": "IMAP kräver krypterad anslutning. Använd port 993 med SSL.",
       "timeout": "IMAP-servern svarade inte i tid. Försök igen om en stund.",
-      "generic": "IMAP-testet misslyckades. Kontrollera server, port, användarnamn och lösenord."
+      "generic": "IMAP-testet misslyckades. Kontrollera server, port, användarnamn och lösenord.",
+      "authFailedGeneric": "Mejlservern nekade IMAP-inloggningen. Kontrollera att användarnamnet är hela mejladressen och att lösenordet är samma som i webbmailen. Vissa leverantörer kräver att IMAP aktiveras för postlådan."
     }
   }
 }
