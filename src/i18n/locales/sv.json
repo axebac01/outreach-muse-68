@@ -77,7 +77,18 @@
       "sameAsSmtpToggle": "Använd samma inställningar för IMAP",
       "noImapWarning": "IMAP är obligatoriskt. Utan IMAP kan vi inte upptäcka när ett lead svarar — och då skulle vi fortsätta skicka uppföljningar efter svar. Fyll i IMAP-värden eller slå på \"Använd samma inställningar\".",
       "detectedProvider": "Det här ser ut som ett {{provider}}-konto. Vill du använda guiden istället?",
-      "useGuide": "Använd {{provider}}-guiden"
+      "useGuide": "Använd {{provider}}-guiden",
+      "usernameHint": "Oftast samma som din mejladress. Vissa leverantörer använder ett separat kontonamn — kolla hos din mejlleverantör.",
+      "smtpExplain": "SMTP används för att skicka dina utskick.",
+      "imapExplain": "IMAP används för att läsa svar i din inkorg, så att uppföljningar stoppas när ett lead svarar.",
+      "sameAsSmtpHint": "Vi gissar att IMAP-servern är imap. + din domän. Stämmer inte det kan du stänga av växeln och fylla i manuellt.",
+      "testTitle": "Testresultat",
+      "testSmtpLabel": "Utgående (SMTP)",
+      "testImapLabel": "Inkommande (IMAP)",
+      "testRunning": "Testar…",
+      "testPassed": "Fungerar",
+      "imapFailedButSaveable": "Du kan spara ändå — utskick fungerar, men vi kan inte läsa svar förrän IMAP är korrekt.",
+      "saveAnyway": "Spara ändå"
     },
     "success": {
       "title": "Mejlkonto anslutet",
@@ -278,15 +289,42 @@
       "title": "Vad en credit kostar",
       "subtitle": "1 credit = 1 verifierad mejladress. AI-skrivande, sekvenser och utskick ingår alltid.",
       "rows": [
-        { "action": "Verifierad B2B-mejladress", "cost": "1 credit" },
-        { "action": "AI-genererat mejl + uppföljningar", "cost": "Ingår" },
-        { "action": "AI bygger hel kampanj/sekvens åt dig", "cost": "Ingår" },
-        { "action": "Skicka mejl & schemalägga", "cost": "Ingår" },
-        { "action": "Importera egen CSV", "cost": "Ingår" },
-        { "action": "Re-reveal (samma lead)", "cost": "0" },
-        { "action": "Refund vid bouncad / felaktig data", "cost": "Automatiskt" },
-        { "action": "Direkt mobilnummer (kommer snart)", "cost": "5 credits" },
-        { "action": "Deep ICP-research per lead (kommer snart)", "cost": "3 credits" }
+        {
+          "action": "Verifierad B2B-mejladress",
+          "cost": "1 credit"
+        },
+        {
+          "action": "AI-genererat mejl + uppföljningar",
+          "cost": "Ingår"
+        },
+        {
+          "action": "AI bygger hel kampanj/sekvens åt dig",
+          "cost": "Ingår"
+        },
+        {
+          "action": "Skicka mejl & schemalägga",
+          "cost": "Ingår"
+        },
+        {
+          "action": "Importera egen CSV",
+          "cost": "Ingår"
+        },
+        {
+          "action": "Re-reveal (samma lead)",
+          "cost": "0"
+        },
+        {
+          "action": "Refund vid bouncad / felaktig data",
+          "cost": "Automatiskt"
+        },
+        {
+          "action": "Direkt mobilnummer (kommer snart)",
+          "cost": "5 credits"
+        },
+        {
+          "action": "Deep ICP-research per lead (kommer snart)",
+          "cost": "3 credits"
+        }
       ]
     },
     "topups": {
@@ -295,25 +333,62 @@
       "perCredit": "kr/credit",
       "viewAll": "Se alla credit-paket",
       "packs": [
-        { "credits": "200", "price": "390 kr", "perCredit": "1,95" },
-        { "credits": "800", "price": "1 390 kr", "perCredit": "1,74", "badge": "Populärast" },
-        { "credits": "3 500", "price": "5 490 kr", "perCredit": "1,57" },
-        { "credits": "10 000", "price": "13 990 kr", "perCredit": "1,40" }
+        {
+          "credits": "200",
+          "price": "390 kr",
+          "perCredit": "1,95"
+        },
+        {
+          "credits": "800",
+          "price": "1 390 kr",
+          "perCredit": "1,74",
+          "badge": "Populärast"
+        },
+        {
+          "credits": "3 500",
+          "price": "5 490 kr",
+          "perCredit": "1,57"
+        },
+        {
+          "credits": "10 000",
+          "price": "13 990 kr",
+          "perCredit": "1,40"
+        }
       ]
     },
     "guarantee": "30 dagars pengarna-tillbaka-garanti · GDPR-säker · Servrar i EU",
     "faqTitle": "Vanliga frågor",
     "faqs": [
-      { "q": "Vad är en credit?", "a": "En credit motsvarar en verifierad B2B-mejladress. AI-skrivande, kampanjbyggande och utskick ingår alltid — du betalar bara för datan vi hämtar åt dig." },
-      { "q": "Vad händer om jag inte använder alla credits en månad?", "a": "Plan-credits rullar över i 60 dagar. Topp-up-credits gäller i 12 månader och konsumeras alltid efter plan-credits." },
-      { "q": "Kan jag toppa upp credits utan att uppgradera plan?", "a": "Ja. Du kan köpa credit-paket även på Free-planen. Plan ger alltid bättre pris per credit, men topp-ups är flexibla." },
-      { "q": "Kostar AI-mejl eller kampanjbyggande extra?", "a": "Nej. Obegränsat AI-skrivande, omgenerering, sekvenser och kampanjbyggande ingår i alla planer — även Free. Vi tar bara betalt för data." },
-      { "q": "Kan jag avsluta när som helst?", "a": "Ja — avsluta i Inställningar utan frågor. Är du på årsplan har du tillgång till slutet av perioden." },
-      { "q": "Hur är pengarna-tillbaka-garantin?", "a": "Om du inte är nöjd inom 30 dagar betalar vi tillbaka — inga frågor. Outnyttjade credits återbetalas per credit." },
-      { "q": "Sparar ni mina leaddata?", "a": "Ja, dina leads sparas säkert i EU. Vi delar eller säljer aldrig dina data och du kan radera när som helst." }
+      {
+        "q": "Vad är en credit?",
+        "a": "En credit motsvarar en verifierad B2B-mejladress. AI-skrivande, kampanjbyggande och utskick ingår alltid — du betalar bara för datan vi hämtar åt dig."
+      },
+      {
+        "q": "Vad händer om jag inte använder alla credits en månad?",
+        "a": "Plan-credits rullar över i 60 dagar. Topp-up-credits gäller i 12 månader och konsumeras alltid efter plan-credits."
+      },
+      {
+        "q": "Kan jag toppa upp credits utan att uppgradera plan?",
+        "a": "Ja. Du kan köpa credit-paket även på Free-planen. Plan ger alltid bättre pris per credit, men topp-ups är flexibla."
+      },
+      {
+        "q": "Kostar AI-mejl eller kampanjbyggande extra?",
+        "a": "Nej. Obegränsat AI-skrivande, omgenerering, sekvenser och kampanjbyggande ingår i alla planer — även Free. Vi tar bara betalt för data."
+      },
+      {
+        "q": "Kan jag avsluta när som helst?",
+        "a": "Ja — avsluta i Inställningar utan frågor. Är du på årsplan har du tillgång till slutet av perioden."
+      },
+      {
+        "q": "Hur är pengarna-tillbaka-garantin?",
+        "a": "Om du inte är nöjd inom 30 dagar betalar vi tillbaka — inga frågor. Outnyttjade credits återbetalas per credit."
+      },
+      {
+        "q": "Sparar ni mina leaddata?",
+        "a": "Ja, dina leads sparas säkert i EU. Vi delar eller säljer aldrig dina data och du kan radera när som helst."
+      }
     ]
   },
-
   "auth": {
     "loginTitle": "Välkommen tillbaka",
     "loginSub": "Logga in på ditt MailLead.ai-konto",
@@ -382,7 +457,12 @@
   "analytics": {
     "title": "Analys",
     "subtitle": "Sammanfattning från alla dina kampanjer",
-    "range": { "24h": "24 timmar", "7d": "7 dagar", "30d": "30 dagar", "all": "Allt" },
+    "range": {
+      "24h": "24 timmar",
+      "7d": "7 dagar",
+      "30d": "30 dagar",
+      "all": "Allt"
+    },
     "sent": "Skickade",
     "replies": "Svar",
     "replyRate": "svarsfrekvens",
@@ -447,7 +527,13 @@
       "nextMonday": "Nästa måndag",
       "clear": "Rensa",
       "days": {
-        "mon": "Mån", "tue": "Tis", "wed": "Ons", "thu": "Tor", "fri": "Fre", "sat": "Lör", "sun": "Sön"
+        "mon": "Mån",
+        "tue": "Tis",
+        "wed": "Ons",
+        "thu": "Tor",
+        "fri": "Fre",
+        "sat": "Lör",
+        "sun": "Sön"
       }
     },
     "sending": {
@@ -623,7 +709,9 @@
       "timeout": "Mejlservern svarade inte i tid. Försök igen om en stund.",
       "personalOutlookBlocked": "Microsoft stängde av SMTP för personliga Outlook/Hotmail-konton 2024. Använd 'Anslut med Microsoft' (OAuth) istället.",
       "appPasswordRequired": "Gmail kräver ett app-lösenord (inte ditt vanliga lösenord). Generera ett på myaccount.google.com/apppasswords.",
-      "generic": "SMTP-test misslyckades: {{detail}}"
+      "generic": "SMTP-test misslyckades: {{detail}}",
+      "hostNotAllowed": "Servern kunde inte nås (privat eller okänd adress). Kontrollera serveradressen.",
+      "genericNoDetail": "SMTP-testet misslyckades. Kontrollera server, port, användarnamn och lösenord."
     },
     "send": {
       "gmailAuthExpired": "Gmail-token har gått ut. Återanslut kontot under E-postkonton.",
@@ -666,6 +754,17 @@
       "invalidUrl": "Ange en giltig URL (börja med https://).",
       "tooShort": "Måste vara minst {{min}} tecken.",
       "tooLong": "Får vara max {{max}} tecken."
+    },
+    "imap": {
+      "missingFields": "Fyll i alla IMAP-fält (server, port, användarnamn, lösenord).",
+      "authFailed": "IMAP nekade inloggningen. Kontrollera användarnamn och lösenord — vissa leverantörer kräver ett separat app-lösenord för IMAP.",
+      "connectionRefused": "Kunde inte nå IMAP-servern. Kontrollera server och port (oftast 993).",
+      "hostNotFound": "Hittar inte IMAP-servern. Kolla stavningen (oftast imap.dindomän.se).",
+      "hostNotAllowed": "IMAP-servern kunde inte nås (privat eller okänd adress). Kontrollera serveradressen.",
+      "tlsFailed": "TLS/SSL-handskakning mot IMAP misslyckades. Använd port 993 med SSL.",
+      "tlsRequired": "IMAP kräver krypterad anslutning. Använd port 993 med SSL.",
+      "timeout": "IMAP-servern svarade inte i tid. Försök igen om en stund.",
+      "generic": "IMAP-testet misslyckades. Kontrollera server, port, användarnamn och lösenord."
     }
   }
 }
