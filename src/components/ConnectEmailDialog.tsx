@@ -132,11 +132,31 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
     [form.email],
   );
 
-  const runTest = async (): Promise<boolean> => {
-    setTesting(true);
+  const invokeCheck = async (
+    fn: string,
+    body: Record<string, unknown>,
+    fallbackKey: string,
+  ): Promise<TestResult> => {
     try {
-      const { data, error } = await supabase.functions.invoke("test-smtp", {
-        body: {
+      const { data, error } = await supabase.functions.invoke(fn, { body });
+      if (error) {
+        const unwrapped = await unwrapFunctionError(error);
+        throw unwrapped;
+      }
+      if (data?.error) throw data.error;
+      return { state: "ok" };
+    } catch (e: unknown) {
+      return { state: "error", message: toUserMessage(e, t, fallbackKey) };
+    }
+  };
+
+  const runTest = async (): Promise<{ smtp: TestResult; imap: TestResult }> => {
+    setTesting(true);
+    setTests({ smtp: { state: "testing" }, imap: { state: "testing" } });
+    try {
+      const smtpPromise = invokeCheck(
+        "test-smtp",
+        {
           smtp_host: form.smtp_host,
           smtp_port: form.smtp_port,
           smtp_secure: form.smtp_secure,
@@ -144,27 +164,52 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           smtp_password: form.smtp_password,
           from_email: form.email,
         },
-      });
-      if (error || data?.error) throw data?.error ?? error;
-      setTested(true);
-      return true;
-    } catch (e: any) {
-      toast.error(toUserMessage(e, t, "errors.smtp.generic"));
-      return false;
+        "errors.smtp.genericNoDetail",
+      );
+      const imapPromise: Promise<TestResult> = resolvedImap.host
+        ? invokeCheck(
+            "test-imap",
+            {
+              imap_host: resolvedImap.host,
+              imap_port: resolvedImap.port,
+              imap_secure: resolvedImap.secure,
+              imap_username: resolvedImap.username || form.email,
+              imap_password: resolvedImap.password,
+            },
+            "errors.imap.generic",
+          )
+        : Promise.resolve<TestResult>({
+            state: "error",
+            message: t("emailAccounts.custom.noImapWarning"),
+          });
+
+      const [smtp, imap] = await Promise.all([smtpPromise, imapPromise]);
+      setTests({ smtp, imap });
+      setTested(smtp.state === "ok");
+      return { smtp, imap };
     } finally {
       setTesting(false);
     }
   };
 
   const handleTest = async () => {
-    const ok = await runTest();
-    if (ok) toast.success(t("emailAccounts.testOk"));
+    const { smtp, imap } = await runTest();
+    if (smtp.state === "ok" && imap.state === "ok") {
+      toast.success(t("emailAccounts.testOk"));
+    } else if (smtp.state !== "ok") {
+      toast.error(smtp.message ?? t("emailAccounts.testFailed"));
+    } else {
+      toast.warning(imap.message ?? t("emailAccounts.testFailed"));
+    }
   };
 
   const handleSave = async () => {
     if (!tested) {
-      const ok = await runTest();
-      if (!ok) return;
+      const { smtp } = await runTest();
+      if (smtp.state !== "ok") {
+        toast.error(smtp.message ?? t("emailAccounts.testFailed"));
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -182,21 +227,23 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
             imap_host: resolvedImap.host || null,
             imap_port: resolvedImap.port || null,
             imap_secure: resolvedImap.secure,
-            imap_username: form.imap_username || form.email,
+            imap_username: resolvedImap.username || form.email,
             imap_password: resolvedImap.password || null,
           },
         },
       );
-      if (error || data?.error) throw data?.error ?? error;
+      if (error) throw await unwrapFunctionError(error);
+      if (data?.error) throw data.error;
       toast.success(t("emailAccounts.connected"));
       qc.invalidateQueries({ queryKey: ["email_accounts"] });
       setSavedEmail(form.email);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(toUserMessage(e, t, "emailAccounts.connectFailed"));
     } finally {
       setSaving(false);
     }
   };
+
 
   const onPortChange = (port: number) => {
     setForm((f) => ({ ...f, smtp_port: port, smtp_secure: port === 465 }));
