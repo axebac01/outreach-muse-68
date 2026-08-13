@@ -110,8 +110,8 @@ Deno.serve(async (req) => {
       await client.login(15000);
       await client.selectInbox(15000);
     } finally {
-      try { await client.logout?.(); } catch { /* ignore */ }
-      try { await client.close?.(); } catch { /* ignore */ }
+      try { await client.logout(); } catch { /* ignore */ }
+
     }
 
     return new Response(JSON.stringify({ ok: true }), {
