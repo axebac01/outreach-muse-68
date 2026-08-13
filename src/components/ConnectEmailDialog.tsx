@@ -197,6 +197,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
           from_email: form.email,
         },
         "errors.smtp.genericNoDetail",
+        form.smtp_host,
       );
       const imapPromise: Promise<TestResult> = resolvedImap.host
         ? invokeCheck(
@@ -209,7 +210,9 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
               imap_password: resolvedImap.password,
             },
             "errors.imap.generic",
+            resolvedImap.host,
           )
+
         : Promise.resolve<TestResult>({
             state: "error",
             message: t("emailAccounts.custom.noImapWarning"),
