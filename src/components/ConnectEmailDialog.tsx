@@ -160,6 +160,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
     fn: string,
     body: Record<string, unknown>,
     fallbackKey: string,
+    host: string,
   ): Promise<TestResult> => {
     try {
       const { data, error } = await supabase.functions.invoke(fn, { body });
@@ -170,9 +171,16 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
       if (data?.error) throw data.error;
       return { state: "ok" };
     } catch (e: unknown) {
-      return { state: "error", message: toUserMessage(e, t, fallbackKey) };
+      const { detail } = extractErrorInfo(e);
+      return {
+        state: "error",
+        message: toUserMessage(e, t, fallbackKey, { host }),
+        detail,
+        authFailed: isAuthFailure(e),
+      };
     }
   };
+
 
   const runTest = async (): Promise<{ smtp: TestResult; imap: TestResult }> => {
     setTesting(true);
