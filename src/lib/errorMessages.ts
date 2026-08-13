@@ -255,7 +255,12 @@ export function toUserMessage(
 
   if (raw) {
     const match = matchFreeText(raw);
-    if (match) return render(match.key, match.opts);
+    if (match) {
+      const key = match.key === "errors.smtp.authFailed"
+        ? (authFailedKey("smtp_auth_failed", opts?.host) ?? match.key)
+        : match.key;
+      return render(key, match.opts);
+    }
   }
 
   if (fallbackKey) return render(fallbackKey, { detail: raw ? trimDetail(raw) : "" });
@@ -263,4 +268,20 @@ export function toUserMessage(
   if (raw) return render("errors.generic.withDetail", { detail: trimDetail(raw) });
   return unknownMsg;
 }
+
+/** Plockar ut felkod och teknisk detalj för visning i UI. */
+export function extractErrorInfo(err: unknown): { code?: string; detail?: string } {
+  const s = extractStructured(err);
+  const detail = s?.detail ?? (err instanceof Error ? err.message : typeof err === "string" ? err : undefined);
+  return { code: s?.code, detail: detail ? trimDetail(detail, 200) : undefined };
+}
+
+/** True när felet beror på avvisad inloggning (SMTP eller IMAP). */
+export function isAuthFailure(err: unknown): boolean {
+  const { code, detail } = extractErrorInfo(err);
+  if (code === "smtp_auth_failed" || code === "imap_auth_failed") return true;
+  const m = (detail ?? "").toLowerCase();
+  return m.includes("535") || m.includes("authenticationfailed") || m.includes("authentication failed");
+}
+
 
