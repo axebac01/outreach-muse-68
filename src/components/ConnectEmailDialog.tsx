@@ -558,6 +558,9 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                   {t("emailAccounts.custom.sameAsSmtpToggle")}
                 </label>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {t("emailAccounts.custom.imapExplain")}
+              </p>
               {!sameAsSmtp && (
                 <>
                   <div className="grid grid-cols-3 gap-3">
@@ -581,14 +584,27 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                       />
                     </div>
                   </div>
-                  <div>
-                    <Label>{t("emailAccounts.password")}</Label>
-                    <Input
-                      type="password"
-                      value={form.imap_password}
-                      onChange={(e) => update("imap_password", e.target.value)}
-                      placeholder={t("emailAccounts.sameAsSmtp")}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>{t("emailAccounts.username")}</Label>
+                      <Input
+                        value={form.imap_username}
+                        onChange={(e) => update("imap_username", e.target.value)}
+                        placeholder={form.smtp_username || form.email}
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        {t("emailAccounts.custom.usernameHint")}
+                      </p>
+                    </div>
+                    <div>
+                      <Label>{t("emailAccounts.password")}</Label>
+                      <Input
+                        type="password"
+                        value={form.imap_password}
+                        onChange={(e) => update("imap_password", e.target.value)}
+                        placeholder={t("emailAccounts.sameAsSmtp")}
+                      />
+                    </div>
                   </div>
                   {!form.imap_host && (
                     <div className="flex items-start gap-2 text-xs text-warning">
@@ -599,13 +615,68 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                 </>
               )}
               {sameAsSmtp && (
-                <p className="text-xs text-muted-foreground">
-                  {resolvedImap.host
-                    ? `${resolvedImap.host}:${resolvedImap.port}`
-                    : t("emailAccounts.custom.imapHostHint")}
-                </p>
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    {resolvedImap.host
+                      ? `${resolvedImap.host}:${resolvedImap.port}`
+                      : t("emailAccounts.custom.imapHostHint")}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("emailAccounts.custom.sameAsSmtpHint")}
+                  </p>
+                </>
               )}
             </div>
+
+            {(tests.smtp.state !== "idle" || tests.imap.state !== "idle") && (
+              <div className="rounded-lg border p-4 space-y-2">
+                <p className="font-medium text-sm">
+                  {t("emailAccounts.custom.testTitle")}
+                </p>
+                {([
+                  ["testSmtpLabel", tests.smtp],
+                  ["testImapLabel", tests.imap],
+                ] as const).map(([labelKey, result]) => (
+                  <div key={labelKey} className="flex items-start gap-2 text-sm">
+                    {result.state === "testing" && (
+                      <Loader2 className="h-4 w-4 animate-spin shrink-0 mt-0.5 text-muted-foreground" />
+                    )}
+                    {result.state === "ok" && (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-success" />
+                    )}
+                    {result.state === "error" && (
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-destructive" />
+                    )}
+                    <span>
+                      <span className="font-medium">
+                        {t(`emailAccounts.custom.${labelKey}`)}:
+                      </span>{" "}
+                      <span
+                        className={
+                          result.state === "error"
+                            ? "text-destructive"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {result.state === "testing"
+                          ? t("emailAccounts.custom.testRunning")
+                          : result.state === "ok"
+                            ? t("emailAccounts.custom.testPassed")
+                            : result.state === "error"
+                              ? result.message ?? t("emailAccounts.testFailed")
+                              : ""}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+                {tests.smtp.state === "ok" && tests.imap.state === "error" && (
+                  <p className="text-xs text-muted-foreground pt-1">
+                    {t("emailAccounts.custom.imapFailedButSaveable")}
+                  </p>
+                )}
+              </div>
+            )}
+
 
             <div className="flex justify-between gap-2 pt-2">
               <Button
