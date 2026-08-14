@@ -15,6 +15,7 @@ import { useSendingLimits, useSentToday, useUpdateSendingLimit, effectiveCap } f
 import ConnectEmailDialog from "@/components/ConnectEmailDialog";
 import EditSignatureDialog from "@/components/EditSignatureDialog";
 import DeliverabilityCheck from "@/components/DeliverabilityCheck";
+import DnsFixDialog from "@/components/email/DnsFixDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { toUserMessage } from "@/lib/errorMessages";
