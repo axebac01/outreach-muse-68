@@ -53,6 +53,8 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const [parsedRows, setParsedRows] = useState<Record<string, any>[]>([]);
   const [showMapper, setShowMapper] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
 
   // GDPR / lawful basis confirmation — required before adding leads.
   // Persisted per workspace so it isn't asked on every visit.
