@@ -268,6 +268,33 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
                 className="min-h-[100px]"
               />
             </div>
+
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+              <div>
+                <p className="text-sm font-medium">Om kampanjen</p>
+                <p className="text-xs text-muted-foreground">
+                  AI:n skriver betydligt bättre mejl när den vet vem du skriver till och vad ni erbjuder. Vi sparar det på kampanjen.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Målgrupp</Label>
+                <Textarea
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value)}
+                  placeholder="VD:ar på svenska SaaS-bolag, 10–50 anställda"
+                  className="min-h-[60px] bg-background"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Vad ni erbjuder</Label>
+                <Textarea
+                  value={offer}
+                  onChange={(e) => setOffer(e.target.value)}
+                  placeholder="Vår plattform för kall mejlutskick – 14 dagars gratis test"
+                  className="min-h-[60px] bg-background"
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label>Steg</Label>
