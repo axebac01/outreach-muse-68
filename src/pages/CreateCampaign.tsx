@@ -45,6 +45,7 @@ const CreateCampaign = () => {
     offer: "",
     tone: "",
   });
+  const [contextOpen, setContextOpen] = useState(false);
 
   const update = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
