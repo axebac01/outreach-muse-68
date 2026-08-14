@@ -242,7 +242,7 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
             </div>
           </ScrollArea>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Snabbval</Label>
               <div className="flex flex-wrap gap-1.5">
