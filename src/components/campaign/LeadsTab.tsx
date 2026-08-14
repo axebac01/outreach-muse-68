@@ -53,6 +53,8 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const [parsedRows, setParsedRows] = useState<Record<string, any>[]>([]);
   const [showMapper, setShowMapper] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
 
   // GDPR / lawful basis confirmation — required before adding leads.
   // Persisted per workspace so it isn't asked on every visit.
@@ -209,12 +211,40 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
               <button
                 type="button"
                 onClick={() => fileInput.current?.click()}
-                className="w-full border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/40 transition-colors"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.dataTransfer.dropEffect = "copy";
+                  if (!isDragging) setIsDragging(true);
+                }}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) onFile(f);
+                }}
+                className={`w-full border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  isDragging ? "border-primary bg-primary/5" : "hover:border-primary/40"
+                }`}
               >
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <div className="text-sm font-medium">Klicka för att ladda upp CSV eller Excel</div>
+                <div className="text-sm font-medium">
+                  {isDragging ? "Släpp filen här" : "Dra och släpp eller klicka för att ladda upp CSV eller Excel"}
+                </div>
                 <div className="text-xs text-muted-foreground mt-1">CSV, XLSX, XLS · max 5MB</div>
               </button>
+
               <input
                 ref={fileInput}
                 type="file"
