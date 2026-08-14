@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCreateCampaign } from "@/hooks/useCampaigns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Props {
   open: boolean;
@@ -31,6 +32,7 @@ export default function CreateCampaignInlineDialog({ open, onOpenChange, onCreat
     offer: "",
     tone: "Professionell och rak",
   });
+  const [contextOpen, setContextOpen] = useState(false);
 
   const update = (key: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
