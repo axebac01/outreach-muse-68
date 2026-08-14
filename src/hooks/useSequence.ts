@@ -234,7 +234,8 @@ export const useAddSequenceLeads = (sequenceId: string) => {
         role: l.role ?? null,
         phone: l.phone ?? null,
         company: l.company ?? null,
-        website: (l as any).website ?? null,
+        website: l.website ?? null,
+
 
       }));
       if (rows.length === 0) return { count: 0 };
