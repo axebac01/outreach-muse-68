@@ -1,0 +1,1 @@
+ALTER TABLE public.sequence_leads ADD COLUMN IF NOT EXISTS website text;

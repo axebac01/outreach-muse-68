@@ -30,6 +30,8 @@ export type SequenceLead = {
   role: string | null;
   phone: string | null;
   company: string | null;
+  website: string | null;
+
   status: string;
   current_step: number;
   created_at: string;
@@ -232,6 +234,9 @@ export const useAddSequenceLeads = (sequenceId: string) => {
         role: l.role ?? null,
         phone: l.phone ?? null,
         company: l.company ?? null,
+        website: l.website ?? null,
+
+
       }));
       if (rows.length === 0) return { count: 0 };
       const { error, count } = await supabase
