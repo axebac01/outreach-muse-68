@@ -360,6 +360,28 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
               </Table>
             </div>
           )}
+          {filteredLeads.length > 0 && (
+            <div className="flex items-center justify-between gap-3 pt-3 text-xs text-muted-foreground">
+              <span>
+                Visar {rangeStart}–{rangeEnd} av {filteredLeads.length}
+                {statusFilter !== "all" ? ` (filtrerat av ${totalLeads})` : ""}
+              </span>
+              {pageCount > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+                    Föregående
+                  </Button>
+                  <span>
+                    Sida {page} av {pageCount}
+                  </span>
+                  <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => setPage((p) => p + 1)}>
+                    Nästa
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
         </CardContent>
       </Card>
     </div>
