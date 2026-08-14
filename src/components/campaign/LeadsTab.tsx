@@ -147,7 +147,11 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const handleConfirmImport = async (mapped: Array<Record<string, string>>) => {
     try {
       const res = await addLeads.mutateAsync(mapped as any);
-      toast.success(`Importerade ${res.count} leads`);
+      toast.success(
+        res.skipped > 0
+          ? `Importerade ${res.count} leads (${res.skipped} hoppades över: ${res.duplicates} dubbletter, ${res.invalid} ogiltiga)`
+          : `Importerade ${res.count} leads`,
+      );
       setShowMapper(false);
       setParsedRows([]);
       setParsedHeaders([]);
