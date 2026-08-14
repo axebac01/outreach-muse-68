@@ -15,6 +15,7 @@ import { useSendingLimits, useSentToday, useUpdateSendingLimit, effectiveCap } f
 import ConnectEmailDialog from "@/components/ConnectEmailDialog";
 import EditSignatureDialog from "@/components/EditSignatureDialog";
 import DeliverabilityCheck from "@/components/DeliverabilityCheck";
+import DnsFixDialog from "@/components/email/DnsFixDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { toUserMessage } from "@/lib/errorMessages";
@@ -229,18 +230,27 @@ const EmailAccounts = () => {
                   {acc.deliverability_check && acc.deliverability_check.score !== "good" && (
                     <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-900 dark:text-amber-200 flex items-start gap-2">
                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                      <div className="space-y-0.5">
-                        <div className="font-medium">{t("emailAccounts.deliverabilityWarnTitle")}</div>
-                        <div className="text-xs">
-                          {[
-                            acc.deliverability_check.spf?.status !== "ok" && "SPF",
-                            acc.deliverability_check.dkim?.status !== "ok" && "DKIM",
-                            acc.deliverability_check.dmarc?.status !== "ok" && "DMARC",
-                          ].filter(Boolean).join(", ")} {t("emailAccounts.deliverabilityWarnMissing")}
+                      <div className="space-y-2">
+                        <div className="space-y-0.5">
+                          <div className="font-medium">{t("emailAccounts.deliverabilityWarnTitle")}</div>
+                          <div className="text-xs">
+                            {[
+                              acc.deliverability_check.spf?.status !== "ok" && "SPF",
+                              acc.deliverability_check.dkim?.status !== "ok" && "DKIM",
+                              acc.deliverability_check.dmarc?.status !== "ok" && "DMARC",
+                            ].filter(Boolean).join(", ")} {t("emailAccounts.deliverabilityWarnMissing")}
+                          </div>
                         </div>
+                        <DnsFixDialog
+                          domain={acc.deliverability_check.domain ?? acc.email.split("@")[1]}
+                          provider={acc.provider}
+                          report={acc.deliverability_check}
+                          accountId={acc.id}
+                        />
                       </div>
                     </div>
                   )}
+
 
 
                   <div className="rounded-lg bg-muted/40 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 text-xs">

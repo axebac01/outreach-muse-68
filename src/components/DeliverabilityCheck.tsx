@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, AlertTriangle, XCircle, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import DnsFixDialog from "@/components/email/DnsFixDialog";
 
 type CheckResult = {
   status: "ok" | "missing";
@@ -110,9 +111,17 @@ export default function DeliverabilityCheck({ email, provider, accountId }: { em
         <Row label="DMARC" result={report.dmarc} />
       </div>
       {report.score !== "good" && (
-        <p className="text-[11px] text-muted-foreground pt-1 border-t">
-          Lägg till saknade DNS-poster hos din domänleverantör. Detta är ett krav för att hamna i inkorgen — inte spam.
-        </p>
+        <div className="pt-1 border-t space-y-2">
+          <p className="text-[11px] text-muted-foreground">
+            Lägg till saknade DNS-poster hos din domänleverantör. Detta är ett krav för att hamna i inkorgen — inte spam.
+          </p>
+          <DnsFixDialog
+            domain={report.domain || domain}
+            provider={provider}
+            report={report}
+            accountId={accountId}
+          />
+        </div>
       )}
     </div>
   );
