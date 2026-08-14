@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles, Wand2, Eraser } from "lucide-react";
 
 export type LeadField =
   | "email"
@@ -26,22 +26,39 @@ export const LEAD_FIELDS: { value: LeadField; label: string }[] = [
   { value: "ignore", label: "— ignorera —" },
 ];
 
-const HEADER_GUESS: Record<string, LeadField> = {
+const normalizeHeader = (h: string) =>
+  h
+    .toLowerCase()
+    .trim()
+    .replace(/[_\-.]+/g, " ")
+    .replace(/[^\p{L}\p{N} ]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const deAccent = (s: string) =>
+  s.replace(/å|ä/g, "a").replace(/ö/g, "o").replace(/é/g, "e");
+
+/** Exact header matches (normalized) */
+const HEADER_EXACT: Record<string, LeadField> = {
   email: "email",
   "email address": "email",
-  "e-mail": "email",
+  "e mail": "email",
   mail: "email",
-  "e-post": "email",
+  "e post": "email",
   epost: "email",
-  "e-postadress": "email",
+  "e postadress": "email",
+  epostadress: "email",
   name: "full_name",
   namn: "full_name",
   "full name": "full_name",
   fullname: "full_name",
+  "contact name": "full_name",
+  kontaktperson: "full_name",
+  kontakt: "full_name",
   "first name": "first_name",
   firstname: "first_name",
   fname: "first_name",
-  förnamn: "first_name",
+  fornamn: "first_name",
   "last name": "last_name",
   lastname: "last_name",
   lname: "last_name",
@@ -59,11 +76,13 @@ const HEADER_GUESS: Record<string, LeadField> = {
   "phone number": "phone",
   telefon: "phone",
   mobil: "phone",
+  tel: "phone",
   company: "company",
   organization: "company",
+  organisation: "company",
   org: "company",
   employer: "company",
-  företag: "company",
+  arbetsgivare: "company",
   foretag: "company",
   bolag: "company",
   website: "website",
@@ -72,8 +91,89 @@ const HEADER_GUESS: Record<string, LeadField> = {
   webbplats: "website",
   hemsida: "website",
   webb: "website",
+  webbadress: "website",
   domain: "website",
-  domän: "website",
+  doman: "website",
+};
+
+/** Keyword rules, evaluated in order — first match wins */
+const HEADER_KEYWORDS: Array<{ field: LeadField; words: string[] }> = [
+  { field: "email", words: ["email", "e mail", "epost", "e post", "mailadress"] },
+  { field: "first_name", words: ["first name", "firstname", "fornamn", "given name", "fname"] },
+  { field: "last_name", words: ["last name", "lastname", "efternamn", "surname", "family name", "lname"] },
+  { field: "website", words: ["website", "webbplats", "hemsida", "webbadress", "web site", "homepage", "doman", "domain"] },
+  { field: "phone", words: ["phone", "telefon", "mobil", "mobile", "tel nr", "telnr", "cell"] },
+  { field: "company", words: ["company", "foretag", "bolag", "organisation", "organization", "employer", "arbetsgivare", "account name"] },
+  { field: "role", words: ["title", "titel", "role", "roll", "position", "befattning", "job"] },
+  { field: "full_name", words: ["full name", "fullname", "kontaktperson", "contact name", "namn", "name"] },
+];
+
+/** Headers that should never be auto-mapped to website */
+const NON_WEBSITE_URL_HINTS = ["linkedin", "facebook", "twitter", "instagram", "profile", "profil"];
+
+const guessFromHeader = (header: string): LeadField | null => {
+  const norm = deAccent(normalizeHeader(header));
+  if (!norm) return null;
+  const exact = HEADER_EXACT[norm];
+  if (exact) return exact;
+
+  const isSocial = NON_WEBSITE_URL_HINTS.some((w) => norm.includes(w));
+  for (const rule of HEADER_KEYWORDS) {
+    if (rule.field === "website" && isSocial) continue;
+    if (rule.words.some((w) => norm.includes(w))) return rule.field;
+  }
+  return null;
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const URL_RE = /^(https?:\/\/)?(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i;
+const NAME_RE = /^\p{Lu}[\p{L}'’-]+(\s+\p{Lu}[\p{L}'’-]+)+$/u;
+
+const guessFromValues = (values: string[]): LeadField | null => {
+  const sample = values.filter(Boolean).slice(0, 20);
+  if (sample.length < 2) return null;
+  const ratio = (fn: (v: string) => boolean) => sample.filter(fn).length / sample.length;
+
+  if (ratio((v) => EMAIL_RE.test(v)) >= 0.7) return "email";
+  if (ratio((v) => URL_RE.test(v) && !v.includes("@")) >= 0.7) return "website";
+  if (ratio((v) => /^[+()\d][\d\s()+-]{6,}$/.test(v) && (v.match(/\d/g)?.length ?? 0) >= 7) >= 0.7) return "phone";
+  if (ratio((v) => NAME_RE.test(v)) >= 0.7) return "full_name";
+  return null;
+};
+
+const guessMapping = (
+  headers: string[],
+  rows: Record<string, any>[],
+): { mapping: Record<string, LeadField>; auto: Record<string, boolean> } => {
+  const mapping: Record<string, LeadField> = {};
+  const auto: Record<string, boolean> = {};
+  const used = new Set<LeadField>();
+
+  // Pass 1: header based
+  headers.forEach((h) => {
+    mapping[h] = "ignore";
+    auto[h] = false;
+    const guess = guessFromHeader(h);
+    if (guess && !used.has(guess)) {
+      used.add(guess);
+      mapping[h] = guess;
+      auto[h] = true;
+    }
+  });
+
+  // Pass 2: value based fallback
+  headers.forEach((h) => {
+    if (mapping[h] !== "ignore") return;
+    const values = rows.map((r) => String(r[h] ?? "").trim());
+    const guess = guessFromValues(values);
+    if (guess && !used.has(guess)) {
+      used.add(guess);
+      mapping[h] = guess;
+      auto[h] = true;
+    }
+  });
+
+  return { mapping, auto };
 };
 
 export interface CsvColumnMapperProps {
@@ -85,22 +185,34 @@ export interface CsvColumnMapperProps {
 }
 
 export const CsvColumnMapper = ({ headers, rows, onConfirm, onCancel, isImporting }: CsvColumnMapperProps) => {
-  const initial: Record<string, LeadField> = useMemo(() => {
-    const m: Record<string, LeadField> = {};
-    const used = new Set<LeadField>();
-    headers.forEach((h) => {
-      const guess = HEADER_GUESS[h.trim().toLowerCase()];
-      if (guess && !used.has(guess)) {
-        used.add(guess);
-        m[h] = guess;
-      } else {
-        m[h] = "ignore";
-      }
-    });
-    return m;
-  }, [headers]);
+  const initial = useMemo(() => guessMapping(headers, rows), [headers, rows]);
 
-  const [mapping, setMapping] = useState<Record<string, LeadField>>(initial);
+  const [mapping, setMapping] = useState<Record<string, LeadField>>(initial.mapping);
+  const [autoMapped, setAutoMapped] = useState<Record<string, boolean>>(initial.auto);
+
+  const autoCount = Object.values(autoMapped).filter(Boolean).length;
+
+  const handleChange = (header: string, value: LeadField) => {
+    setMapping((m) => ({ ...m, [header]: value }));
+    setAutoMapped((a) => ({ ...a, [header]: false }));
+  };
+
+  const handleReguess = () => {
+    const next = guessMapping(headers, rows);
+    setMapping(next.mapping);
+    setAutoMapped(next.auto);
+  };
+
+  const handleClearAll = () => {
+    const cleared: Record<string, LeadField> = {};
+    const auto: Record<string, boolean> = {};
+    headers.forEach((h) => {
+      cleared[h] = "ignore";
+      auto[h] = false;
+    });
+    setMapping(cleared);
+    setAutoMapped(auto);
+  };
 
   const stats = useMemo(() => {
     const emailCol = Object.entries(mapping).find(([, f]) => f === "email")?.[0];
@@ -111,7 +223,7 @@ export const CsvColumnMapper = ({ headers, rows, onConfirm, onCancel, isImportin
     let invalid = 0;
     for (const r of rows) {
       const email = String(r[emailCol] ?? "").trim().toLowerCase();
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!email || !EMAIL_RE.test(email)) {
         invalid++;
         continue;
       }
@@ -146,7 +258,7 @@ export const CsvColumnMapper = ({ headers, rows, onConfirm, onCancel, isImportin
         if (val) obj[field] = val;
       }
       const email = (obj.email ?? "").toLowerCase();
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) continue;
+      if (!email || !EMAIL_RE.test(email)) continue;
       if (seen.has(email)) continue;
       seen.add(email);
       obj.email = email;
@@ -160,9 +272,22 @@ export const CsvColumnMapper = ({ headers, rows, onConfirm, onCancel, isImportin
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        {rows.length} rader i filen. Välj vilket lead-fält varje kolumn ska mappas till.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          {rows.length} rader i filen.{" "}
+          {autoCount > 0
+            ? `${autoCount} kolumner gissades automatiskt – kontrollera och ändra vid behov.`
+            : "Välj vilket lead-fält varje kolumn ska mappas till."}
+        </p>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={handleReguess}>
+            <Wand2 className="h-3.5 w-3.5" /> Gissa om
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={handleClearAll}>
+            <Eraser className="h-3.5 w-3.5" /> Rensa alla
+          </Button>
+        </div>
+      </div>
 
       <div className="rounded-md border divide-y">
         {headers.map((h) => (
@@ -177,25 +302,29 @@ export const CsvColumnMapper = ({ headers, rows, onConfirm, onCancel, isImportin
               </div>
             </div>
             <ArrowRight className="hidden sm:block h-4 w-4 text-muted-foreground shrink-0" />
-            <Select
-              value={mapping[h]}
-              onValueChange={(v) => setMapping((m) => ({ ...m, [h]: v as LeadField }))}
-            >
-              <SelectTrigger className="h-9 w-full sm:w-[200px] shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LEAD_FIELDS.map((f) => (
-                  <SelectItem
-                    key={f.value}
-                    value={f.value}
-                    disabled={f.value !== "ignore" && f.value !== mapping[h] && usedFields.has(f.value)}
-                  >
-                    {f.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              {autoMapped[h] && mapping[h] !== "ignore" && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                  <Sparkles className="h-3 w-3" /> Auto
+                </span>
+              )}
+              <Select value={mapping[h]} onValueChange={(v) => handleChange(h, v as LeadField)}>
+                <SelectTrigger className="h-9 w-full sm:w-[200px] shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEAD_FIELDS.map((f) => (
+                    <SelectItem
+                      key={f.value}
+                      value={f.value}
+                      disabled={f.value !== "ignore" && f.value !== mapping[h] && usedFields.has(f.value)}
+                    >
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         ))}
       </div>
