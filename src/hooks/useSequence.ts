@@ -164,13 +164,10 @@ export const useSequenceSendStats = (sequenceId: string | undefined) => {
         ),
       ]);
 
-      if (sendsRes.error) throw sendsRes.error;
       if (stepsRes.error) throw stepsRes.error;
-      if (leadsRes.error) throw leadsRes.error;
 
-      const sends = sendsRes.data ?? [];
       const totalSteps = stepsRes.count ?? 0;
-      const leads = leadsRes.data ?? [];
+
 
       const summary = { sent: 0, scheduled: 0, failed: 0, replied: 0 };
       const byLeadId = new Map<string, LeadSendStat>();
