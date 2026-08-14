@@ -142,20 +142,28 @@ export const useSequenceSendStats = (sequenceId: string | undefined) => {
   return useQuery({
     queryKey: ["sequence_send_stats", sequenceId],
     queryFn: async () => {
-      const [sendsRes, stepsRes, leadsRes] = await Promise.all([
-        supabase
-          .from("scheduled_sends")
-          .select("id, lead_id, status, scheduled_for, updated_at")
-          .eq("sequence_id", sequenceId!),
+      const [sends, stepsRes, leads] = await Promise.all([
+        fetchAllRows<{ id: string; lead_id: string; status: string; scheduled_for: string | null; updated_at: string | null }>(
+          (from, to) =>
+            supabase
+              .from("scheduled_sends")
+              .select("id, lead_id, status, scheduled_for, updated_at")
+              .eq("sequence_id", sequenceId!)
+              .range(from, to),
+        ),
         supabase
           .from("sequence_steps")
           .select("id", { count: "exact", head: true })
           .eq("sequence_id", sequenceId!),
-        supabase
-          .from("sequence_leads")
-          .select("id, status")
-          .eq("sequence_id", sequenceId!),
+        fetchAllRows<{ id: string; status: string }>((from, to) =>
+          supabase
+            .from("sequence_leads")
+            .select("id, status")
+            .eq("sequence_id", sequenceId!)
+            .range(from, to),
+        ),
       ]);
+
       if (sendsRes.error) throw sendsRes.error;
       if (stepsRes.error) throw stepsRes.error;
       if (leadsRes.error) throw leadsRes.error;
