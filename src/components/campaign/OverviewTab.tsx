@@ -22,6 +22,12 @@ const STATUS_LABEL: Record<string, string> = {
   completed: "Slutförd",
 };
 
+const MissingHint = () => (
+  <span className="text-[10px] font-normal text-muted-foreground border rounded px-1.5 py-0.5">
+    Saknas
+  </span>
+);
+
 export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }: Props) => {
   const update = useUpdateCampaign(campaign.id);
   const { data: stats } = useSequenceSendStats(sequenceId);
