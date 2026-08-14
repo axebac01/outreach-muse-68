@@ -349,7 +349,7 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
           ) : (
             <>
               <Button variant="outline" onClick={() => closeDialog(false)} disabled={loading}>Avbryt</Button>
-              <Button onClick={handleGenerate} disabled={loading || !goal.trim()} className="gap-2">
+              <Button onClick={handleGenerate} disabled={loading || !goal.trim() || !audience.trim() || !offer.trim()} className="gap-2">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                 Generera
               </Button>

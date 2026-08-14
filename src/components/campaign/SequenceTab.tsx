@@ -12,7 +12,7 @@ import { EmailPreview, type PreviewLead } from "@/components/sequence/EmailPrevi
 import { AiWriteSequenceDialog } from "./AiWriteSequenceDialog";
 import { SendTestEmailDialog } from "./SendTestEmailDialog";
 
-export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
+export const SequenceTab = ({ sequenceId, campaign }: { sequenceId: string; campaign?: any }) => {
   const { data: steps = [] } = useSequenceSteps(sequenceId);
   const { data: leads = [] } = useSequenceLeads(sequenceId);
   const upsertStep = useUpsertStep(sequenceId);
@@ -116,6 +116,7 @@ export const SequenceTab = ({ sequenceId }: { sequenceId: string }) => {
       </div>
 
       <AiWriteSequenceDialog
+        campaign={campaign}
         sequenceId={sequenceId}
         hasExistingContent={steps.some((s) => (s.subject?.trim() || s.body?.trim()))}
         open={aiOpen}
