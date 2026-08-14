@@ -30,6 +30,8 @@ export type SequenceLead = {
   role: string | null;
   phone: string | null;
   company: string | null;
+  website: string | null;
+
   status: string;
   current_step: number;
   created_at: string;
