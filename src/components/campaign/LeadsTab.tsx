@@ -331,8 +331,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {leads
-                    .filter((l) => statusFilter === "all" || deriveStatus(l.status, stats?.byLeadId.get(l.id)) === statusFilter)
+                  {pagedLeads
                     .map((l) => {
                       const stat = stats?.byLeadId.get(l.id);
                       const key = deriveStatus(l.status, stat);
