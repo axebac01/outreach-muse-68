@@ -44,10 +44,31 @@ const deriveStatus = (leadStatus: string, stat?: LeadSendStat): keyof typeof STA
 export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const { t } = useTranslation();
   const { data: leads = [] } = useSequenceLeads(sequenceId);
+  const { data: leadCount } = useSequenceLeadCount(sequenceId);
   const { data: stats } = useSequenceSendStats(sequenceId);
   const addLeads = useAddSequenceLeads(sequenceId);
   const deleteLead = useDeleteSequenceLead(sequenceId);
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("all");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
+
+  const totalLeads = leadCount ?? leads.length;
+  const filteredLeads = useMemo(
+    () =>
+      leads.filter(
+        (l) => statusFilter === "all" || deriveStatus(l.status, stats?.byLeadId.get(l.id)) === statusFilter,
+      ),
+    [leads, statusFilter, stats],
+  );
+  const pageCount = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
+  const pagedLeads = filteredLeads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const rangeStart = filteredLeads.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, filteredLeads.length);
+
 
   const [parsedHeaders, setParsedHeaders] = useState<string[]>([]);
   const [parsedRows, setParsedRows] = useState<Record<string, any>[]>([]);
