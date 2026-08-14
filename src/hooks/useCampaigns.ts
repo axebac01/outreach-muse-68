@@ -27,18 +27,16 @@ export const useCampaigns = () => {
 
       const seqByCampaign = new Map((seqs ?? []).map((s) => [s.campaign_id!, s]));
 
-      // Lead counts via sequence_leads grouped by sequence_id
-      const seqIds = (seqs ?? []).map((s) => s.id);
+      // Hämta exakta totalsummor. Att hämta raderna direkt kapas vid 1000 av API:t.
       const counts = new Map<string, number>();
-      if (seqIds.length > 0) {
-        const { data: rows } = await supabase
+      await Promise.all((seqs ?? []).map(async (sequence) => {
+        const { count, error: countError } = await supabase
           .from("sequence_leads")
-          .select("sequence_id")
-          .in("sequence_id", seqIds);
-        for (const r of rows ?? []) {
-          counts.set(r.sequence_id, (counts.get(r.sequence_id) ?? 0) + 1);
-        }
-      }
+          .select("id", { count: "exact", head: true })
+          .eq("sequence_id", sequence.id);
+        if (countError) throw countError;
+        counts.set(sequence.id, count ?? 0);
+      }));
 
       return (campaigns ?? []).map((c) => {
         const seq = seqByCampaign.get(c.id);
