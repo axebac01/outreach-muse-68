@@ -78,24 +78,41 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Kontext</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Kontext</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Valfritt — men hjälper AI:n att skriva bättre mejl.
+          </p>
+        </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5"><Target className="h-3.5 w-3.5" /> Målgrupp</Label>
+            <Label className="text-xs flex items-center gap-1.5">
+              <Target className="h-3.5 w-3.5" /> Målgrupp
+              {!campaign.target_audience && <MissingHint />}
+            </Label>
             <Textarea defaultValue={campaign.target_audience ?? ""} onChange={(e) => queueSave({ target_audience: e.target.value })} />
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1.5"><Package className="h-3.5 w-3.5" /> Produkt</Label>
+              <Label className="text-xs flex items-center gap-1.5">
+                <Package className="h-3.5 w-3.5" /> Produkt
+                {!campaign.product && <MissingHint />}
+              </Label>
               <Input defaultValue={campaign.product ?? ""} onChange={(e) => queueSave({ product: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1.5"><Gift className="h-3.5 w-3.5" /> Erbjudande</Label>
+              <Label className="text-xs flex items-center gap-1.5">
+                <Gift className="h-3.5 w-3.5" /> Erbjudande
+                {!campaign.offer && <MissingHint />}
+              </Label>
               <Input defaultValue={campaign.offer ?? ""} onChange={(e) => queueSave({ offer: e.target.value })} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> Tonalitet</Label>
+            <Label className="text-xs flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5" /> Tonalitet
+              {!campaign.tone && <MissingHint />}
+            </Label>
             <Input defaultValue={campaign.tone ?? ""} onChange={(e) => queueSave({ tone: e.target.value })} />
           </div>
         </CardContent>
