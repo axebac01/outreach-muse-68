@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCreateCampaign } from "@/hooks/useCampaigns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Props {
   open: boolean;
@@ -31,6 +32,7 @@ export default function CreateCampaignInlineDialog({ open, onOpenChange, onCreat
     offer: "",
     tone: "Professionell och rak",
   });
+  const [contextOpen, setContextOpen] = useState(false);
 
   const update = (key: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -79,53 +81,64 @@ export default function CreateCampaignInlineDialog({ open, onOpenChange, onCreat
               autoFocus
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cn-audience">Målgrupp</Label>
-            <Textarea
-              id="cn-audience"
-              placeholder="VD:ar på svenska SaaS-bolag, 10–50 anställda"
-              value={form.target_audience}
-              onChange={(e) => update("target_audience", e.target.value)}
-              required
-              rows={2}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="cn-product">Produkt</Label>
-              <Input
-                id="cn-product"
-                placeholder="Vad säljer du?"
-                value={form.product}
-                onChange={(e) => update("product", e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cn-offer">Erbjudande</Label>
-              <Input
-                id="cn-offer"
-                placeholder="Demo, 14 dagars trial…"
-                value={form.offer}
-                onChange={(e) => update("offer", e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cn-tone">Ton</Label>
-            <Input
-              id="cn-tone"
-              value={form.tone}
-              onChange={(e) => update("tone", e.target.value)}
-              required
-            />
-          </div>
+          <Collapsible open={contextOpen} onOpenChange={setContextOpen}>
+            <CollapsibleTrigger asChild>
+              <button type="button" className="flex w-full items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5 text-left">
+                <span>
+                  <span className="text-sm font-medium">Kampanjkontext (valfritt)</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Fyll i om du vill — vi frågar igen när du skriver sekvensen med AI.
+                  </span>
+                </span>
+                <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${contextOpen ? "rotate-180" : ""}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="cn-audience">Målgrupp</Label>
+                <Textarea
+                  id="cn-audience"
+                  placeholder="VD:ar på svenska SaaS-bolag, 10–50 anställda"
+                  value={form.target_audience}
+                  onChange={(e) => update("target_audience", e.target.value)}
+                  rows={2}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cn-product">Produkt</Label>
+                  <Input
+                    id="cn-product"
+                    placeholder="Vad säljer du?"
+                    value={form.product}
+                    onChange={(e) => update("product", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cn-offer">Erbjudande</Label>
+                  <Input
+                    id="cn-offer"
+                    placeholder="Demo, 14 dagars trial…"
+                    value={form.offer}
+                    onChange={(e) => update("offer", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cn-tone">Ton</Label>
+                <Input
+                  id="cn-tone"
+                  value={form.tone}
+                  onChange={(e) => update("tone", e.target.value)}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
           <DialogFooter className="pt-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Avbryt
             </Button>
-            <Button type="submit" disabled={createCampaign.isPending} className="gap-2">
+            <Button type="submit" disabled={createCampaign.isPending || !form.name.trim()} className="gap-2">
               {createCampaign.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Skapa kampanj
             </Button>

@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -43,6 +45,7 @@ const CreateCampaign = () => {
     offer: "",
     tone: "",
   });
+  const [contextOpen, setContextOpen] = useState(false);
 
   const update = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -79,26 +82,43 @@ const CreateCampaign = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">{t("createCampaign.name")}</Label>
-              <Input id="name" placeholder={t("createCampaign.namePh")} value={form.name} onChange={(e) => update("name", e.target.value)} required />
+              <Input id="name" placeholder={t("createCampaign.namePh")} value={form.name} onChange={(e) => update("name", e.target.value)} required autoFocus />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="audience">{t("createCampaign.audience")}</Label>
-              <Textarea id="audience" placeholder={t("createCampaign.audiencePh")} value={form.target_audience} onChange={(e) => update("target_audience", e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="product">{t("createCampaign.product")}</Label>
-              <Input id="product" placeholder={t("createCampaign.productPh")} value={form.product} onChange={(e) => update("product", e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="offer">{t("createCampaign.offer")}</Label>
-              <Input id="offer" placeholder={t("createCampaign.offerPh")} value={form.offer} onChange={(e) => update("offer", e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tone">{t("createCampaign.tone")}</Label>
-              <Input id="tone" placeholder={t("createCampaign.tonePh")} value={form.tone} onChange={(e) => update("tone", e.target.value)} required />
-            </div>
+
+            <Collapsible open={contextOpen} onOpenChange={setContextOpen}>
+              <CollapsibleTrigger asChild>
+                <button type="button" className="flex w-full items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 text-left">
+                  <span>
+                    <span className="text-sm font-medium">Kampanjkontext (valfritt)</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Fyll i om du vill — vi frågar igen när du skriver sekvensen med AI.
+                    </span>
+                  </span>
+                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${contextOpen ? "rotate-180" : ""}`} />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="audience">{t("createCampaign.audience")}</Label>
+                  <Textarea id="audience" placeholder={t("createCampaign.audiencePh")} value={form.target_audience} onChange={(e) => update("target_audience", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product">{t("createCampaign.product")}</Label>
+                  <Input id="product" placeholder={t("createCampaign.productPh")} value={form.product} onChange={(e) => update("product", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="offer">{t("createCampaign.offer")}</Label>
+                  <Input id="offer" placeholder={t("createCampaign.offerPh")} value={form.offer} onChange={(e) => update("offer", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tone">{t("createCampaign.tone")}</Label>
+                  <Input id="tone" placeholder={t("createCampaign.tonePh")} value={form.tone} onChange={(e) => update("tone", e.target.value)} />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
             <div className="flex gap-3 pt-2">
-              <Button type="submit" variant="hero" className="flex-1" disabled={createCampaign.isPending || !canCreate}>
+              <Button type="submit" variant="hero" className="flex-1" disabled={createCampaign.isPending || !canCreate || !form.name.trim()}>
                 {createCampaign.isPending ? t("createCampaign.creating") : t("createCampaign.createBtn")}
               </Button>
               <Button type="button" variant="outline" onClick={() => navigate("/dashboard")}>{t("common.cancel")}</Button>

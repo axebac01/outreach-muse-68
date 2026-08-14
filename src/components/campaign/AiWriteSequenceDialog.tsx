@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,11 +12,20 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
+interface CampaignContext {
+  id: string;
+  target_audience?: string | null;
+  product?: string | null;
+  offer?: string | null;
+  tone?: string | null;
+}
+
 interface Props {
   sequenceId: string;
   hasExistingContent: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  campaign?: CampaignContext | null;
 }
 
 interface GeneratedStep {
@@ -34,7 +43,7 @@ const TEMPLATES: { id: string; label: string; goal: string }[] = [
   { id: "demo", label: "Boka demo", goal: "Få bokade produktdemos med rätt persona." },
 ];
 
-export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, onOpenChange }: Props) => {
+export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, onOpenChange, campaign }: Props) => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [goal, setGoal] = useState(() => localStorage.getItem("ai_seq_goal") ?? "");
@@ -44,6 +53,15 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<GeneratedStep[] | null>(null);
+  const [audience, setAudience] = useState("");
+  const [offer, setOffer] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setAudience(campaign?.target_audience ?? "");
+    setOffer([campaign?.product, campaign?.offer].filter(Boolean).join(" – "));
+    if (campaign?.tone?.trim()) setTone((t) => t || campaign.tone!.trim());
+  }, [open, campaign?.id]);
 
   const reset = () => {
     setPreview(null);
@@ -62,19 +80,45 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
       toast.error("Beskriv vad du vill åstadkomma med kampanjen");
       return;
     }
+    if (!audience.trim()) {
+      toast.error("Beskriv målgruppen — AI:n behöver veta vem mejlen skrivs till");
+      return;
+    }
+    if (!offer.trim()) {
+      toast.error("Beskriv vad ni erbjuder i den här kampanjen");
+      return;
+    }
     localStorage.setItem("ai_seq_goal", goal);
     localStorage.setItem("ai_seq_steps", stepCount);
     localStorage.setItem("ai_seq_tone", tone);
     localStorage.setItem("ai_seq_length", length);
 
+    // Spara tillbaka kontexten på kampanjen så man slipper fylla i den igen
+    if (campaign?.id) {
+      const patch: Record<string, string> = {};
+      if (audience.trim() !== (campaign.target_audience ?? "")) patch.target_audience = audience.trim();
+      if (!campaign.offer?.trim() && offer.trim()) patch.offer = offer.trim();
+      if (tone.trim() !== (campaign.tone ?? "")) patch.tone = tone.trim();
+      if (Object.keys(patch).length > 0) {
+        await supabase.from("campaigns").update(patch as any).eq("id", campaign.id);
+        qc.invalidateQueries({ queryKey: ["campaign", campaign.id] });
+        qc.invalidateQueries({ queryKey: ["campaigns"] });
+      }
+    }
+
     setLoading(true);
     setPreview(null);
     try {
       const fullTone = `${tone}, längd: ${length}`;
+      const fullGoal = [
+        goal.trim(),
+        `Målgrupp: ${audience.trim()}`,
+        `Vi erbjuder: ${offer.trim()}`,
+      ].join("\n");
       const { data, error } = await supabase.functions.invoke("generate-sequence", {
         body: {
           sequence_id: sequenceId,
-          goal: goal.trim(),
+          goal: fullGoal,
           step_count: Number(stepCount),
           tone: fullTone,
         },
@@ -198,7 +242,7 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
             </div>
           </ScrollArea>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Snabbval</Label>
               <div className="flex flex-wrap gap-1.5">
@@ -223,6 +267,33 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
                 placeholder="Erbjuda partnerskap till IT-konsulter som jobbar med Microsoft 365…"
                 className="min-h-[100px]"
               />
+            </div>
+
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+              <div>
+                <p className="text-sm font-medium">Om kampanjen</p>
+                <p className="text-xs text-muted-foreground">
+                  AI:n skriver betydligt bättre mejl när den vet vem du skriver till och vad ni erbjuder. Vi sparar det på kampanjen.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Målgrupp</Label>
+                <Textarea
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value)}
+                  placeholder="VD:ar på svenska SaaS-bolag, 10–50 anställda"
+                  className="min-h-[60px] bg-background"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Vad ni erbjuder</Label>
+                <Textarea
+                  value={offer}
+                  onChange={(e) => setOffer(e.target.value)}
+                  placeholder="Vår plattform för kall mejlutskick – 14 dagars gratis test"
+                  className="min-h-[60px] bg-background"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
@@ -278,7 +349,7 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
           ) : (
             <>
               <Button variant="outline" onClick={() => closeDialog(false)} disabled={loading}>Avbryt</Button>
-              <Button onClick={handleGenerate} disabled={loading || !goal.trim()} className="gap-2">
+              <Button onClick={handleGenerate} disabled={loading || !goal.trim() || !audience.trim() || !offer.trim()} className="gap-2">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                 Generera
               </Button>

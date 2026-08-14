@@ -99,7 +99,7 @@ const CampaignDetails = () => {
         <Tabs value={activeTab} onValueChange={setTab}>
           <TabsContent value="overview"><OverviewTab campaign={campaign} sequenceStatus={sequence.status} sequenceId={sequence.id} leadCount={leads.length} /></TabsContent>
           <TabsContent value="leads"><LeadsTab sequenceId={sequence.id} /></TabsContent>
-          <TabsContent value="sequence"><SequenceTab sequenceId={sequence.id} /></TabsContent>
+          <TabsContent value="sequence"><SequenceTab sequenceId={sequence.id} campaign={campaign} /></TabsContent>
           <TabsContent value="schedule"><ScheduleTab sequence={sequence as any} /></TabsContent>
           <TabsContent value="senders"><SendersTab sequence={sequence as any} /></TabsContent>
         </Tabs>
