@@ -389,13 +389,13 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
               </span>
               {pageCount > 1 && (
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+                  <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
                     Föregående
                   </Button>
                   <span>
-                    Sida {page} av {pageCount}
+                    Sida {currentPage} av {pageCount}
                   </span>
-                  <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => setPage((p) => p + 1)}>
+                  <Button variant="outline" size="sm" disabled={currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}>
                     Nästa
                   </Button>
                 </div>
