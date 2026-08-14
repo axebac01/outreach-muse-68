@@ -296,7 +296,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
 
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Leads ({leads.length})</CardTitle>
+          <CardTitle className="text-base">Leads ({totalLeads.toLocaleString("sv-SE")})</CardTitle>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as LeadStatusFilter)}>
             <SelectTrigger className="w-[180px] h-8 text-xs">
               <SelectValue />
