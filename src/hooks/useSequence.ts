@@ -203,51 +203,130 @@ export const useSequenceSendStats = (sequenceId: string | undefined) => {
 };
 
 // ---------- Leads ----------
-export const useSequenceLeads = (sequenceId: string | undefined) => {
+const PAGE = 1000;
+
+/** Hämtar alla rader (API:t returnerar max 1000 per anrop). */
+async function fetchAllRows<T>(
+  build: (from: number, to: number) => any,
+): Promise<T[]> {
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as T[];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return all;
+}
+
+export const useSequenceLeadCount = (sequenceId: string | undefined) => {
   return useQuery({
-    queryKey: ["sequence_leads", sequenceId],
+    queryKey: ["sequence_leads_count", sequenceId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { count, error } = await supabase
         .from("sequence_leads")
-        .select("*")
-        .eq("sequence_id", sequenceId!)
-        .order("created_at", { ascending: true });
+        .select("id", { count: "exact", head: true })
+        .eq("sequence_id", sequenceId!);
       if (error) throw error;
-      return (data ?? []) as SequenceLead[];
+      return count ?? 0;
     },
     enabled: !!sequenceId,
   });
 };
+
+export const useSequenceLeads = (sequenceId: string | undefined) => {
+  return useQuery({
+    queryKey: ["sequence_leads", sequenceId],
+    queryFn: async () =>
+      fetchAllRows<SequenceLead>((from, to) =>
+        supabase
+          .from("sequence_leads")
+          .select("*")
+          .eq("sequence_id", sequenceId!)
+          .order("created_at", { ascending: true })
+          .range(from, to),
+      ),
+    enabled: !!sequenceId,
+  });
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const INSERT_CHUNK = 500;
 
 export const useAddSequenceLeads = (sequenceId: string) => {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (leads: Array<Partial<SequenceLead> & { email: string }>) => {
-      const rows = leads.map((l) => ({
-        sequence_id: sequenceId,
-        user_id: user!.id,
-        email: l.email.toLowerCase().trim(),
-        full_name: l.full_name ?? null,
-        first_name: l.first_name ?? null,
-        last_name: l.last_name ?? null,
-        role: l.role ?? null,
-        phone: l.phone ?? null,
-        company: l.company ?? null,
-        website: l.website ?? null,
+      const seen = new Set<string>();
+      let invalid = 0;
+      let duplicates = 0;
 
+      const cleaned = leads.flatMap((l) => {
+        const email = (l.email ?? "").toLowerCase().trim();
+        if (!EMAIL_RE.test(email)) {
+          invalid++;
+          return [];
+        }
+        if (seen.has(email)) {
+          duplicates++;
+          return [];
+        }
+        seen.add(email);
+        return [{ ...l, email }];
+      });
 
-      }));
-      if (rows.length === 0) return { count: 0 };
-      const { error, count } = await supabase
-        .from("sequence_leads")
-        .insert(rows, { count: "exact" });
-      if (error) throw error;
-      return { count: count ?? rows.length };
+      // Hoppa över e-postadresser som redan finns i sekvensen
+      const existing = await fetchAllRows<{ email: string }>((from, to) =>
+        supabase
+          .from("sequence_leads")
+          .select("email")
+          .eq("sequence_id", sequenceId)
+          .range(from, to),
+      );
+      const existingSet = new Set(existing.map((r) => r.email));
+
+      const rows = cleaned
+        .filter((l) => {
+          if (existingSet.has(l.email)) {
+            duplicates++;
+            return false;
+          }
+          return true;
+        })
+        .map((l) => ({
+          sequence_id: sequenceId,
+          user_id: user!.id,
+          email: l.email,
+          full_name: l.full_name ?? null,
+          first_name: l.first_name ?? null,
+          last_name: l.last_name ?? null,
+          role: l.role ?? null,
+          phone: l.phone ?? null,
+          company: l.company ?? null,
+          website: l.website ?? null,
+        }));
+
+      let count = 0;
+      for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+        const chunk = rows.slice(i, i + INSERT_CHUNK);
+        const { error, count: c } = await supabase
+          .from("sequence_leads")
+          .insert(chunk, { count: "exact" });
+        if (error) throw error;
+        count += c ?? chunk.length;
+      }
+
+      return { count, duplicates, invalid, skipped: duplicates + invalid };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sequence_leads", sequenceId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sequence_leads", sequenceId] });
+      qc.invalidateQueries({ queryKey: ["sequence_leads_count", sequenceId] });
+    },
   });
 };
+
 
 export const useDeleteSequenceLead = (sequenceId: string) => {
   const qc = useQueryClient();
