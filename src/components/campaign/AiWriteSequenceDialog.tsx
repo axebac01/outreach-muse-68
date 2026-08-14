@@ -43,7 +43,7 @@ const TEMPLATES: { id: string; label: string; goal: string }[] = [
   { id: "demo", label: "Boka demo", goal: "Få bokade produktdemos med rätt persona." },
 ];
 
-export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, onOpenChange }: Props) => {
+export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, onOpenChange, campaign }: Props) => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [goal, setGoal] = useState(() => localStorage.getItem("ai_seq_goal") ?? "");
@@ -53,6 +53,15 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<GeneratedStep[] | null>(null);
+  const [audience, setAudience] = useState("");
+  const [offer, setOffer] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setAudience(campaign?.target_audience ?? "");
+    setOffer([campaign?.product, campaign?.offer].filter(Boolean).join(" – "));
+    if (campaign?.tone?.trim()) setTone((t) => t || campaign.tone!.trim());
+  }, [open, campaign?.id]);
 
   const reset = () => {
     setPreview(null);
@@ -71,19 +80,45 @@ export const AiWriteSequenceDialog = ({ sequenceId, hasExistingContent, open, on
       toast.error("Beskriv vad du vill åstadkomma med kampanjen");
       return;
     }
+    if (!audience.trim()) {
+      toast.error("Beskriv målgruppen — AI:n behöver veta vem mejlen skrivs till");
+      return;
+    }
+    if (!offer.trim()) {
+      toast.error("Beskriv vad ni erbjuder i den här kampanjen");
+      return;
+    }
     localStorage.setItem("ai_seq_goal", goal);
     localStorage.setItem("ai_seq_steps", stepCount);
     localStorage.setItem("ai_seq_tone", tone);
     localStorage.setItem("ai_seq_length", length);
 
+    // Spara tillbaka kontexten på kampanjen så man slipper fylla i den igen
+    if (campaign?.id) {
+      const patch: Record<string, string> = {};
+      if (audience.trim() !== (campaign.target_audience ?? "")) patch.target_audience = audience.trim();
+      if (!campaign.offer?.trim() && offer.trim()) patch.offer = offer.trim();
+      if (tone.trim() !== (campaign.tone ?? "")) patch.tone = tone.trim();
+      if (Object.keys(patch).length > 0) {
+        await supabase.from("campaigns").update(patch as any).eq("id", campaign.id);
+        qc.invalidateQueries({ queryKey: ["campaign", campaign.id] });
+        qc.invalidateQueries({ queryKey: ["campaigns"] });
+      }
+    }
+
     setLoading(true);
     setPreview(null);
     try {
       const fullTone = `${tone}, längd: ${length}`;
+      const fullGoal = [
+        goal.trim(),
+        `Målgrupp: ${audience.trim()}`,
+        `Vi erbjuder: ${offer.trim()}`,
+      ].join("\n");
       const { data, error } = await supabase.functions.invoke("generate-sequence", {
         body: {
           sequence_id: sequenceId,
-          goal: goal.trim(),
+          goal: fullGoal,
           step_count: Number(stepCount),
           tone: fullTone,
         },
