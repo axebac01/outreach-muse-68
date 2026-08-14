@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   useSequenceLeads,
+  useSequenceLeadCount,
   useAddSequenceLeads,
   useDeleteSequenceLead,
   useSequenceSendStats,
@@ -44,10 +45,31 @@ const deriveStatus = (leadStatus: string, stat?: LeadSendStat): keyof typeof STA
 export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const { t } = useTranslation();
   const { data: leads = [] } = useSequenceLeads(sequenceId);
+  const { data: leadCount } = useSequenceLeadCount(sequenceId);
   const { data: stats } = useSequenceSendStats(sequenceId);
   const addLeads = useAddSequenceLeads(sequenceId);
   const deleteLead = useDeleteSequenceLead(sequenceId);
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("all");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
+
+  const totalLeads = leadCount ?? leads.length;
+  const filteredLeads = useMemo(
+    () =>
+      leads.filter(
+        (l) => statusFilter === "all" || deriveStatus(l.status, stats?.byLeadId.get(l.id)) === statusFilter,
+      ),
+    [leads, statusFilter, stats],
+  );
+  const pageCount = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
+  const pagedLeads = filteredLeads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const rangeStart = filteredLeads.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, filteredLeads.length);
+
 
   const [parsedHeaders, setParsedHeaders] = useState<string[]>([]);
   const [parsedRows, setParsedRows] = useState<Record<string, any>[]>([]);
@@ -125,7 +147,11 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const handleConfirmImport = async (mapped: Array<Record<string, string>>) => {
     try {
       const res = await addLeads.mutateAsync(mapped as any);
-      toast.success(`Importerade ${res.count} leads`);
+      toast.success(
+        res.skipped > 0
+          ? `Importerade ${res.count} leads (${res.skipped} hoppades över: ${res.duplicates} dubbletter, ${res.invalid} ogiltiga)`
+          : `Importerade ${res.count} leads`,
+      );
       setShowMapper(false);
       setParsedRows([]);
       setParsedHeaders([]);
@@ -296,7 +322,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
 
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Leads ({leads.length})</CardTitle>
+          <CardTitle className="text-base">Leads ({totalLeads.toLocaleString("sv-SE")})</CardTitle>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as LeadStatusFilter)}>
             <SelectTrigger className="w-[180px] h-8 text-xs">
               <SelectValue />
@@ -331,8 +357,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {leads
-                    .filter((l) => statusFilter === "all" || deriveStatus(l.status, stats?.byLeadId.get(l.id)) === statusFilter)
+                  {pagedLeads
                     .map((l) => {
                       const stat = stats?.byLeadId.get(l.id);
                       const key = deriveStatus(l.status, stat);
@@ -360,6 +385,28 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
               </Table>
             </div>
           )}
+          {filteredLeads.length > 0 && (
+            <div className="flex items-center justify-between gap-3 pt-3 text-xs text-muted-foreground">
+              <span>
+                Visar {rangeStart}–{rangeEnd} av {filteredLeads.length}
+                {statusFilter !== "all" ? ` (filtrerat av ${totalLeads})` : ""}
+              </span>
+              {pageCount > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
+                    Föregående
+                  </Button>
+                  <span>
+                    Sida {currentPage} av {pageCount}
+                  </span>
+                  <Button variant="outline" size="sm" disabled={currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}>
+                    Nästa
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
         </CardContent>
       </Card>
     </div>
