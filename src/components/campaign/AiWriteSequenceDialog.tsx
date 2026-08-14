@@ -12,11 +12,20 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
+interface CampaignContext {
+  id: string;
+  target_audience?: string | null;
+  product?: string | null;
+  offer?: string | null;
+  tone?: string | null;
+}
+
 interface Props {
   sequenceId: string;
   hasExistingContent: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  campaign?: CampaignContext | null;
 }
 
 interface GeneratedStep {

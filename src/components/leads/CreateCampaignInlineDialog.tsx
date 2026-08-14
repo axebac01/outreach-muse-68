@@ -138,7 +138,7 @@ export default function CreateCampaignInlineDialog({ open, onOpenChange, onCreat
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Avbryt
             </Button>
-            <Button type="submit" disabled={createCampaign.isPending} className="gap-2">
+            <Button type="submit" disabled={createCampaign.isPending || !form.name.trim()} className="gap-2">
               {createCampaign.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Skapa kampanj
             </Button>
