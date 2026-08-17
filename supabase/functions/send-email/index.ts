@@ -54,6 +54,8 @@ function buildRfc2822(opts: {
   bodyText?: string;
   bodyHtml?: string;
   inReplyTo?: string;
+  /** Full References chain (space separated, oldest first) */
+  references?: string;
   extraHeaders?: string[];
   includeDate?: boolean;
 }): string {
@@ -68,8 +70,15 @@ function buildRfc2822(opts: {
   if (opts.extraHeaders) headers.push(...opts.extraHeaders);
   if (opts.inReplyTo) {
     headers.push(`In-Reply-To: ${opts.inReplyTo}`);
-    headers.push(`References: ${opts.inReplyTo}`);
+    // Clients (especially Outlook) need the whole ancestry, not just the
+    // direct parent, to keep step 3 in the same conversation as step 1.
+    const refs = (opts.references && opts.references.trim())
+      ? opts.references.trim()
+      : opts.inReplyTo;
+    // Fold long chains at whitespace (RFC 5322 line length limit).
+    headers.push("References: " + refs.split(/\s+/).join("\r\n "));
   }
+
 
   // Bodies are base64 encoded: safe for UTF-8 and avoids the 998-char line
   // limit that long single-line HTML would otherwise break.
