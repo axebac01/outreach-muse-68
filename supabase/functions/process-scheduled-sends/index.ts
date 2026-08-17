@@ -359,16 +359,20 @@ Deno.serve(async (req) => {
       // reusing the first subject with a "Re:" prefix (Outlook groups on subject).
       let finalSubject = subject;
       if (prior?.message_id_header && seq.thread_followups !== false) {
-        const { data: firstMsg } = await admin
+        let firstQuery = admin
           .from("email_messages")
           .select("subject")
           .eq("user_id", row.user_id)
           .eq("lead_id", row.lead_id)
           .eq("sequence_id", row.sequence_id)
-          .eq("direction", "outbound")
+          .eq("direction", "outbound");
+        // Scope to the current thread so an older run's subject isn't reused.
+        if (prior.thread_key) firstQuery = firstQuery.eq("thread_key", prior.thread_key);
+        const { data: firstMsg } = await firstQuery
           .order("created_at", { ascending: true })
           .limit(1)
           .maybeSingle();
+
         const base = (firstMsg?.subject || subject).trim();
         finalSubject = /^re:/i.test(base) ? base : `Re: ${base}`;
       }
