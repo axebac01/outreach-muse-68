@@ -66,7 +66,7 @@ const Waitlist = () => {
     if (error) {
       if (error.code === "23505") {
         toast.success("Du står redan på listan", {
-          description: "Vi hör av oss inför launch den 15 augusti.",
+          description: "Vi hör av oss inför launch den 31 augusti.",
         });
         setDone(true);
         return;
@@ -83,10 +83,10 @@ const Waitlist = () => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <Helmet>
-        <title>Väntelista — MailLead.ai öppnar 15 augusti</title>
+        <title>Väntelista — MailLead.ai öppnar 31 augusti</title>
         <meta
           name="description"
-          content="MailLead.ai går live den 15 augusti 2026. Säkra din plats på väntelistan — tidiga användare får extra gratis-credits vid launch."
+          content="MailLead.ai går live den 31 augusti 2026. Säkra din plats på väntelistan — tidiga användare får extra gratis-credits vid launch."
         />
         <meta name="robots" content="noindex,nofollow" />
         <link rel="canonical" href="https://maillead.ai/waitlist" />
@@ -149,7 +149,7 @@ const Waitlist = () => {
                   "linear-gradient(135deg, #E0512B 0%, #F4801F 50%, #D9920F 100%)",
               }}
             >
-              15 augusti
+              31 augusti
             </em>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base sm:text-lg text-muted-foreground">
@@ -171,7 +171,7 @@ const Waitlist = () => {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Vi hör av oss på <strong className="text-foreground">{form.email || "din e-post"}</strong> så snart vi öppnar
-                  den 15 augusti. Vill du komma in tidigare? Mejla oss på{" "}
+                  den 31 augusti. Vill du komma in tidigare? Mejla oss på{" "}
                   <a href="mailto:info@maillead.ai" className="text-primary hover:underline">
                     info@maillead.ai
                   </a>
