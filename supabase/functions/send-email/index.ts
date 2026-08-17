@@ -16,6 +16,7 @@ import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
 import { htmlToPlainText, looksLikeHtml } from "../_shared/htmlToText.ts";
 import { withRetry, TransientError, isTransientStatus, isTransientSmtpCode } from "../_shared/retry.ts";
 import { redactSecrets } from "../_shared/redactSecrets.ts";
+import { sendRawMail } from "../_shared/smtp.ts";
 
 
 function encodeMimeWord(s: string): string {
