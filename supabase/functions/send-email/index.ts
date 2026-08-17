@@ -454,9 +454,12 @@ Deno.serve(async (req) => {
         });
         try {
           const result = await client.send({
-            from: encodeAddress(fromAddr),
+            // denomailer MIME-encodes headers itself — passing pre-encoded
+            // values here produced double-encoded, unreadable subjects.
+            from: fromAddr,
             to,
-            subject: encodeMimeWord(subject),
+            subject,
+
             content: finalBody.text || "",
             html: finalBody.html || undefined,
             inReplyTo: in_reply_to || undefined,
