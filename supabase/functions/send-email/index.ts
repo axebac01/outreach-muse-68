@@ -301,9 +301,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (unsub) {
       return new Response(
-        JSON.stringify({ error: "Recipient is unsubscribed", skipped: true }),
+        JSON.stringify({ error: "Recipient is unsubscribed", skipped: true, reason: "unsubscribed" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+
     }
 
     // Last-mile safety: re-check lead status and sequence pause state right
