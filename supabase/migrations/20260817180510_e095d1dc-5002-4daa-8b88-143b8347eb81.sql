@@ -1,0 +1,1 @@
+update scheduled_sends set scheduled_for = now() - interval '2 minutes' where id in ('ebd22da2-a93f-4ff5-b935-d95a58380d32','d7c0f69e-17dc-45fe-aa52-9bcc649e91f4');
