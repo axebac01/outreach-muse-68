@@ -359,6 +359,7 @@ Deno.serve(async (req) => {
     // Unsubscribe token + headers
     const unsubToken = await signUnsubscribeToken(userId, toLower);
     const unsubUrl = buildUnsubscribeUrl(unsubToken);
+    const unsubPageUrl = buildUnsubscribePageUrl(unsubToken);
     // Use the sender's own domain in the Message-ID — required for good
     // deliverability. RFC 5322 expects the right-hand side to be a real
     // host the sender controls. Falling back to a placeholder caused
@@ -371,17 +372,21 @@ Deno.serve(async (req) => {
       `List-Unsubscribe-Post: List-Unsubscribe=One-Click`,
     ];
 
-    // Auto-append unsubscribe footer if missing in body
+    // Auto-append unsubscribe footer if missing in body.
+    // The visible link points at the branded app page (short URL, real design);
+    // the List-Unsubscribe header keeps the functions endpoint since one-click
+    // requires a POST target.
     const ensureUnsub = (html: string | undefined, text: string | undefined) => {
-      const hasInHtml = html && /unsubscribe/i.test(html);
-      const hasInText = text && /unsubscribe/i.test(text);
-      const footerHtml = `<p style="margin-top:24px;font-size:12px;color:#888">If you no longer wish to receive these emails, <a href="${unsubUrl}">unsubscribe here</a>.</p>`;
-      const footerText = `\n\nUnsubscribe: ${unsubUrl}`;
+      const hasInHtml = html && /unsubscribe|avregistrera/i.test(html);
+      const hasInText = text && /unsubscribe|avregistrera/i.test(text);
+      const footerHtml = `<p style="margin-top:24px;font-size:12px;color:#888">Vill du inte få fler mejl? <a href="${unsubPageUrl}">Avregistrera dig här</a>.</p>`;
+      const footerText = `\n\nAvregistrera: ${unsubPageUrl}`;
       return {
         html: html ? (hasInHtml ? html : html + footerHtml) : undefined,
         text: text ? (hasInText ? text : text + footerText) : (html ? undefined : footerText.trim()),
       };
     };
+
     // Auto-tag links to user's tracked domains for visitor identification
     let taggedHtml = body_html;
     let taggedText = body_text;
