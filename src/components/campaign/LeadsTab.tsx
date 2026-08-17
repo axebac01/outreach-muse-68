@@ -333,26 +333,53 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
       )}
 
       <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Leads ({totalLeads.toLocaleString("sv-SE")})</CardTitle>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as LeadStatusFilter)}>
-            <SelectTrigger className="w-[180px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alla statusar</SelectItem>
-              <SelectItem value="sent">Skickat</SelectItem>
-              <SelectItem value="scheduled">Schemalagt</SelectItem>
-              <SelectItem value="failed">Misslyckades</SelectItem>
-              <SelectItem value="replied">Svarat</SelectItem>
-              <SelectItem value="none">Inte skickat</SelectItem>
-            </SelectContent>
-          </Select>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-base">Leads ({totalLeads.toLocaleString("sv-SE")})</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Sök namn, e-post, företag…"
+                  className="h-8 w-[260px] pl-8 pr-8 text-xs"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    aria-label="Rensa sökning"
+                    onClick={() => setSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as LeadStatusFilter)}>
+                <SelectTrigger className="w-[180px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alla statusar</SelectItem>
+                  <SelectItem value="sent">Skickat</SelectItem>
+                  <SelectItem value="scheduled">Schemalagt</SelectItem>
+                  <SelectItem value="failed">Misslyckades</SelectItem>
+                  <SelectItem value="replied">Svarat</SelectItem>
+                  <SelectItem value="none">Inte skickat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {leads.length === 0 ? (
             <div className="text-sm text-muted-foreground py-8 text-center">
               Inga leads än. Lägg till några manuellt eller ladda upp en fil.
+            </div>
+          ) : filteredLeads.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-8 text-center">
+              Inga leads matchar din sökning.
             </div>
           ) : (
             <div className="rounded-md border overflow-hidden">
