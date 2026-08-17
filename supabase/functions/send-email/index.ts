@@ -130,6 +130,7 @@ async function sendViaGmail(
   bodyText: string | undefined,
   inReplyTo: string | undefined,
   extraHeaders: string[],
+  references?: string,
 ): Promise<{ messageId: string | null }> {
   const accessToken = await getValidGoogleAccessToken(admin, account);
   const rfc = buildRfc2822({
@@ -139,6 +140,7 @@ async function sendViaGmail(
     bodyText: bodyText ?? undefined,
     bodyHtml: bodyHtml ?? undefined,
     inReplyTo,
+    references,
     extraHeaders,
   });
   const raw = base64UrlEncode(rfc);
@@ -442,6 +444,26 @@ Deno.serve(async (req) => {
     }
     const finalBody = ensureUnsub(taggedHtml, taggedText);
 
+    // Build the full References chain from earlier messages in this thread so
+    // follow-ups stay in one conversation (Outlook ignores In-Reply-To alone).
+    let referencesChain: string | undefined;
+    if (in_reply_to) {
+      const { data: priorMsgs } = await admin
+        .from("email_messages")
+        .select("message_id_header, created_at")
+        .eq("user_id", userId)
+        .eq("direction", "outbound")
+        .eq("to_address", to)
+        .eq("sequence_id", sequence_id ?? null)
+        .not("message_id_header", "is", null)
+        .order("created_at", { ascending: true });
+      const ids = (priorMsgs ?? [])
+        .map((m: any) => String(m.message_id_header))
+        .filter((id: string) => id.startsWith("<"));
+      if (!ids.includes(in_reply_to)) ids.push(in_reply_to);
+      referencesChain = Array.from(new Set(ids)).join(" ");
+    }
+
     let status = "sent";
     let errorMessage: string | null = null;
     let providerMessageId: string | null = null;
@@ -458,6 +480,7 @@ Deno.serve(async (req) => {
           finalBody.text,
           in_reply_to,
           extraHeaders,
+          referencesChain,
         );
         providerMessageId = r.messageId;
       } else if (account.auth_type === "oauth" && account.provider === "outlook") {
@@ -485,6 +508,7 @@ Deno.serve(async (req) => {
           bodyText: finalBody.text || undefined,
           bodyHtml: finalBody.html || undefined,
           inReplyTo: in_reply_to || undefined,
+          references: referencesChain,
           includeDate: true,
           extraHeaders,
         });
