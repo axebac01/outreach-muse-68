@@ -1,54 +1,57 @@
 # Verifiering inför skarp sändning imorgon
 
-Målet: bevisa att hela kedjan fungerar — första mejlet, uppföljning efter X dagar, avregistrering, och stopp-logiken — utan att vänta i tre dagar och utan att mejla en enda riktig mottagare.
+Målet: bevisa att hela kedjan fungerar — första mejlet, uppföljning efter X dagar, avregistrering och stopp-logiken — utan att vänta i tre dagar och utan att mejla en enda riktig mottagare.
 
-## Fas 1 — Testkampanj till dina egna adresser
+## Testkampanj
 
-Skapa en separat kampanj (inte den skarpa) med 2–3 leads som alla är dina egna mejladresser, gärna på olika leverantörer (t.ex. en Gmail, en företagsadress). Samma sekvens-innehåll som den skarpa kampanjen, med samma väntetider.
+Jag skapar en kampanj "TEST – leveransverifiering" på ditt inloggade konto med:
 
-Detta bevisar: avsändarkontot fungerar, ämne/innehåll och personalisering (`{{first_name}}` m.fl.) renderas rätt, mejlet landar i inkorgen (inte skräppost), och avsändarnamn/signatur ser rätt ut.
+- Avsändare: de anslutna bisdata-kampanj.se-adresserna (hampus, oskar, kevin) — alla tre, så vi också ser att rundgången mellan flera inkorgar fungerar.
+- Mottagare (3 leads): axebac01@gmail.com, axel.backstrom@crmdata.se, axel@rekryterar.com — med för- och efternamn samt företag ifyllt så personaliseringen kan verifieras.
+- Sekvens: 3 steg med personaliseringsfält i både ämne och brödtext, väntetider 3 respektive 2 dagar (samma upplägg som skarpt).
+- Sändningsfönster brett under testet så inget bromsas av tidsfönstret.
 
-## Fas 2 — Uppföljningsmejlet, utan att vänta 3 dagar
+Sedan startar jag kampanjen och de tre första mejlen går iväg inom någon minut.
 
-Så fungerar det idag: när steg 1 skickas skapas raden för steg 2 direkt, med sändningstid = nu + väntetiden i dagar. Det som är osäkert är inte logiken utan att den faktiskt löser ut när tiden passerar.
+Detta bevisar: SMTP-kontona fungerar, personalisering renderas rätt, mejlen landar i inkorgen, avsändarnamn och signatur ser rätt ut, och leads fördelas mellan flera inkorgar.
 
-Verifiering: efter att steg 1 gått iväg i testkampanjen flyttar jag sändningstiden för det schemalagda steg 2 bakåt i tiden i databasen (bara för dina testleads). Bakgrundsjobbet kör varje minut, så uppföljningen ska då gå iväg inom någon minut — som en tidsresa tre dagar framåt. Vi kontrollerar att:
+## Uppföljning utan att vänta 3 dagar
 
-- uppföljningen kommer fram och hamnar i samma mejltråd som första mejlet
-- steg 3 (om det finns) automatiskt schemaläggs efter det
+Så fungerar det idag: när steg 1 skickats skapas raden för steg 2 direkt, med sändningstid = nu + väntetiden. Det osäkra är inte logiken utan att den faktiskt löser ut när tiden passerar.
+
+Jag flyttar sändningstiden för testkampanjens steg 2 bakåt i tiden i databasen — en tidsresa tre dagar framåt. Bakgrundsjobbet kör varje minut, så uppföljningen ska gå iväg direkt. Samma sak för steg 3. Vi kontrollerar att:
+
+- uppföljningen kommer fram och hamnar i samma mejltråd som första mejlet (svarsrubrik/tråd-id)
+- nästa steg schemaläggs automatiskt efter varje skickat mejl
 - efter sista steget markeras leadet som klart och inga fler mejl skapas
+- 30–120-sekundersfördröjningen mellan mejl från samma inkorg respekteras
 
-## Fas 3 — Avregistrering
+## Avregistrering
 
-I testkampanjen klickar du på avregistrera-länken i mejlet du fått. Jag kontrollerar sedan i databasen att:
+Du klickar på avregistrera-länken i ett av testmejlen. Jag kontrollerar att:
 
-- adressen hamnar på avregistrerade
+- adressen hamnar bland avregistrerade
 - leadet får status "unsubscribed"
-- kommande schemalagda mejl till den adressen ställs in (avbryts) i stället för att skickas
+- kommande schemalagda mejl till adressen avbryts i stället för att skickas
 - ett nytt mejl till samma adress blockeras även om det schemaläggs på nytt
 
-Vi testar även ett-klicks-avregistrering (knappen Gmail/Outlook visar högst upp i mejlet), eftersom den går en annan väg än länken i sidfoten.
+Jag testar även ett-klicks-avregistrering (knappen som Gmail/Outlook visar högst upp i mejlet) eftersom den går en annan väg än länken i sidfoten, samt att avregistrera-sidan visas korrekt.
 
-## Fas 4 — Stopp- och säkerhetskontroller
+## Stopp- och säkerhetskontroller
 
-Snabbtest av det som skyddar dig när det går fel:
+- Du svarar på ett testmejl → resterande steg till det leadet ska avbrytas (kräver att inkorgssynken hunnit köra, den går var tionde minut).
+- Jag pausar kampanjen → inget mer går iväg.
+- Dagligt tak och sändningsfönster: verifieras genom att sätta taket lågt en stund och se att överskjutande mejl skjuts till nästa dag i stället för att skickas.
+- Ogiltig mottagaradress: ett lead med en påhittad adress för att se att felet fångas och syns som misslyckat i stället för att tysta försvinna.
 
-- svarar du på ett testmejl ska resterande steg till det leadet avbrytas
-- pausar du kampanjen ska inget mer gå iväg
-- dagligt tak och sändningsfönster respekteras (kontrolleras i data, inte genom väntan)
+## Grönt ljus för den skarpa kampanjen
 
-## Fas 5 — Grönt ljus för den skarpa kampanjen
-
-Innan start går vi igenom: rätt avsändarkonto, DNS-status (SPF/DKIM/DMARC) grön, dagligt tak max 25 per konto, sändningsfönster satt i rätt tidszon, inga "test" kvar i ämnesraderna, och att antalet leads stämmer. Efter start kollar vi de första 10–15 minuterna att mejl faktiskt får status "skickat" och inte fastnar.
+Före start går vi igenom: rätt avsändarkonton, DNS-status (SPF/DKIM/DMARC) grön för bisdata-kampanj.se, dagligt tak max 25 per konto, sändningsfönster i rätt tidszon, inga "test" kvar i ämnesraderna och att antalet leads stämmer. Efter start bevakar jag de första minuterna att mejlen får status "skickat" och inte fastnar. Testkampanjen pausas och kan tas bort efteråt.
 
 ## Tekniska detaljer
 
-- Tidsresan i fas 2 görs med en `update` på `scheduled_sends.scheduled_for` filtrerad på testkampanjens `sequence_id` — inga kodändringar krävs.
-- Bakgrundsjobbet `process-scheduled-sends` körs varje minut via cron (verifierat aktivt).
-- Kontroller görs mot `scheduled_sends` (status, cancelled_reason, error_message), `email_messages` (tråd-id, in-reply-to), `unsubscribes` och `sequence_leads`.
-- Inga produktionsdata rörs; alla ändringar sker på testkampanjens rader.
-
-## Vad jag behöver av dig
-
-1. Bekräfta att jag ska skapa testkampanjen åt dig, eller om du skapar den själv och säger till när steg 1 gått iväg.
-2. Vilka mejladresser du vill använda som testmottagare.
+- Testdata skapas i `campaigns`/`sequences`/`sequence_steps`/`sequence_leads`/`sequence_senders` för din användare; inga produktionsrader rörs.
+- Tidsresan görs med `update scheduled_sends set scheduled_for = now() - interval '1 minute'` filtrerat på testkampanjens `sequence_id`.
+- `process-scheduled-sends` körs varje minut via cron (verifierat aktivt).
+- Kontroller mot `scheduled_sends` (status, cancelled_reason, error_message), `email_messages` (thread_key, in_reply_to), `unsubscribes` och `sequence_leads`.
+- Inga kodändringar planeras; om ett fel hittas åtgärdas det som en separat, avgränsad fix.
