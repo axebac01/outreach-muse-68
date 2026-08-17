@@ -22,8 +22,19 @@ async function checkSpf(domain: string) {
   const spf = ans.map((a) => stripQuotes(a.data)).find((d) => d.toLowerCase().startsWith("v=spf1"));
   if (!spf) return { status: "missing" as const, record: null, message: "No SPF record found" };
   // Soft-pass policies are weaker; hard fail (-all) preferred.
+  // A neutral "?all" (or a missing all-mechanism) gives receivers no signal at
+  // all — treat it as a warning, not a pass.
   const policy = /-all\b/.test(spf) ? "strict" : /~all\b/.test(spf) ? "softfail" : "neutral";
+  if (policy === "neutral") {
+    return {
+      status: "warn" as const,
+      record: spf,
+      policy,
+      message: "SPF ends with ?all (neutral) — use ~all or -all",
+    };
+  }
   return { status: "ok" as const, record: spf, policy };
+
 }
 
 async function checkDkim(domain: string, provider: string) {
