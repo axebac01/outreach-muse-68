@@ -235,11 +235,17 @@ const EmailAccounts = () => {
                           <div className="font-medium">{t("emailAccounts.deliverabilityWarnTitle")}</div>
                           <div className="text-xs">
                             {[
-                              acc.deliverability_check.spf?.status !== "ok" && "SPF",
-                              acc.deliverability_check.dkim?.status !== "ok" && "DKIM",
-                              acc.deliverability_check.dmarc?.status !== "ok" && "DMARC",
-                            ].filter(Boolean).join(", ")} {t("emailAccounts.deliverabilityWarnMissing")}
+                              acc.deliverability_check.spf?.status === "missing"
+                                ? "SPF saknas"
+                                : acc.deliverability_check.spf?.policy === "neutral"
+                                  ? "SPF är neutral (?all) — byt till ~all"
+                                  : null,
+                              acc.deliverability_check.dkim?.status !== "ok" && "DKIM saknas",
+                              acc.deliverability_check.dmarc?.status !== "ok" &&
+                                "DMARC saknas — största orsaken till skräppost i Outlook",
+                            ].filter(Boolean).join(" · ")}
                           </div>
+
                         </div>
                         <DnsFixDialog
                           domain={acc.deliverability_check.domain ?? acc.email.split("@")[1]}

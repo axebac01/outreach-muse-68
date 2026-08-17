@@ -21,6 +21,8 @@ import BlogIndex from "./pages/blog/BlogIndex";
 import BlogPost from "./pages/blog/BlogPost";
 import { SOFT_LAUNCH_MODE } from "@/config/launch";
 import VerifyEmail from "./pages/VerifyEmail";
+import Unsubscribe from "./pages/Unsubscribe";
+
 import Dashboard from "./pages/Dashboard";
 import CreateCampaign from "./pages/CreateCampaign";
 import CampaignDetails from "./pages/CampaignDetails";
@@ -78,6 +80,9 @@ const App = () => (
             <Route path="/blogg/:slug" element={<BlogPost />} />
 
             <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/avregistrera" element={<Unsubscribe />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
+
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><OnboardingGate><Dashboard /></OnboardingGate></ProtectedRoute>} />
             <Route path="/campaign/new" element={<ProtectedRoute><OnboardingGate><CreateCampaign /></OnboardingGate></ProtectedRoute>} />

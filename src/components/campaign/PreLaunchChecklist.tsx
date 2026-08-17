@@ -1,6 +1,8 @@
 import { CheckCircle2, AlertTriangle, Circle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSequenceSteps, useSequenceSenders, useSequenceLeads, type Sequence } from "@/hooks/useSequence";
+import { useEmailAccounts } from "@/hooks/useEmailAccounts";
+
 
 type CheckLevel = "ok" | "warn" | "fail";
 
@@ -20,6 +22,7 @@ export const PreLaunchChecklist = ({ sequence }: { sequence: Sequence }) => {
   const { data: steps = [] } = useSequenceSteps(sequence.id);
   const { data: senders = [] } = useSequenceSenders(sequence.id);
   const { data: leads = [] } = useSequenceLeads(sequence.id);
+  const { data: accounts = [] } = useEmailAccounts();
 
   const checks: CheckItem[] = [];
 
@@ -29,6 +32,32 @@ export const PreLaunchChecklist = ({ sequence }: { sequence: Sequence }) => {
       ? { level: "fail", label: "Inga avsändarkonton valda", hint: "Välj minst ett konto nedan." }
       : { level: "ok", label: `${senders.length} avsändarkonto${senders.length > 1 ? "n" : ""} valda` },
   );
+
+  // DNS/deliverability for the selected senders. Missing DMARC or a neutral
+  // SPF policy is the single most common reason cold email lands in spam at
+  // Outlook, so surface it before the campaign starts rather than after.
+  const senderIds = new Set(senders.map((s: any) => s.email_account_id));
+  const senderAccounts = accounts.filter((a: any) => senderIds.has(a.id));
+  const dnsIssues: string[] = [];
+  for (const acc of senderAccounts as any[]) {
+    const check = acc.deliverability_check as any;
+    if (!check) continue;
+    const domain = check.domain || String(acc.email).split("@")[1];
+    const problems: string[] = [];
+    if (check.dmarc?.status && check.dmarc.status !== "ok") problems.push("DMARC saknas");
+    if (check.spf?.status === "missing") problems.push("SPF saknas");
+    else if (check.spf?.policy === "neutral") problems.push("SPF är neutral (?all)");
+    if (check.dkim?.status && check.dkim.status !== "ok") problems.push("DKIM saknas");
+    if (problems.length) dnsIssues.push(`${domain}: ${problems.join(", ")}`);
+  }
+  if (dnsIssues.length) {
+    checks.push({
+      level: "warn",
+      label: "DNS-inställningar kan skicka mejlen till skräpposten",
+      hint: `${dnsIssues.join(" · ")}. Fixa under Mejlkonton → Så fixar du det.`,
+    });
+  }
+
 
   // Leads
   checks.push(

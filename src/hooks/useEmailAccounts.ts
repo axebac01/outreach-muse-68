@@ -5,12 +5,14 @@ import { withSaveStatus } from "./useSaveStatus";
 
 export type DeliverabilityCheckResult = {
   domain: string;
-  spf: { status: "ok" | "missing" };
+  // "warn" = record exists but is too weak (e.g. SPF ending in ?all)
+  spf: { status: "ok" | "warn" | "missing"; record?: string | null; policy?: "strict" | "softfail" | "neutral" };
   dkim: { status: "ok" | "missing" };
   dmarc: { status: "ok" | "missing" };
   score: "good" | "warn" | "bad";
   checked_at: string;
 };
+
 
 export type EmailAccount = {
   id: string;
