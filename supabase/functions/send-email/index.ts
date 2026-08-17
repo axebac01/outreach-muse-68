@@ -10,6 +10,7 @@ import {
   signUnsubscribeToken,
   buildUnsubscribeUrl,
   buildUnsubscribePageUrl,
+  getShortUnsubscribeId,
 } from "../_shared/unsubscribe.ts";
 
 import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
@@ -377,7 +378,10 @@ Deno.serve(async (req) => {
     // Unsubscribe token + headers
     const unsubToken = await signUnsubscribeToken(userId, toLower);
     const unsubUrl = buildUnsubscribeUrl(unsubToken);
-    const unsubPageUrl = buildUnsubscribePageUrl(unsubToken);
+    // Footer link uses a short id (long tokens get line-wrapped by mail
+    // transports and break when copied); falls back to the signed token.
+    const shortUnsubId = await getShortUnsubscribeId(admin, userId, toLower);
+    const unsubPageUrl = buildUnsubscribePageUrl(shortUnsubId ?? unsubToken);
     // Use the sender's own domain in the Message-ID — required for good
     // deliverability. RFC 5322 expects the right-hand side to be a real
     // host the sender controls. Falling back to a placeholder caused

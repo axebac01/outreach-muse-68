@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   buildUnsubscribePageUrl,
   verifyUnsubscribeToken,
+  resolveShortUnsubscribeId,
 } from "../_shared/unsubscribe.ts";
 
 const corsHeaders = {
@@ -37,15 +38,19 @@ Deno.serve(async (req) => {
     });
   }
 
-  const verified = await verifyUnsubscribeToken(token);
-  if (!verified) {
-    return json({ ok: false, error: "invalid_token" }, 400);
-  }
-
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  // Two link formats: the signed token (List-Unsubscribe header) and the
+  // short id used in the visible footer link.
+  const verified = token.includes(".")
+    ? await verifyUnsubscribeToken(token)
+    : await resolveShortUnsubscribeId(admin, token);
+  if (!verified) {
+    return json({ ok: false, error: "invalid_token" }, 400);
+  }
 
   await admin.from("unsubscribes").upsert(
     {
