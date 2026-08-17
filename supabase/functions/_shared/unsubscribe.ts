@@ -64,7 +64,23 @@ export async function verifyUnsubscribeToken(
   }
 }
 
+/**
+ * Endpoint used in the List-Unsubscribe header. Must accept POST (one-click),
+ * so it has to stay on the functions host.
+ */
 export function buildUnsubscribeUrl(token: string): string {
   const base = Deno.env.get("SUPABASE_URL")!;
   return `${base}/functions/v1/unsubscribe?t=${encodeURIComponent(token)}`;
 }
+
+/**
+ * Human-facing page linked from the email footer. Lives on the app domain so
+ * it renders with real branding (the functions gateway forces text/plain and a
+ * sandbox CSP, which strips all styling and breaks UTF-8 rendering).
+ */
+export function buildUnsubscribePageUrl(token: string): string {
+  const base = (Deno.env.get("PUBLIC_APP_URL") || "https://maillead.ai")
+    .replace(/\/+$/, "");
+  return `${base}/avregistrera?t=${encodeURIComponent(token)}`;
+}
+
