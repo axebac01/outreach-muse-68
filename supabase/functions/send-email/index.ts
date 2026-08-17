@@ -479,7 +479,9 @@ Deno.serve(async (req) => {
           {
             hostname: account.smtp_host,
             port: Number(account.smtp_port),
-            secure: account.smtp_secure !== false && Number(account.smtp_port) === 465,
+            // 587/25 = plain connection upgraded via STARTTLS, 465 = implicit TLS
+            secure: account.smtp_secure !== false &&
+              ![587, 25, 2525].includes(Number(account.smtp_port)),
             username: account.smtp_username,
             password,
           },
