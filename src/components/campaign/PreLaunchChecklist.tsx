@@ -1,6 +1,8 @@
 import { CheckCircle2, AlertTriangle, Circle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSequenceSteps, useSequenceSenders, useSequenceLeads, type Sequence } from "@/hooks/useSequence";
+import { useEmailAccounts } from "@/hooks/useEmailAccounts";
+
 
 type CheckLevel = "ok" | "warn" | "fail";
 
