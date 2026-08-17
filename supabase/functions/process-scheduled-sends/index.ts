@@ -344,7 +344,7 @@ Deno.serve(async (req) => {
       if ((step.step_order ?? 0) > 1) {
         const { data } = await admin
           .from("email_messages")
-          .select("message_id_header, thread_key")
+          .select("message_id_header, thread_key, subject, created_at")
           .eq("user_id", row.user_id)
           .eq("lead_id", row.lead_id)
           .eq("sequence_id", row.sequence_id)
@@ -353,6 +353,24 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
         prior = data;
+      }
+
+      // Optional per-campaign setting: keep follow-ups in the same thread by
+      // reusing the first subject with a "Re:" prefix (Outlook groups on subject).
+      let finalSubject = subject;
+      if (prior?.message_id_header && seq.thread_followups !== false) {
+        const { data: firstMsg } = await admin
+          .from("email_messages")
+          .select("subject")
+          .eq("user_id", row.user_id)
+          .eq("lead_id", row.lead_id)
+          .eq("sequence_id", row.sequence_id)
+          .eq("direction", "outbound")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        const base = (firstMsg?.subject || subject).trim();
+        finalSubject = /^re:/i.test(base) ? base : `Re: ${base}`;
       }
 
       const sendRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
@@ -365,7 +383,7 @@ Deno.serve(async (req) => {
           internal_user_id: row.user_id,
           email_account_id: row.email_account_id,
           to: lead.email,
-          subject,
+          subject: finalSubject,
           body_html: isHtml ? rawBody : undefined,
           body_text: isHtml ? undefined : rawBody,
           lead_id: row.lead_id,

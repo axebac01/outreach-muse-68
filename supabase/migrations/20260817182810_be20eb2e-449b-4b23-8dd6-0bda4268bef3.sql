@@ -1,0 +1,1 @@
+ALTER TABLE public.sequences ADD COLUMN IF NOT EXISTS thread_followups boolean NOT NULL DEFAULT true;
