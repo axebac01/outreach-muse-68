@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Upload, Plus, ShieldCheck } from "lucide-react";
+import { Trash2, Upload, Plus, ShieldCheck, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,22 +50,34 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const addLeads = useAddSequenceLeads(sequenceId);
   const deleteLead = useDeleteSequenceLead(sequenceId);
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("all");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
 
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 150);
+    return () => clearTimeout(id);
+  }, [search]);
+
   const totalLeads = leadCount ?? leads.length;
-  const filteredLeads = useMemo(
-    () =>
-      leads.filter(
-        (l) => statusFilter === "all" || deriveStatus(l.status, stats?.byLeadId.get(l.id)) === statusFilter,
-      ),
-    [leads, statusFilter, stats],
-  );
+  const filteredLeads = useMemo(() => {
+    const q = debouncedSearch;
+    return leads.filter((l) => {
+      if (statusFilter !== "all" && deriveStatus(l.status, stats?.byLeadId.get(l.id)) !== statusFilter) return false;
+      if (!q) return true;
+      const haystack = [l.email, l.full_name, l.first_name, l.last_name, l.company, (l as any).website, l.role]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [leads, statusFilter, stats, debouncedSearch]);
   const pageCount = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   useEffect(() => {
     setPage(1);
-  }, [statusFilter]);
+  }, [statusFilter, debouncedSearch]);
   const pagedLeads = filteredLeads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const rangeStart = filteredLeads.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(currentPage * PAGE_SIZE, filteredLeads.length);
