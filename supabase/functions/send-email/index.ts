@@ -462,42 +462,33 @@ Deno.serve(async (req) => {
         providerMessageId = r.messageId;
       } else if (account.auth_type === "smtp") {
         const password = await decryptToken(admin, account.smtp_password_enc);
-        const client = new SMTPClient({
-          connection: {
-            hostname: account.smtp_host,
-            port: account.smtp_port,
-            tls: account.smtp_secure !== false,
-            auth: { username: account.smtp_username, password },
-          },
+        // We build the whole RFC 5322 message ourselves (same path as Gmail)
+        // and only use SMTP for transport. Letting an SMTP library build the
+        // headers produced broken encoded-words and a bogus "InReplyTo:".
+        const rfc = buildRfc2822({
+          from: fromAddr,
+          to,
+          subject,
+          bodyText: finalBody.text || undefined,
+          bodyHtml: finalBody.html || undefined,
+          inReplyTo: in_reply_to || undefined,
+          includeDate: true,
+          extraHeaders,
         });
-        try {
-          const result = await client.send({
-            // denomailer MIME-encodes headers itself — passing pre-encoded
-            // values here produced double-encoded, unreadable subjects.
-            from: fromAddr,
-            to,
-            subject,
+        await sendRawMail(
+          {
+            hostname: account.smtp_host,
+            port: Number(account.smtp_port),
+            secure: account.smtp_secure !== false && Number(account.smtp_port) === 465,
+            username: account.smtp_username,
+            password,
+          },
+          String(account.email),
+          parseAddr(String(to)).address,
+          rfc,
+        );
+        providerMessageId = null;
 
-            content: finalBody.text || "",
-            html: finalBody.html || undefined,
-            inReplyTo: in_reply_to || undefined,
-            headers: {
-              // Must match the Message-ID we persist, otherwise follow-up
-              // steps reference a Message-ID that never existed and the
-              // thread breaks in the recipient's client.
-              "Message-ID": localMessageId,
-              ...(in_reply_to ? { References: in_reply_to } : {}),
-              "List-Unsubscribe": `<${unsubUrl}>`,
-              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-            },
-
-          });
-          providerMessageId = (result as any)?.messageId ?? null;
-        } finally {
-          try {
-            await client.close();
-          } catch (_) { /* noop */ }
-        }
       } else {
         throw new Error(
           `Unsupported account type: ${account.auth_type}/${account.provider}`,
