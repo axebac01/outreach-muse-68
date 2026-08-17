@@ -167,7 +167,7 @@ export default function AuroraLanding() {
         <section className="hero"><div className="wrap">
           <span className="badge">
             <span className="ping" />
-            {SOFT_LAUNCH_MODE ? "Soft launch · vi öppnar 15 augusti" : "Ansluten till 3 inkorgar · skickar nu"}
+            {SOFT_LAUNCH_MODE ? "Soft launch · vi öppnar 31 augusti" : "Ansluten till 3 inkorgar · skickar nu"}
           </span>
           <h1 className="hh">Hitta nya B2B-kunder med <em className="em">AI-drivna utskick</em></h1>
           <p className="hsub">Köp e-postadresser, skapa smarta kampanjer och följ upp automatiskt med MailLead.ai — ett enkelt verktyg för digital kundbearbetning.</p>

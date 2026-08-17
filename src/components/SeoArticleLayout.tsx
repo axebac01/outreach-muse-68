@@ -96,7 +96,7 @@ const SeoArticleLayout = ({
             Vill du testa MailLead.ai?
           </h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Vi öppnar 15 augusti 2026. Säkra din plats nu — tidiga användare får 50 extra gratis-credits vid launch.
+            Vi öppnar 31 augusti 2026. Säkra din plats nu — tidiga användare får 50 extra gratis-credits vid launch.
           </p>
           <Button asChild className="mt-4 gap-2">
             <Link to={ctaHref}>

@@ -4,6 +4,6 @@
 export const SOFT_LAUNCH_MODE = true;
 
 // Tid då vi öppnar skarpt. Använd ISO med tidszon.
-export const LAUNCH_DATE = new Date("2026-08-15T09:00:00+02:00");
+export const LAUNCH_DATE = new Date("2026-08-31T09:00:00+02:00");
 
 export const WAITLIST_PATH = "/waitlist";
