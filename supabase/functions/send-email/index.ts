@@ -39,6 +39,13 @@ function encodeAddress(addr: string): string {
   return addr;
 }
 
+function b64Body(s: string): string {
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return (btoa(bin).match(/.{1,76}/g) ?? []).join("\r\n");
+}
+
 function buildRfc2822(opts: {
   from: string;
   to: string;
@@ -47,6 +54,7 @@ function buildRfc2822(opts: {
   bodyHtml?: string;
   inReplyTo?: string;
   extraHeaders?: string[];
+  includeDate?: boolean;
 }): string {
   const boundary = "boundary_" + crypto.randomUUID().replace(/-/g, "");
   const headers: string[] = [
@@ -55,12 +63,15 @@ function buildRfc2822(opts: {
     `Subject: ${encodeMimeWord(opts.subject)}`,
     "MIME-Version: 1.0",
   ];
+  if (opts.includeDate) headers.push(`Date: ${new Date().toUTCString()}`);
   if (opts.extraHeaders) headers.push(...opts.extraHeaders);
   if (opts.inReplyTo) {
     headers.push(`In-Reply-To: ${opts.inReplyTo}`);
     headers.push(`References: ${opts.inReplyTo}`);
   }
 
+  // Bodies are base64 encoded: safe for UTF-8 and avoids the 998-char line
+  // limit that long single-line HTML would otherwise break.
   if (opts.bodyHtml && opts.bodyText) {
     headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
     return [
@@ -68,23 +79,28 @@ function buildRfc2822(opts: {
       "",
       `--${boundary}`,
       'Content-Type: text/plain; charset="UTF-8"',
+      "Content-Transfer-Encoding: base64",
       "",
-      opts.bodyText,
+      b64Body(opts.bodyText),
       `--${boundary}`,
       'Content-Type: text/html; charset="UTF-8"',
+      "Content-Transfer-Encoding: base64",
       "",
-      opts.bodyHtml,
+      b64Body(opts.bodyHtml),
       `--${boundary}--`,
       "",
     ].join("\r\n");
   }
   if (opts.bodyHtml) {
     headers.push('Content-Type: text/html; charset="UTF-8"');
-    return headers.join("\r\n") + "\r\n\r\n" + opts.bodyHtml;
+    headers.push("Content-Transfer-Encoding: base64");
+    return headers.join("\r\n") + "\r\n\r\n" + b64Body(opts.bodyHtml);
   }
   headers.push('Content-Type: text/plain; charset="UTF-8"');
-  return headers.join("\r\n") + "\r\n\r\n" + (opts.bodyText ?? "");
+  headers.push("Content-Transfer-Encoding: base64");
+  return headers.join("\r\n") + "\r\n\r\n" + b64Body(opts.bodyText ?? "");
 }
+
 
 function base64UrlEncode(s: string): string {
   // UTF-8 safe base64url
