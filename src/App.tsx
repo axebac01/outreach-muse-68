@@ -21,6 +21,8 @@ import BlogIndex from "./pages/blog/BlogIndex";
 import BlogPost from "./pages/blog/BlogPost";
 import { SOFT_LAUNCH_MODE } from "@/config/launch";
 import VerifyEmail from "./pages/VerifyEmail";
+import Unsubscribe from "./pages/Unsubscribe";
+
 import Dashboard from "./pages/Dashboard";
 import CreateCampaign from "./pages/CreateCampaign";
 import CampaignDetails from "./pages/CampaignDetails";
