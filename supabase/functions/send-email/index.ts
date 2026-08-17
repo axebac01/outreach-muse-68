@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import {
   corsHeaders,
   decryptToken,
@@ -11,12 +10,14 @@ import {
   signUnsubscribeToken,
   buildUnsubscribeUrl,
   buildUnsubscribePageUrl,
+  getShortUnsubscribeId,
 } from "../_shared/unsubscribe.ts";
 
 import { tagLinksForTracking } from "../_shared/trackingLinks.ts";
 import { htmlToPlainText, looksLikeHtml } from "../_shared/htmlToText.ts";
 import { withRetry, TransientError, isTransientStatus, isTransientSmtpCode } from "../_shared/retry.ts";
 import { redactSecrets } from "../_shared/redactSecrets.ts";
+import { sendRawMail } from "../_shared/smtp.ts";
 
 
 function encodeMimeWord(s: string): string {
@@ -39,6 +40,13 @@ function encodeAddress(addr: string): string {
   return addr;
 }
 
+function b64Body(s: string): string {
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return (btoa(bin).match(/.{1,76}/g) ?? []).join("\r\n");
+}
+
 function buildRfc2822(opts: {
   from: string;
   to: string;
@@ -47,6 +55,7 @@ function buildRfc2822(opts: {
   bodyHtml?: string;
   inReplyTo?: string;
   extraHeaders?: string[];
+  includeDate?: boolean;
 }): string {
   const boundary = "boundary_" + crypto.randomUUID().replace(/-/g, "");
   const headers: string[] = [
@@ -55,12 +64,15 @@ function buildRfc2822(opts: {
     `Subject: ${encodeMimeWord(opts.subject)}`,
     "MIME-Version: 1.0",
   ];
+  if (opts.includeDate) headers.push(`Date: ${new Date().toUTCString()}`);
   if (opts.extraHeaders) headers.push(...opts.extraHeaders);
   if (opts.inReplyTo) {
     headers.push(`In-Reply-To: ${opts.inReplyTo}`);
     headers.push(`References: ${opts.inReplyTo}`);
   }
 
+  // Bodies are base64 encoded: safe for UTF-8 and avoids the 998-char line
+  // limit that long single-line HTML would otherwise break.
   if (opts.bodyHtml && opts.bodyText) {
     headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
     return [
@@ -68,23 +80,28 @@ function buildRfc2822(opts: {
       "",
       `--${boundary}`,
       'Content-Type: text/plain; charset="UTF-8"',
+      "Content-Transfer-Encoding: base64",
       "",
-      opts.bodyText,
+      b64Body(opts.bodyText),
       `--${boundary}`,
       'Content-Type: text/html; charset="UTF-8"',
+      "Content-Transfer-Encoding: base64",
       "",
-      opts.bodyHtml,
+      b64Body(opts.bodyHtml),
       `--${boundary}--`,
       "",
     ].join("\r\n");
   }
   if (opts.bodyHtml) {
     headers.push('Content-Type: text/html; charset="UTF-8"');
-    return headers.join("\r\n") + "\r\n\r\n" + opts.bodyHtml;
+    headers.push("Content-Transfer-Encoding: base64");
+    return headers.join("\r\n") + "\r\n\r\n" + b64Body(opts.bodyHtml);
   }
   headers.push('Content-Type: text/plain; charset="UTF-8"');
-  return headers.join("\r\n") + "\r\n\r\n" + (opts.bodyText ?? "");
+  headers.push("Content-Transfer-Encoding: base64");
+  return headers.join("\r\n") + "\r\n\r\n" + b64Body(opts.bodyText ?? "");
 }
+
 
 function base64UrlEncode(s: string): string {
   // UTF-8 safe base64url
@@ -361,7 +378,10 @@ Deno.serve(async (req) => {
     // Unsubscribe token + headers
     const unsubToken = await signUnsubscribeToken(userId, toLower);
     const unsubUrl = buildUnsubscribeUrl(unsubToken);
-    const unsubPageUrl = buildUnsubscribePageUrl(unsubToken);
+    // Footer link uses a short id (long tokens get line-wrapped by mail
+    // transports and break when copied); falls back to the signed token.
+    const shortUnsubId = await getShortUnsubscribeId(admin, userId, toLower);
+    const unsubPageUrl = buildUnsubscribePageUrl(shortUnsubId ?? unsubToken);
     // Use the sender's own domain in the Message-ID — required for good
     // deliverability. RFC 5322 expects the right-hand side to be a real
     // host the sender controls. Falling back to a placeholder caused
@@ -446,42 +466,35 @@ Deno.serve(async (req) => {
         providerMessageId = r.messageId;
       } else if (account.auth_type === "smtp") {
         const password = await decryptToken(admin, account.smtp_password_enc);
-        const client = new SMTPClient({
-          connection: {
-            hostname: account.smtp_host,
-            port: account.smtp_port,
-            tls: account.smtp_secure !== false,
-            auth: { username: account.smtp_username, password },
-          },
+        // We build the whole RFC 5322 message ourselves (same path as Gmail)
+        // and only use SMTP for transport. Letting an SMTP library build the
+        // headers produced broken encoded-words and a bogus "InReplyTo:".
+        const rfc = buildRfc2822({
+          from: fromAddr,
+          to,
+          subject,
+          bodyText: finalBody.text || undefined,
+          bodyHtml: finalBody.html || undefined,
+          inReplyTo: in_reply_to || undefined,
+          includeDate: true,
+          extraHeaders,
         });
-        try {
-          const result = await client.send({
-            // denomailer MIME-encodes headers itself — passing pre-encoded
-            // values here produced double-encoded, unreadable subjects.
-            from: fromAddr,
-            to,
-            subject,
+        await sendRawMail(
+          {
+            hostname: account.smtp_host,
+            port: Number(account.smtp_port),
+            // 587/25 = plain connection upgraded via STARTTLS, 465 = implicit TLS
+            secure: account.smtp_secure !== false &&
+              ![587, 25, 2525].includes(Number(account.smtp_port)),
+            username: account.smtp_username,
+            password,
+          },
+          String(account.email),
+          parseAddr(String(to)).address,
+          rfc,
+        );
+        providerMessageId = null;
 
-            content: finalBody.text || "",
-            html: finalBody.html || undefined,
-            inReplyTo: in_reply_to || undefined,
-            headers: {
-              // Must match the Message-ID we persist, otherwise follow-up
-              // steps reference a Message-ID that never existed and the
-              // thread breaks in the recipient's client.
-              "Message-ID": localMessageId,
-              ...(in_reply_to ? { References: in_reply_to } : {}),
-              "List-Unsubscribe": `<${unsubUrl}>`,
-              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-            },
-
-          });
-          providerMessageId = (result as any)?.messageId ?? null;
-        } finally {
-          try {
-            await client.close();
-          } catch (_) { /* noop */ }
-        }
       } else {
         throw new Error(
           `Unsupported account type: ${account.auth_type}/${account.provider}`,

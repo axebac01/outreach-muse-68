@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { verifySmtpLogin } from "../_shared/smtp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -181,25 +181,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    const client = new SMTPClient({
-      connection: {
-        hostname: smtp_host,
-        port: Number(smtp_port),
-        tls: smtp_secure !== false,
-        auth: { username: smtp_username, password: smtp_password },
-      },
+    await verifySmtpLogin({
+      hostname: smtp_host,
+      port: Number(smtp_port),
+      // 587/25 = plain connection upgraded via STARTTLS, 465 = implicit TLS
+      secure: smtp_secure !== false && ![587, 25, 2525].includes(Number(smtp_port)),
+      username: smtp_username,
+      password: smtp_password,
     });
-
-    try {
-      await client.send({
-        from: from_email || smtp_username,
-        to: from_email || smtp_username,
-        subject: "MailLead.ai – SMTP test",
-        content: "This is an automated test from MailLead.ai. Connection OK.",
-      });
-    } finally {
-      try { await client.close(); } catch { /* ignore */ }
-    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

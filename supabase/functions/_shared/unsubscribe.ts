@@ -84,3 +84,60 @@ export function buildUnsubscribePageUrl(token: string): string {
   return `${base}/avregistrera?t=${encodeURIComponent(token)}`;
 }
 
+
+/**
+ * Short, mail-friendly unsubscribe id used in the visible footer link.
+ * Long signed tokens get wrapped across lines by mail transports, which broke
+ * links when recipients copied them out of the message.
+ */
+export async function getShortUnsubscribeId(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  userId: string,
+  email: string,
+): Promise<string | null> {
+  const lower = email.toLowerCase();
+  try {
+    const { data: existing } = await admin
+      .from("unsubscribe_links")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("email", lower)
+      .maybeSingle();
+    if (existing?.id) return existing.id as string;
+
+    const bytes = new Uint8Array(9);
+    crypto.getRandomValues(bytes);
+    const id = b64url(bytes);
+    const { error } = await admin
+      .from("unsubscribe_links")
+      .insert({ id, user_id: userId, email: lower });
+    if (error) {
+      const { data: retry } = await admin
+        .from("unsubscribe_links")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("email", lower)
+        .maybeSingle();
+      return (retry?.id as string) ?? null;
+    }
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolves a short id back to the user/email pair. */
+export async function resolveShortUnsubscribeId(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  id: string,
+): Promise<{ userId: string; email: string } | null> {
+  const { data } = await admin
+    .from("unsubscribe_links")
+    .select("user_id, email")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  return { userId: data.user_id as string, email: data.email as string };
+}
