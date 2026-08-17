@@ -54,6 +54,8 @@ function buildRfc2822(opts: {
   bodyText?: string;
   bodyHtml?: string;
   inReplyTo?: string;
+  /** Full References chain (space separated, oldest first) */
+  references?: string;
   extraHeaders?: string[];
   includeDate?: boolean;
 }): string {
@@ -68,8 +70,15 @@ function buildRfc2822(opts: {
   if (opts.extraHeaders) headers.push(...opts.extraHeaders);
   if (opts.inReplyTo) {
     headers.push(`In-Reply-To: ${opts.inReplyTo}`);
-    headers.push(`References: ${opts.inReplyTo}`);
+    // Clients (especially Outlook) need the whole ancestry, not just the
+    // direct parent, to keep step 3 in the same conversation as step 1.
+    const refs = (opts.references && opts.references.trim())
+      ? opts.references.trim()
+      : opts.inReplyTo;
+    // Fold long chains at whitespace (RFC 5322 line length limit).
+    headers.push("References: " + refs.split(/\s+/).join("\r\n "));
   }
+
 
   // Bodies are base64 encoded: safe for UTF-8 and avoids the 998-char line
   // limit that long single-line HTML would otherwise break.
@@ -121,6 +130,7 @@ async function sendViaGmail(
   bodyText: string | undefined,
   inReplyTo: string | undefined,
   extraHeaders: string[],
+  references?: string,
 ): Promise<{ messageId: string | null }> {
   const accessToken = await getValidGoogleAccessToken(admin, account);
   const rfc = buildRfc2822({
@@ -130,6 +140,7 @@ async function sendViaGmail(
     bodyText: bodyText ?? undefined,
     bodyHtml: bodyHtml ?? undefined,
     inReplyTo,
+    references,
     extraHeaders,
   });
   const raw = base64UrlEncode(rfc);
@@ -433,6 +444,26 @@ Deno.serve(async (req) => {
     }
     const finalBody = ensureUnsub(taggedHtml, taggedText);
 
+    // Build the full References chain from earlier messages in this thread so
+    // follow-ups stay in one conversation (Outlook ignores In-Reply-To alone).
+    let referencesChain: string | undefined;
+    if (in_reply_to) {
+      const { data: priorMsgs } = await admin
+        .from("email_messages")
+        .select("message_id_header, created_at")
+        .eq("user_id", userId)
+        .eq("direction", "outbound")
+        .eq("to_address", to)
+        .eq("sequence_id", sequence_id ?? null)
+        .not("message_id_header", "is", null)
+        .order("created_at", { ascending: true });
+      const ids = (priorMsgs ?? [])
+        .map((m: any) => String(m.message_id_header))
+        .filter((id: string) => id.startsWith("<"));
+      if (!ids.includes(in_reply_to)) ids.push(in_reply_to);
+      referencesChain = Array.from(new Set(ids)).join(" ");
+    }
+
     let status = "sent";
     let errorMessage: string | null = null;
     let providerMessageId: string | null = null;
@@ -449,6 +480,7 @@ Deno.serve(async (req) => {
           finalBody.text,
           in_reply_to,
           extraHeaders,
+          referencesChain,
         );
         providerMessageId = r.messageId;
       } else if (account.auth_type === "oauth" && account.provider === "outlook") {
@@ -476,6 +508,7 @@ Deno.serve(async (req) => {
           bodyText: finalBody.text || undefined,
           bodyHtml: finalBody.html || undefined,
           inReplyTo: in_reply_to || undefined,
+          references: referencesChain,
           includeDate: true,
           extraHeaders,
         });
