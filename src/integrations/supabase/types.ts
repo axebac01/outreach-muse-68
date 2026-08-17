@@ -1237,6 +1237,7 @@ export type Database = {
           sending_window_start: string
           start_at: string | null
           status: string
+          thread_followups: boolean
           timezone: string
           updated_at: string
           user_id: string
@@ -1253,6 +1254,7 @@ export type Database = {
           sending_window_start?: string
           start_at?: string | null
           status?: string
+          thread_followups?: boolean
           timezone?: string
           updated_at?: string
           user_id: string
@@ -1269,6 +1271,7 @@ export type Database = {
           sending_window_start?: string
           start_at?: string | null
           status?: string
+          thread_followups?: boolean
           timezone?: string
           updated_at?: string
           user_id?: string
