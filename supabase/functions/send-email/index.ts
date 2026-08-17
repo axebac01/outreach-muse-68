@@ -455,9 +455,15 @@ Deno.serve(async (req) => {
             html: finalBody.html || undefined,
             inReplyTo: in_reply_to || undefined,
             headers: {
+              // Must match the Message-ID we persist, otherwise follow-up
+              // steps reference a Message-ID that never existed and the
+              // thread breaks in the recipient's client.
+              "Message-ID": localMessageId,
+              ...(in_reply_to ? { References: in_reply_to } : {}),
               "List-Unsubscribe": `<${unsubUrl}>`,
               "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
             },
+
           });
           providerMessageId = (result as any)?.messageId ?? null;
         } finally {
