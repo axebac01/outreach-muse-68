@@ -161,8 +161,21 @@ export const ScheduleTab = ({ sequence }: { sequence: Sequence }) => {
             </div>
             <Switch checked={sequence.pause_on_reply} onCheckedChange={(v) => update.mutate({ pause_on_reply: v })} />
           </div>
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+            <div>
+              <div className="font-medium text-sm">Håll uppföljningar i samma tråd</div>
+              <div className="text-xs text-muted-foreground">
+                Uppföljningar skickas som svar med "Re: " och samma ämnesrad som första mejlet. Stäng av om varje steg ska ha egen rubrik.
+              </div>
+            </div>
+            <Switch
+              checked={(sequence as any).thread_followups !== false}
+              onCheckedChange={(v) => update.mutate({ thread_followups: v } as any)}
+            />
+          </div>
         </CardContent>
       </Card>
+
     </div>
   );
 };
