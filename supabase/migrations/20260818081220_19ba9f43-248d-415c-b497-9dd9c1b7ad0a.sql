@@ -1,0 +1,2 @@
+update scheduled_sends set status='scheduled', error_message=null, attempts=0, email_account_id='9ce9ed0c-e9b0-4eee-aa4c-9205f96b598b', scheduled_for=now()
+where sequence_id='4ed83fca-78ef-48eb-ab3d-021ef2e74843' and status='failed';
