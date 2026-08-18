@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowRight, Sparkles, Wand2, Eraser } from "lucide-react";
+import { classifyRecipient, sanitizeName } from "@/lib/emailAddressQuality";
 
 export type LeadField =
   | "email"
