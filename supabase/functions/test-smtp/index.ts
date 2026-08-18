@@ -11,11 +11,15 @@ function classifySmtpError(err: unknown, host: string): {
   code: string;
   message: string;
   detail: string;
+  stage?: string;
 } {
   const raw = err instanceof Error ? err.message : String(err ?? "");
   const m = raw.toLowerCase();
   const detail = raw.slice(0, 400);
   const hostLc = host.toLowerCase();
+  const stage = (err && typeof err === "object" && typeof (err as any).stage === "string")
+    ? (err as any).stage as string
+    : undefined;
 
   if ((hostLc.includes("outlook.com") || hostLc.includes("hotmail")) &&
       (m.includes("535") || m.includes("5.7.139") || m.includes("authentication"))) {
@@ -23,6 +27,7 @@ function classifySmtpError(err: unknown, host: string): {
       code: "smtp_personal_outlook_blocked",
       message: "Personal Outlook/Hotmail SMTP is disabled by Microsoft.",
       detail,
+      stage,
     };
   }
   if (m.includes("sender address blocked") || m.includes("5.1.8") ||
@@ -33,39 +38,60 @@ function classifySmtpError(err: unknown, host: string): {
       code: "smtp_sender_blocked",
       message: "Sender address blocked by the mail server.",
       detail,
+      stage,
     };
   }
   if (m.includes("535") || m.includes("authentication unsuccessful") ||
       m.includes("authentication failed") || m.includes("invalid login") ||
       m.includes("username and password not accepted")) {
-    return { code: "smtp_auth_failed", message: "SMTP authentication failed.", detail };
+    return { code: "smtp_auth_failed", message: "SMTP authentication failed.", detail, stage };
   }
   if (m.includes("enotfound") || m.includes("getaddrinfo") ||
       m.includes("name or service not known")) {
-    return { code: "smtp_host_not_found", message: `Host not found: ${host}`, detail };
+    return { code: "smtp_host_not_found", message: `Host not found: ${host}`, detail, stage };
   }
   if (m.includes("econnrefused") || m.includes("connection refused")) {
-    return { code: "smtp_connection_refused", message: "Connection refused.", detail };
+    return { code: "smtp_connection_refused", message: "Connection refused.", detail, stage };
   }
   if (m.includes("tls") || m.includes("ssl") || m.includes("certificate") ||
       m.includes("handshake")) {
-    return { code: "smtp_tls_failed", message: "TLS handshake failed.", detail };
+    return { code: "smtp_tls_failed", message: "TLS handshake failed.", detail, stage };
   }
   if (m.includes("timeout") || m.includes("timed out")) {
-    return { code: "smtp_timeout", message: "SMTP server did not respond in time.", detail };
+    return { code: "smtp_timeout", message: "SMTP server did not respond in time.", detail, stage };
   }
-  return { code: "smtp_generic", message: "SMTP test failed.", detail };
+  return { code: "smtp_generic", message: "SMTP test failed.", detail, stage };
+}
+
+/**
+ * Zoho har två uppsättningar SMTP-värdar: `smtppro.*` för betalda planer och
+ * `smtp.*` för gratis/övriga. Fel värd ger 554 5.1.8 trots rätt lösenord, så vi
+ * provar motsvarigheten automatiskt och rapporterar om den fungerar.
+ */
+function alternateHosts(host: string): string[] {
+  const h = host.trim().toLowerCase();
+  if (!h.includes("zoho")) return [];
+  if (h.startsWith("smtppro.")) return [h.replace(/^smtppro\./, "smtp.")];
+  if (h.startsWith("smtp.")) return [h.replace(/^smtp\./, "smtppro.")];
+  return [];
 }
 
 function jsonError(
   status: number,
-  payload: { code: string; message: string; detail?: string },
+  payload: {
+    code: string;
+    message: string;
+    detail?: string;
+    stage?: string;
+    alt_host?: string;
+  },
 ) {
   return new Response(JSON.stringify({ error: payload }), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
+
 
 function isPrivateIPv4(ip: string): boolean {
   const m = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
