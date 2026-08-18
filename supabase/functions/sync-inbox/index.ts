@@ -645,7 +645,9 @@ async function syncImap(admin: any, account: any): Promise<number> {
       // Parse MIME
       let parsedMail: any;
       try {
-        parsedMail = await simpleParser(msg.raw);
+        // mailparser needs a Buffer/string — a raw Uint8Array is treated as a
+        // stream and fails with "input.once is not a function".
+        parsedMail = await simpleParser(Buffer.from(msg.raw));
       } catch (e: any) {
         console.warn(`MIME parse failed uid=${msg.uid}:`, e?.message);
         continue;
