@@ -420,8 +420,41 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   <SelectItem value="none">Inte skickat</SelectItem>
                 </SelectContent>
               </Select>
+              {filteredLeads.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs text-destructive hover:text-destructive"
+                  disabled={deleteLeads.isPending}
+                  onClick={() => setConfirmMode("filtered")}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {isFiltering
+                    ? `Ta bort filtrerade (${filteredLeads.length.toLocaleString("sv-SE")})`
+                    : `Ta bort alla (${filteredLeads.length.toLocaleString("sv-SE")})`}
+                </Button>
+              )}
             </div>
           </div>
+          {selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2">
+              <span className="text-sm font-medium">
+                {selectedIds.size.toLocaleString("sv-SE")} markerade
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={deleteLeads.isPending}
+                onClick={() => setConfirmMode("selected")}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Ta bort markerade
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setSelectedIds(new Set())}>
+                Avmarkera
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {leads.length === 0 ? (
@@ -437,6 +470,13 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        aria-label="Markera alla på sidan"
+                        checked={allPageSelected}
+                        onCheckedChange={(v) => toggleSelectAllOnPage(v === true)}
+                      />
+                    </TableHead>
                     <TableHead>E-post</TableHead>
                     <TableHead>Namn</TableHead>
                     <TableHead>Företag</TableHead>
@@ -454,9 +494,22 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                       const meta = STATUS_META[key];
                       const totalSteps = stats?.totalSteps ?? 0;
                       return (
-                        <TableRow key={l.id}>
+                        <TableRow key={l.id} data-state={selectedIds.has(l.id) ? "selected" : undefined}>
+                          <TableCell>
+                            <Checkbox
+                              aria-label={`Markera ${l.email}`}
+                              checked={selectedIds.has(l.id)}
+                              onCheckedChange={(v) => {
+                                const next = new Set(selectedIds);
+                                if (v === true) next.add(l.id);
+                                else next.delete(l.id);
+                                setSelectedIds(next);
+                              }}
+                            />
+                          </TableCell>
                           <TableCell className="text-sm">{l.email}</TableCell>
                           <TableCell className="text-sm">{l.full_name ?? `${l.first_name ?? ""} ${l.last_name ?? ""}`.trim()}</TableCell>
+
                           <TableCell className="text-sm">{l.company ?? "—"}</TableCell>
                           <TableCell><Badge variant={meta.variant}>{meta.label}</Badge></TableCell>
                           <TableCell className="text-sm">{(stat?.sent ?? 0)} / {totalSteps}</TableCell>
