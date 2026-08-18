@@ -116,7 +116,10 @@
       "authChecklistPassword": "The password is the same one you use for webmail — not your hosting account password.",
       "authChecklistEnabled": "SMTP/IMAP is enabled for the mailbox at your provider.",
       "authChecklistPort": "Try port 587 (STARTTLS) if 465 (SSL) is rejected.",
-      "showTechnicalDetails": "Show technical details"
+      "showTechnicalDetails": "Show technical details",
+      "failedAtStage": "The server stopped at: {{stage}}",
+      "altHostSuggestion": "Login worked against {{host}}. Switch the server address and test again.",
+      "useAltHost": "Use {{host}}"
     },
     "success": {
       "title": "Email account connected",
@@ -739,6 +742,7 @@
       "appPasswordRequired": "Gmail requires an app password (not your normal password). Generate one at myaccount.google.com/apppasswords.",
       "generic": "SMTP test failed: {{detail}}",
       "hostNotAllowed": "The server could not be reached (private or unknown address). Check the host name.",
+      "senderBlockedZoho": "Zoho rejected this address as a sender even though the login is correct. Common causes: wrong server address (smtppro.zoho.eu is for paid plans, smtp.zoho.eu for others), a plan without external SMTP, two-factor requiring an app-specific password, or a domain that is not fully verified in Zoho yet.",
       "senderBlocked": "The mail server blocked this address as a sender. Make sure the address is a real mailbox (not an alias), that outgoing SMTP is enabled for the account with your provider, and that the username is the full email address. Some providers require a separate SMTP password.",
       "genericNoDetail": "The SMTP test failed. Check host, port, username and password.",
       "authFailedGeneric": "The mail server rejected the login. Check that the username is your full email address and that the password is the same one you use for webmail. Some providers require SMTP to be enabled for the mailbox."

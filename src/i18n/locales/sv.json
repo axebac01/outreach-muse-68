@@ -116,7 +116,10 @@
       "authChecklistPassword": "Lösenordet är samma som i webbmailen — inte kontolösenordet hos webbhotellet.",
       "authChecklistEnabled": "SMTP/IMAP är påslaget för postlådan hos din leverantör.",
       "authChecklistPort": "Prova port 587 (STARTTLS) om 465 (SSL) nekas.",
-      "showTechnicalDetails": "Visa tekniska detaljer"
+      "showTechnicalDetails": "Visa tekniska detaljer",
+      "failedAtStage": "Servern avbröt vid: {{stage}}",
+      "altHostSuggestion": "Inloggningen fungerade mot {{host}}. Byt serveradress och testa igen.",
+      "useAltHost": "Använd {{host}}"
     },
     "success": {
       "title": "Mejlkonto anslutet",
@@ -739,6 +742,7 @@
       "appPasswordRequired": "Gmail kräver ett app-lösenord (inte ditt vanliga lösenord). Generera ett på myaccount.google.com/apppasswords.",
       "generic": "SMTP-test misslyckades: {{detail}}",
       "hostNotAllowed": "Servern kunde inte nås (privat eller okänd adress). Kontrollera serveradressen.",
+      "senderBlockedZoho": "Zoho nekade adressen som avsändare trots att inloggningen är korrekt. Vanliga orsaker: fel serveradress (smtppro.zoho.eu gäller betalda planer, smtp.zoho.eu för övriga), att planen inte tillåter extern SMTP, att tvåfaktor kräver ett app-specifikt lösenord, eller att domänen ännu inte är fullt verifierad i Zoho.",
       "senderBlocked": "Mejlservern blockerar den här adressen som avsändare. Kontrollera att adressen är en riktig brevlåda (inte ett alias), att utgående SMTP är påslaget för kontot hos din leverantör, och att användarnamnet är hela mejladressen. Vissa leverantörer kräver ett separat SMTP-lösenord.",
       "genericNoDetail": "SMTP-testet misslyckades. Kontrollera server, port, användarnamn och lösenord.",
       "authFailedGeneric": "Mejlservern nekade inloggningen. Kontrollera att användarnamnet är hela mejladressen och att lösenordet är samma som du loggar in med i webbmailen. Vissa leverantörer kräver att SMTP aktiveras för postlådan."
