@@ -3,9 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Target, Package, Gift, MessageSquare, Send, Clock, AlertTriangle, MessageCircle } from "lucide-react";
+import { Target, Package, Gift, MessageSquare, Send, Clock, AlertTriangle, MessageCircle, UserMinus } from "lucide-react";
 import { useUpdateCampaign, useCampaignSequence } from "@/hooks/useCampaigns";
-import { useSequenceSendStats } from "@/hooks/useSequence";
+import { useSequenceSendStats, useSequenceUnsubscribes } from "@/hooks/useSequence";
 import { useRef } from "react";
 
 interface Props {
@@ -31,6 +31,7 @@ const MissingHint = () => (
 export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }: Props) => {
   const update = useUpdateCampaign(campaign.id);
   const { data: stats } = useSequenceSendStats(sequenceId);
+  const { data: unsubs } = useSequenceUnsubscribes(sequenceId);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const queueSave = (patch: Record<string, any>) => {
@@ -49,7 +50,7 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="rounded-xl border bg-card p-4">
           <div className="text-xs text-muted-foreground flex items-center gap-1.5"><Send className="h-3.5 w-3.5" /> Skickade mejl</div>
           <div className="text-2xl font-semibold">{s.sent}</div>
@@ -65,6 +66,10 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
         <div className="rounded-xl border bg-card p-4">
           <div className="text-xs text-muted-foreground flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Svar</div>
           <div className="text-2xl font-semibold">{s.replied}</div>
+        </div>
+        <div className="rounded-xl border bg-card p-4">
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5"><UserMinus className="h-3.5 w-3.5" /> Avregistrerade</div>
+          <div className="text-2xl font-semibold">{unsubs?.count ?? 0}</div>
         </div>
       </div>
 

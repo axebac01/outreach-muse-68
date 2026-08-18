@@ -113,7 +113,7 @@ const Analytics = () => {
     return {
       sent, failed, pendingFuture, replied, replyRate, activeSeq,
       totalSeq: displayData.sequences.length,
-      totalLeads: displayData.leads.length,
+      totalLeads: displayData.totalLeads ?? displayData.leads.length,
       unsub: displayData.unsubscribes.length,
     };
   }, [displayData]);

@@ -225,6 +225,40 @@ async function fetchAllRows<T>(
   return all;
 }
 
+/** Avregistrerade i en kampanj: unika mejladresser, deduplicerat. */
+export const useSequenceUnsubscribes = (sequenceId: string | undefined) => {
+  return useQuery({
+    queryKey: ["sequence_unsubscribes", sequenceId],
+    enabled: !!sequenceId,
+    queryFn: async () => {
+      const [leads, unsubs] = await Promise.all([
+        fetchAllRows<{ email: string; status: string }>((from, to) =>
+          supabase
+            .from("sequence_leads")
+            .select("email, status")
+            .eq("sequence_id", sequenceId!)
+            .range(from, to),
+        ),
+        fetchAllRows<{ email: string; sequence_id: string | null }>((from, to) =>
+          supabase.from("unsubscribes").select("email, sequence_id").range(from, to),
+        ),
+      ]);
+
+      const leadEmails = new Set(leads.map((l) => (l.email ?? "").toLowerCase()).filter(Boolean));
+      const emails = new Set<string>();
+      for (const l of leads) {
+        if (l.status === "unsubscribed" && l.email) emails.add(l.email.toLowerCase());
+      }
+      for (const u of unsubs) {
+        const e = (u.email ?? "").toLowerCase();
+        if (!e) continue;
+        if (u.sequence_id === sequenceId || leadEmails.has(e)) emails.add(e);
+      }
+      return { count: emails.size, emails };
+    },
+  });
+};
+
 export const useSequenceLeadCount = (sequenceId: string | undefined) => {
   return useQuery({
     queryKey: ["sequence_leads_count", sequenceId],

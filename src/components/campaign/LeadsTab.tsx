@@ -18,22 +18,29 @@ import {
   useAddSequenceLeads,
   useDeleteSequenceLead,
   useSequenceSendStats,
+  useSequenceUnsubscribes,
   type LeadSendStat,
 } from "@/hooks/useSequence";
 import { CsvColumnMapper } from "@/components/CsvColumnMapper";
 import { toUserMessage } from "@/lib/errorMessages";
 
-type LeadStatusFilter = "all" | "sent" | "scheduled" | "failed" | "none" | "replied";
+type LeadStatusFilter = "all" | "sent" | "scheduled" | "failed" | "none" | "replied" | "unsubscribed";
 
 const STATUS_META: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   sent: { label: "Skickat", variant: "default" },
   scheduled: { label: "Schemalagt", variant: "secondary" },
   failed: { label: "Misslyckades", variant: "destructive" },
   replied: { label: "Svarat", variant: "default" },
+  unsubscribed: { label: "Avregistrerad", variant: "outline" },
   none: { label: "Inte skickat", variant: "outline" },
 };
 
-const deriveStatus = (leadStatus: string, stat?: LeadSendStat): keyof typeof STATUS_META => {
+const deriveStatus = (
+  leadStatus: string,
+  stat?: LeadSendStat,
+  isUnsubscribed?: boolean,
+): keyof typeof STATUS_META => {
+  if (leadStatus === "unsubscribed" || isUnsubscribed) return "unsubscribed";
   if (leadStatus === "replied") return "replied";
   if (!stat) return "none";
   if (stat.lastStatus === "failed") return "failed";
@@ -47,6 +54,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const { data: leads = [] } = useSequenceLeads(sequenceId);
   const { data: leadCount } = useSequenceLeadCount(sequenceId);
   const { data: stats } = useSequenceSendStats(sequenceId);
+  const { data: unsubs } = useSequenceUnsubscribes(sequenceId);
   const addLeads = useAddSequenceLeads(sequenceId);
   const deleteLead = useDeleteSequenceLead(sequenceId);
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("all");
@@ -61,10 +69,15 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   }, [search]);
 
   const totalLeads = leadCount ?? leads.length;
+  const isUnsub = (email: string | null) => !!email && !!unsubs?.emails.has(email.toLowerCase());
   const filteredLeads = useMemo(() => {
     const q = debouncedSearch;
     return leads.filter((l) => {
-      if (statusFilter !== "all" && deriveStatus(l.status, stats?.byLeadId.get(l.id)) !== statusFilter) return false;
+      if (
+        statusFilter !== "all" &&
+        deriveStatus(l.status, stats?.byLeadId.get(l.id), isUnsub(l.email)) !== statusFilter
+      )
+        return false;
       if (!q) return true;
       const haystack = [l.email, l.full_name, l.first_name, l.last_name, l.company, (l as any).website, l.role]
         .filter(Boolean)
@@ -72,7 +85,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [leads, statusFilter, stats, debouncedSearch]);
+  }, [leads, statusFilter, stats, debouncedSearch, unsubs]);
   const pageCount = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   useEffect(() => {
@@ -366,6 +379,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   <SelectItem value="scheduled">Schemalagt</SelectItem>
                   <SelectItem value="failed">Misslyckades</SelectItem>
                   <SelectItem value="replied">Svarat</SelectItem>
+                  <SelectItem value="unsubscribed">Avregistrerad</SelectItem>
                   <SelectItem value="none">Inte skickat</SelectItem>
                 </SelectContent>
               </Select>
@@ -399,7 +413,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   {pagedLeads
                     .map((l) => {
                       const stat = stats?.byLeadId.get(l.id);
-                      const key = deriveStatus(l.status, stat);
+                      const key = deriveStatus(l.status, stat, isUnsub(l.email));
                       const meta = STATUS_META[key];
                       const totalSteps = stats?.totalSteps ?? 0;
                       return (
