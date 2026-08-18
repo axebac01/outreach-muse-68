@@ -422,6 +422,8 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   <SelectItem value="failed">Misslyckades</SelectItem>
                   <SelectItem value="replied">Svarat</SelectItem>
                   <SelectItem value="unsubscribed">Avregistrerad</SelectItem>
+                  <SelectItem value="bounced">Studsade</SelectItem>
+                  <SelectItem value="invalid">Ogiltig adress</SelectItem>
                   <SelectItem value="none">Inte skickat</SelectItem>
                 </SelectContent>
               </Select>
