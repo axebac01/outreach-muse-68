@@ -113,6 +113,10 @@ function matchFreeText(
     return { key: "errors.generic.timeout" };
   }
 
+  if (m.includes("sender address blocked") || m.includes("5.1.8") ||
+      m.includes("relay access denied") || m.includes("relaying denied")) {
+    return { key: "errors.smtp.senderBlocked" };
+  }
   if (m.includes("smtp.office365.com") && (m.includes("535") || m.includes("5.7.139"))) {
     return { key: "errors.smtp.personalOutlookBlocked" };
   }
