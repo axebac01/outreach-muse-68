@@ -17,10 +17,21 @@ import {
   useSequenceLeadCount,
   useAddSequenceLeads,
   useDeleteSequenceLead,
+  useDeleteSequenceLeads,
   useSequenceSendStats,
   useSequenceUnsubscribes,
   type LeadSendStat,
 } from "@/hooks/useSequence";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CsvColumnMapper } from "@/components/CsvColumnMapper";
 import { toUserMessage } from "@/lib/errorMessages";
 
@@ -57,6 +68,9 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const { data: unsubs } = useSequenceUnsubscribes(sequenceId);
   const addLeads = useAddSequenceLeads(sequenceId);
   const deleteLead = useDeleteSequenceLead(sequenceId);
+  const deleteLeads = useDeleteSequenceLeads(sequenceId);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmMode, setConfirmMode] = useState<null | "selected" | "filtered">(null);
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("all");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -90,10 +104,33 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const currentPage = Math.min(page, pageCount);
   useEffect(() => {
     setPage(1);
+    setSelectedIds(new Set());
   }, [statusFilter, debouncedSearch]);
   const pagedLeads = filteredLeads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const rangeStart = filteredLeads.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(currentPage * PAGE_SIZE, filteredLeads.length);
+  const allPageSelected = pagedLeads.length > 0 && pagedLeads.every((l) => selectedIds.has(l.id));
+  const toggleSelectAllOnPage = (checked: boolean) => {
+    const next = new Set(selectedIds);
+    pagedLeads.forEach((l) => (checked ? next.add(l.id) : next.delete(l.id)));
+    setSelectedIds(next);
+  };
+  const isFiltering = statusFilter !== "all" || debouncedSearch.length > 0;
+  const confirmCount = confirmMode === "selected" ? selectedIds.size : filteredLeads.length;
+  const runDelete = async () => {
+    const ids =
+      confirmMode === "selected" ? Array.from(selectedIds) : filteredLeads.map((l) => l.id);
+    setConfirmMode(null);
+    try {
+      const n = await deleteLeads.mutateAsync(ids);
+      setSelectedIds(new Set());
+      setPage(1);
+      toast.success(`${n.toLocaleString("sv-SE")} leads borttagna`);
+    } catch (e: any) {
+      toast.error(toUserMessage(e, t, "errors.generic"));
+    }
+  };
+
 
 
   const [parsedHeaders, setParsedHeaders] = useState<string[]>([]);
@@ -383,8 +420,41 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   <SelectItem value="none">Inte skickat</SelectItem>
                 </SelectContent>
               </Select>
+              {filteredLeads.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs text-destructive hover:text-destructive"
+                  disabled={deleteLeads.isPending}
+                  onClick={() => setConfirmMode("filtered")}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {isFiltering
+                    ? `Ta bort filtrerade (${filteredLeads.length.toLocaleString("sv-SE")})`
+                    : `Ta bort alla (${filteredLeads.length.toLocaleString("sv-SE")})`}
+                </Button>
+              )}
             </div>
           </div>
+          {selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2">
+              <span className="text-sm font-medium">
+                {selectedIds.size.toLocaleString("sv-SE")} markerade
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={deleteLeads.isPending}
+                onClick={() => setConfirmMode("selected")}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Ta bort markerade
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setSelectedIds(new Set())}>
+                Avmarkera
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {leads.length === 0 ? (
@@ -400,6 +470,13 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        aria-label="Markera alla på sidan"
+                        checked={allPageSelected}
+                        onCheckedChange={(v) => toggleSelectAllOnPage(v === true)}
+                      />
+                    </TableHead>
                     <TableHead>E-post</TableHead>
                     <TableHead>Namn</TableHead>
                     <TableHead>Företag</TableHead>
@@ -417,9 +494,22 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                       const meta = STATUS_META[key];
                       const totalSteps = stats?.totalSteps ?? 0;
                       return (
-                        <TableRow key={l.id}>
+                        <TableRow key={l.id} data-state={selectedIds.has(l.id) ? "selected" : undefined}>
+                          <TableCell>
+                            <Checkbox
+                              aria-label={`Markera ${l.email}`}
+                              checked={selectedIds.has(l.id)}
+                              onCheckedChange={(v) => {
+                                const next = new Set(selectedIds);
+                                if (v === true) next.add(l.id);
+                                else next.delete(l.id);
+                                setSelectedIds(next);
+                              }}
+                            />
+                          </TableCell>
                           <TableCell className="text-sm">{l.email}</TableCell>
                           <TableCell className="text-sm">{l.full_name ?? `${l.first_name ?? ""} ${l.last_name ?? ""}`.trim()}</TableCell>
+
                           <TableCell className="text-sm">{l.company ?? "—"}</TableCell>
                           <TableCell><Badge variant={meta.variant}>{meta.label}</Badge></TableCell>
                           <TableCell className="text-sm">{(stat?.sent ?? 0)} / {totalSteps}</TableCell>
@@ -462,6 +552,34 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
 
         </CardContent>
       </Card>
+
+      <AlertDialog open={confirmMode !== null} onOpenChange={(o) => !o && setConfirmMode(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Ta bort {confirmCount.toLocaleString("sv-SE")} leads?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmMode === "filtered" && isFiltering
+                ? "Alla leads som matchar din sökning och ditt filter tas bort. "
+                : confirmMode === "filtered"
+                  ? "Alla leads i kampanjen tas bort. "
+                  : "De markerade leadsen tas bort. "}
+              Schemalagda utskick till dessa leads avbryts. Detta går inte att ångra.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={runDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Ta bort
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 };

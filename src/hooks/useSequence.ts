@@ -374,9 +374,38 @@ export const useDeleteSequenceLead = (sequenceId: string) => {
       const { error } = await supabase.from("sequence_leads").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sequence_leads", sequenceId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sequence_leads", sequenceId] });
+      qc.invalidateQueries({ queryKey: ["sequence_leads_count", sequenceId] });
+      qc.invalidateQueries({ queryKey: ["sequence_send_stats", sequenceId] });
+      qc.invalidateQueries({ queryKey: ["campaigns"] });
+    },
   });
 };
+
+export const useDeleteSequenceLeads = (sequenceId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const CHUNK = 500;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const { error } = await supabase
+          .from("sequence_leads")
+          .delete()
+          .in("id", ids.slice(i, i + CHUNK));
+        if (error) throw error;
+      }
+      return ids.length;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sequence_leads", sequenceId] });
+      qc.invalidateQueries({ queryKey: ["sequence_leads_count", sequenceId] });
+      qc.invalidateQueries({ queryKey: ["sequence_send_stats", sequenceId] });
+      qc.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+  });
+};
+
 
 // ---------- Steps ----------
 export const useSequenceSteps = (sequenceId: string | undefined) => {
