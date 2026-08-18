@@ -660,9 +660,9 @@ async function syncImap(admin: any, account: any): Promise<number> {
       }
 
       const fromAddr = parsedMail.from?.value?.[0]?.address ?? "";
-      console.log(`IMAP uid=${msg.uid} from=${fromAddr} subj=${String(parsedMail.subject ?? "").slice(0, 60)}`);
       if (!fromAddr) { console.warn(`IMAP uid=${msg.uid}: no from address`); continue; }
-      if (fromAddr.toLowerCase() === accountEmailLower) { console.log(`IMAP uid=${msg.uid}: skipped (from self)`); continue; }
+      if (msg.uid > newHighestUid) newHighestUid = msg.uid;
+      if (fromAddr.toLowerCase() === accountEmailLower) continue;
 
 
 
