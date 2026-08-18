@@ -216,25 +216,46 @@ export async function sendRawMail(
   }
 }
 
+/** Vilken fas i SMTP-dialogen som fallerade — hjälper till att skilja
+ * "servern spärrar redan anslutningen" från "inloggningen nekades". */
+export type SmtpStage = "connect" | "greeting" | "ehlo" | "starttls" | "auth" | "quit";
+
 /** Connect + EHLO + AUTH only, used by the connection test. */
 export async function verifySmtpLogin(cfg: SmtpConfig): Promise<void> {
   const timeoutMs = cfg.timeoutMs ?? 20_000;
-  const tcp = cfg.secure
-    ? await Deno.connectTls({ hostname: cfg.hostname, port: cfg.port })
-    : await Deno.connect({ hostname: cfg.hostname, port: cfg.port });
+  let stage: SmtpStage = "connect";
+  const tag = (e: unknown) => {
+    if (e && typeof e === "object" && !(e as any).stage) (e as any).stage = stage;
+    return e;
+  };
+
+  let tcp: Deno.Conn;
+  try {
+    tcp = cfg.secure
+      ? await Deno.connectTls({ hostname: cfg.hostname, port: cfg.port })
+      : await Deno.connect({ hostname: cfg.hostname, port: cfg.port });
+  } catch (e) {
+    throw tag(e);
+  }
+
   const conn = new Connection(tcp, timeoutMs);
   try {
+    stage = "greeting";
     const greeting = await conn.readReply();
     if (greeting.code !== 220) throw new SmtpError(greeting.code, greeting.text);
+    stage = "ehlo";
     let ehlo = await cmd(conn, "EHLO maillead.ai", [250]);
     if (!cfg.secure && /STARTTLS/i.test(ehlo.text)) {
+      stage = "starttls";
       await cmd(conn, "STARTTLS", [220]);
       const tls = await Deno.startTls(conn.raw as Deno.TcpConn, {
         hostname: cfg.hostname,
       });
       conn.replace(tls);
+      stage = "ehlo";
       ehlo = await cmd(conn, "EHLO maillead.ai", [250]);
     }
+    stage = "auth";
     if (/AUTH[ -=][^\n]*PLAIN/i.test(ehlo.text)) {
       await cmd(
         conn,
@@ -246,10 +267,14 @@ export async function verifySmtpLogin(cfg: SmtpConfig): Promise<void> {
       await cmd(conn, b64(cfg.username), [334]);
       await cmd(conn, b64(cfg.password), [235]);
     }
+    stage = "quit";
     try {
       await cmd(conn, "QUIT", [221, 250]);
     } catch { /* noop */ }
+  } catch (e) {
+    throw tag(e);
   } finally {
     conn.close();
   }
 }
+
