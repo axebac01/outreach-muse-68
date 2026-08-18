@@ -215,14 +215,32 @@ export const CsvColumnMapper = ({ headers, rows, onConfirm, onCancel, isImportin
   };
 
   const stats = useMemo(() => {
+    const emptyStats = {
+      valid: 0,
+      invalid: rows.length,
+      duplicates: 0,
+      excluded: 0,
+      risky: 0,
+      reasons: {} as Record<string, number>,
+    };
     const emailCol = Object.entries(mapping).find(([, f]) => f === "email")?.[0];
-    if (!emailCol) return { valid: 0, invalid: rows.length, duplicates: 0 };
+    if (!emailCol) return emptyStats;
+
+    const nameCol =
+      Object.entries(mapping).find(([, f]) => f === "full_name")?.[0] ??
+      Object.entries(mapping).find(([, f]) => f === "first_name")?.[0];
+
     const seen = new Set<string>();
     let valid = 0;
     let duplicates = 0;
     let invalid = 0;
+    let excluded = 0;
+    let risky = 0;
+    const reasons: Record<string, number> = {};
+
     for (const r of rows) {
       const email = String(r[emailCol] ?? "").trim().toLowerCase();
+      const name = nameCol ? String(r[nameCol] ?? "").trim() : undefined;
       if (!email || !EMAIL_RE.test(email)) {
         invalid++;
         continue;
@@ -232,9 +250,16 @@ export const CsvColumnMapper = ({ headers, rows, onConfirm, onCancel, isImportin
         continue;
       }
       seen.add(email);
+      const verdict = classifyRecipient(email, name);
+      if (verdict.quality === "invalid") {
+        excluded++;
+        if (verdict.reason) reasons[verdict.reason] = (reasons[verdict.reason] ?? 0) + 1;
+        continue;
+      }
+      if (verdict.quality === "risky") risky++;
       valid++;
     }
-    return { valid, invalid, duplicates };
+    return { valid, invalid, duplicates, excluded, risky, reasons };
   }, [mapping, rows]);
 
   const sampleFor = (header: string) => {
@@ -261,11 +286,20 @@ export const CsvColumnMapper = ({ headers, rows, onConfirm, onCancel, isImportin
       if (!email || !EMAIL_RE.test(email)) continue;
       if (seen.has(email)) continue;
       seen.add(email);
+
+      // Platshållarnamn får aldrig följa med in i mejlen ("Hej [Name of CFO]").
+      obj.full_name = sanitizeName(obj.full_name);
+      obj.first_name = sanitizeName(obj.first_name);
+      obj.last_name = sanitizeName(obj.last_name);
+
+      if (classifyRecipient(email, obj.full_name ?? obj.first_name).quality === "invalid") continue;
+
       obj.email = email;
       out.push(obj as Record<LeadField, string>);
     }
     onConfirm(out);
   };
+
 
   const usedFields = new Set(Object.values(mapping).filter((f) => f !== "ignore"));
   const hasEmail = usedFields.has("email");
