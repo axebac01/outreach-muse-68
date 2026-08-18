@@ -630,7 +630,10 @@ async function syncImap(admin: any, account: any): Promise<number> {
       }
       if (!msg) { console.warn(`IMAP uid=${uid}: empty fetch`); continue; }
 
-      if (msg.uid > newHighestUid) newHighestUid = msg.uid;
+      // NOTE: the UID cursor is only advanced after a message has actually
+      // been handled — otherwise a parse failure would silently skip mail
+      // forever.
+
 
       // Dedupe: same UID may have been processed before
       const providerId = `imap-${account.id}-${msg.uid}`;
