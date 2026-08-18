@@ -54,6 +54,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const { data: leads = [] } = useSequenceLeads(sequenceId);
   const { data: leadCount } = useSequenceLeadCount(sequenceId);
   const { data: stats } = useSequenceSendStats(sequenceId);
+  const { data: unsubs } = useSequenceUnsubscribes(sequenceId);
   const addLeads = useAddSequenceLeads(sequenceId);
   const deleteLead = useDeleteSequenceLead(sequenceId);
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("all");
@@ -68,10 +69,15 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   }, [search]);
 
   const totalLeads = leadCount ?? leads.length;
+  const isUnsub = (email: string | null) => !!email && !!unsubs?.emails.has(email.toLowerCase());
   const filteredLeads = useMemo(() => {
     const q = debouncedSearch;
     return leads.filter((l) => {
-      if (statusFilter !== "all" && deriveStatus(l.status, stats?.byLeadId.get(l.id)) !== statusFilter) return false;
+      if (
+        statusFilter !== "all" &&
+        deriveStatus(l.status, stats?.byLeadId.get(l.id), isUnsub(l.email)) !== statusFilter
+      )
+        return false;
       if (!q) return true;
       const haystack = [l.email, l.full_name, l.first_name, l.last_name, l.company, (l as any).website, l.role]
         .filter(Boolean)
@@ -79,7 +85,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [leads, statusFilter, stats, debouncedSearch]);
+  }, [leads, statusFilter, stats, debouncedSearch, unsubs]);
   const pageCount = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   useEffect(() => {
