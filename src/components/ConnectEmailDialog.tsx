@@ -685,9 +685,14 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                               : ""}
                       </span>
                       {result.state === "error" && result.detail && (
-                        <span className="block text-[11px] text-muted-foreground mt-0.5 font-mono break-all">
-                          {result.detail}
-                        </span>
+                        <details className="mt-1">
+                          <summary className="text-[11px] text-muted-foreground cursor-pointer select-none">
+                            {t("emailAccounts.custom.showTechnicalDetails")}
+                          </summary>
+                          <span className="block text-[11px] text-muted-foreground mt-0.5 font-mono break-all">
+                            {result.detail}
+                          </span>
+                        </details>
                       )}
                     </span>
                   </div>

@@ -25,6 +25,16 @@ function classifySmtpError(err: unknown, host: string): {
       detail,
     };
   }
+  if (m.includes("sender address blocked") || m.includes("5.1.8") ||
+      m.includes("relay access denied") || m.includes("relaying denied") ||
+      m.includes("sender not allowed") || m.includes("not authorized to send") ||
+      m.includes("5.7.1") || m.includes("smtp 554")) {
+    return {
+      code: "smtp_sender_blocked",
+      message: "Sender address blocked by the mail server.",
+      detail,
+    };
+  }
   if (m.includes("535") || m.includes("authentication unsuccessful") ||
       m.includes("authentication failed") || m.includes("invalid login") ||
       m.includes("username and password not accepted")) {

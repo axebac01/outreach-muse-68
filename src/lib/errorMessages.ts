@@ -29,6 +29,7 @@ const KNOWN_CODES: Record<string, string> = {
   smtp_personal_outlook_blocked: "errors.smtp.personalOutlookBlocked",
   smtp_app_password_required: "errors.smtp.appPasswordRequired",
   smtp_host_not_allowed: "errors.smtp.hostNotAllowed",
+  smtp_sender_blocked: "errors.smtp.senderBlocked",
   smtp_generic: "errors.smtp.genericNoDetail",
   // IMAP
   imap_missing_fields: "errors.imap.missingFields",
@@ -112,6 +113,10 @@ function matchFreeText(
     return { key: "errors.generic.timeout" };
   }
 
+  if (m.includes("sender address blocked") || m.includes("5.1.8") ||
+      m.includes("relay access denied") || m.includes("relaying denied")) {
+    return { key: "errors.smtp.senderBlocked" };
+  }
   if (m.includes("smtp.office365.com") && (m.includes("535") || m.includes("5.7.139"))) {
     return { key: "errors.smtp.personalOutlookBlocked" };
   }
