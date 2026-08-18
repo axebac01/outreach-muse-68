@@ -1,0 +1,16 @@
+WITH seq AS (SELECT id FROM public.sequences WHERE campaign_id = 'b34b2ca7-26c9-4354-8d9b-2d7fdc842e94'),
+bad(email) AS (VALUES ('mats@micomsweden.se'),('tonysoderlund@hotmail.com'),('ewa.einerth@furuhojden.se'),('subodha.perera@frontwalker.com'),('info@hattenforlag.se'),('solleftea.produktion@live.se'),('mette.stahlgren@opivanordic.se'),('roland@beroll.se'),('robin@sunneev.se'),('info@gastroclinic.se'),('anna@digpro.se'),('koket@spab.eu'),('nils.c@nocab.net'),('info@kttab.se'),('info@rehabshop.com'),('info.bizservices@mared.se'),('hanna.johansson@mared.se'),('antti.mikkila@marvaco.com'),('john.hansen@karlsromarin.se'),('natalee.agren@taxiforbundet.se'),('info@hundkattspecialisten.se'),('tomas.berglund@ragnsells.com'),('jan.larsson@tanumshamn.se'),('mattias.sjodin@kognitivateamet.se'),('dp@pan-nordic.org'),('anna.karlsson@hjartmott.se'),('enquiries@cruyffinstitute.org'),('henrik.hammarskiold@gwkapital.se'),('ivar.bakken@borupab.se'),('info@domainholdings.com'),('mikael.larsson@fabricoeur.se'),('henrik.schroder@handels.gu.se'),('hakan.larsson@oxyfi.com'),('tommy@koppommaskin.com'),('info@hofpartner.se'),('anna.svedjedal@academicum.se'),('pmackie@hemlock.com'),('asa.magnusson@regsmart.se'),('erik.davidson@stagesmarts.com'),('info@garisbil.se'),('tomas.sjoblom@rallarsving.nu'),('info@mysite.com'),('info@stolpepublishing.se'),('robert.wilson@agc.com'),('travel@tourpacific.se'),('ulrika.palmberg@varsego.se'),('lars.carlson@maskinab.se'),('fredrik.adlercreutz@healsafeinterior.com'),('rolf.hjertsson@vesab.se'),('sebastjan.gergeta@lifegenomics.se'),('info@carlobolaget.se'),('lennart.jonsson@wiljagruppen.se'),('hans.thonestad@thonab.se'),('info@interaxo.com'),('tiina.mykkanen@orebrokompaniet.se'),('magnus.larsson@promimic.com'),('rickard@enbergsvvs.se'),('per.andersson@chessit.se'),('urban.svahn@hoganashuset.se'),('carl.mared@mared.se'),('daan@maincapitalpartners.com'),('mats.olsson@repona.com'),('tim.wiksborg@establish-schening.com'),('jerker.stenberg@solenergiprojekt.se'),('christer@hytorc.no'),('anna.mueller@next-kraftwerke.de'),('larsson.schakt@telia.com'),('eric@berntson.se'),('marc.keenan@oceanoutdoor.com'),('annica.north@alternativ1mc.se'),('anders.brannstrom@solidfasad.se'),('info@marindepan.se'),('knutssonsbilab@telia.com'),('linus@svenssontrafik.se'),('kundservice@drivalia.com'),('calle.andersson@s-i-t.se'),('henrik.zetterstrom@genova.se'),('emailus@email.com'),('goran.mladenovic@stemax.se'),('kristerlund58@hotmail.com'),('elfstromstradgard@elfstromstradgard.com'),('peter@hammarangensbil.se'),('dikshas@linkedin.com'),('erin@evolution.team'),('tryck@ctmab.se'),('petya.gangova@tureinvest.se'),('erik.johansson@mared.se'),('kenth@abckarossen.com'),('fredrik@thunmanentr.com'),('info@lillebud.se')),
+targets AS (
+  SELECT l.id FROM public.sequence_leads l
+  JOIN seq ON seq.id = l.sequence_id
+  WHERE lower(l.email) IN (SELECT email FROM bad)
+),
+cancelled AS (
+  UPDATE public.scheduled_sends ss
+  SET status = 'cancelled', cancelled_reason = 'invalid_lead', updated_at = now()
+  WHERE ss.lead_id IN (SELECT id FROM targets) AND ss.status IN ('pending','scheduled','paused')
+  RETURNING 1
+)
+UPDATE public.sequence_leads l
+SET status = 'invalid'
+WHERE l.id IN (SELECT id FROM targets) AND l.status <> 'invalid';
