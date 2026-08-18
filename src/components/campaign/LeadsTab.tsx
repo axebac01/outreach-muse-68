@@ -552,6 +552,34 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
 
         </CardContent>
       </Card>
+
+      <AlertDialog open={confirmMode !== null} onOpenChange={(o) => !o && setConfirmMode(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Ta bort {confirmCount.toLocaleString("sv-SE")} leads?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmMode === "filtered" && isFiltering
+                ? "Alla leads som matchar din sökning och ditt filter tas bort. "
+                : confirmMode === "filtered"
+                  ? "Alla leads i kampanjen tas bort. "
+                  : "De markerade leadsen tas bort. "}
+              Schemalagda utskick till dessa leads avbryts. Detta går inte att ångra.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={runDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Ta bort
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 };
