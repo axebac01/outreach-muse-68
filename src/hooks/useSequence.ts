@@ -169,7 +169,7 @@ export const useSequenceSendStats = (sequenceId: string | undefined) => {
       const totalSteps = stepsRes.count ?? 0;
 
 
-      const summary = { sent: 0, scheduled: 0, failed: 0, replied: 0 };
+      const summary = { sent: 0, scheduled: 0, failed: 0, replied: 0, bounced: 0, bounceRate: 0 };
       const byLeadId = new Map<string, LeadSendStat>();
 
       for (const s of sends) {
@@ -199,7 +199,11 @@ export const useSequenceSendStats = (sequenceId: string | undefined) => {
 
       for (const l of leads) {
         if (l.status === "replied") summary.replied++;
+        else if (l.status === "bounced") summary.bounced++;
       }
+
+      summary.bounceRate = summary.sent > 0 ? summary.bounced / summary.sent : 0;
+
 
       return { summary, byLeadId, totalSteps };
     },
