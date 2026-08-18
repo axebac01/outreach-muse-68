@@ -373,10 +373,31 @@ export const CsvColumnMapper = ({ headers, rows, onConfirm, onCancel, isImportin
           {stats.invalid > 0 && (
             <span className="rounded-md bg-destructive/10 text-destructive px-2 py-1">{stats.invalid} ogiltiga</span>
           )}
+          {stats.excluded > 0 && (
+            <span className="rounded-md bg-destructive/10 text-destructive px-2 py-1">
+              {stats.excluded} uteslutna (falsk adress)
+            </span>
+          )}
+          {stats.risky > 0 && (
+            <span className="rounded-md bg-warning/10 text-warning px-2 py-1">
+              {stats.risky} rollbaserade
+            </span>
+          )}
           {!hasEmail && (
             <span className="text-destructive text-xs">Du måste mappa en kolumn till E-post.</span>
           )}
         </div>
+
+        {stats.excluded > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Uteslutna:{" "}
+            {Object.entries(stats.reasons)
+              .map(([reason, n]) => `${n} ${reason.toLowerCase()}`)
+              .join(" · ")}
+            . De skulle studsa och skada din avsändardomän.
+          </p>
+        )}
+
 
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onCancel}>Avbryt</Button>
