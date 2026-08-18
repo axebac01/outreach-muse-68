@@ -104,10 +104,33 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const currentPage = Math.min(page, pageCount);
   useEffect(() => {
     setPage(1);
+    setSelectedIds(new Set());
   }, [statusFilter, debouncedSearch]);
   const pagedLeads = filteredLeads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const rangeStart = filteredLeads.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(currentPage * PAGE_SIZE, filteredLeads.length);
+  const allPageSelected = pagedLeads.length > 0 && pagedLeads.every((l) => selectedIds.has(l.id));
+  const toggleSelectAllOnPage = (checked: boolean) => {
+    const next = new Set(selectedIds);
+    pagedLeads.forEach((l) => (checked ? next.add(l.id) : next.delete(l.id)));
+    setSelectedIds(next);
+  };
+  const isFiltering = statusFilter !== "all" || debouncedSearch.length > 0;
+  const confirmCount = confirmMode === "selected" ? selectedIds.size : filteredLeads.length;
+  const runDelete = async () => {
+    const ids =
+      confirmMode === "selected" ? Array.from(selectedIds) : filteredLeads.map((l) => l.id);
+    setConfirmMode(null);
+    try {
+      const n = await deleteLeads.mutateAsync(ids);
+      setSelectedIds(new Set());
+      setPage(1);
+      toast.success(`${n.toLocaleString("sv-SE")} leads borttagna`);
+    } catch (e: any) {
+      toast.error(toUserMessage(e, t, "errors.generic"));
+    }
+  };
+
 
 
   const [parsedHeaders, setParsedHeaders] = useState<string[]>([]);
