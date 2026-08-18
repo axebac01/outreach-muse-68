@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toUserMessage } from "@/lib/errorMessages";
 import { EmailProvider, localized } from "@/lib/emailProviders";
+import { mailRegionHeaders } from "@/lib/mailRegion";
 
 type Props = {
   provider: EmailProvider;
@@ -52,6 +53,7 @@ const ProviderConnectGuide = ({ provider, onBack, onConnected }: Props) => {
     setTesting(true);
     try {
       const { data, error } = await supabase.functions.invoke("test-smtp", {
+        headers: mailRegionHeaders,
         body: {
           smtp_host: smtpHost,
           smtp_port: smtpPort,
@@ -88,6 +90,7 @@ const ProviderConnectGuide = ({ provider, onBack, onConnected }: Props) => {
       const { data, error } = await supabase.functions.invoke(
         "connect-smtp-account",
         {
+          headers: mailRegionHeaders,
           body: {
             email,
             display_name: displayName || null,

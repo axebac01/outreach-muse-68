@@ -12,6 +12,7 @@ import { sanitizeEmailHtml } from "@/lib/sanitizeHtml";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Send, Loader2 } from "lucide-react";
+import { mailRegionHeaders } from "@/lib/mailRegion";
 
 const SAMPLE: RenderVars = {
   first_name: "Alex",
@@ -90,6 +91,7 @@ export const SendTestEmailDialog = ({ sequenceId, open, onOpenChange, defaultSte
     try {
       const subject = `[TEST] ${renderedSubject || "(no subject)"}`;
       const { data, error } = await supabase.functions.invoke("send-email", {
+        headers: mailRegionHeaders,
         body: {
           email_account_id: accountId,
           to,

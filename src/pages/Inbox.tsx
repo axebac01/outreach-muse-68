@@ -24,6 +24,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { sv } from "date-fns/locale";
 import { useAuth } from "@/context/AuthContext";
+import { mailRegionHeaders } from "@/lib/mailRegion";
 
 const Inbox = () => {
   const { user } = useAuth();
@@ -173,7 +174,7 @@ const Inbox = () => {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("sync-inbox", { body: {} });
+      const { data, error } = await supabase.functions.invoke("sync-inbox", { body: {}, headers: mailRegionHeaders });
       if (error) throw error;
       const count = data?.new_messages ?? 0;
       toast.success(count > 0 ? `${count} nytt mejl hämtat` : "Inga nya mejl");
@@ -201,6 +202,7 @@ const Inbox = () => {
     setSending(true);
     try {
       const { error } = await supabase.functions.invoke("send-email", {
+        headers: mailRegionHeaders,
         body: {
           email_account_id: selected.email_account_id,
           to: recipient,

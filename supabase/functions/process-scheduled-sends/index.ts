@@ -89,6 +89,9 @@ function interleaveByKey<T>(items: T[], keyFn: (t: T) => string): T[] {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Loggas för att kunna härleda SMTP-geoblock (551) till fel exekveringsregion.
+  console.log("process-scheduled-sends region:", Deno.env.get("SB_REGION") ?? "unknown");
+
   const tStart = Date.now();
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
   const result = { processed: 0, sent: 0, cancelled: 0, deferred: 0, failed: 0, paused: 0, requeued: 0, retried: 0, time_budget_hit: false };
