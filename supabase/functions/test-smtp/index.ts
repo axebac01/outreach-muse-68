@@ -217,18 +217,42 @@ Deno.serve(async (req) => {
       });
     }
 
-    await verifySmtpLogin({
-      hostname: smtp_host,
-      port: Number(smtp_port),
-      // 587/25 = plain connection upgraded via STARTTLS, 465 = implicit TLS
-      secure: smtp_secure !== false && ![587, 25, 2525].includes(Number(smtp_port)),
-      username: smtp_username,
-      password: smtp_password,
-    });
+    const secure = smtp_secure !== false && ![587, 25, 2525].includes(Number(smtp_port));
+    try {
+      await verifySmtpLogin({
+        hostname: smtp_host,
+        port: Number(smtp_port),
+        // 587/25 = plain connection upgraded via STARTTLS, 465 = implicit TLS
+        secure,
+        username: smtp_username,
+        password: smtp_password,
+      });
+    } catch (err) {
+      const classified = classifySmtpError(err, smtpHost);
+      if (classified.code === "smtp_sender_blocked") {
+        for (const alt of alternateHosts(smtpHost)) {
+          const altOk = await assertPublicHost(alt);
+          if (!altOk.ok) continue;
+          try {
+            await verifySmtpLogin({
+              hostname: alt,
+              port: Number(smtp_port),
+              secure,
+              username: smtp_username,
+              password: smtp_password,
+            });
+            console.log(`test-smtp: ${smtpHost} blocked, ${alt} works`);
+            return jsonError(400, { ...classified, alt_host: alt });
+          } catch (_altErr) { /* alternativvärden fungerade inte heller */ }
+        }
+      }
+      throw err;
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err: unknown) {
     console.error("test-smtp error", err);
     return jsonError(400, classifySmtpError(err, smtpHost));
