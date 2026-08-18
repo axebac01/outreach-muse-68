@@ -18,6 +18,8 @@ export type Sequence = {
   daily_limit_per_account: number;
   created_at: string;
   updated_at: string;
+  paused_reason?: string | null;
+  paused_at?: string | null;
 };
 
 export type SequenceLead = {
