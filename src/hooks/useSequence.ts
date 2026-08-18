@@ -316,8 +316,17 @@ export const useAddSequenceLeads = (sequenceId: string) => {
           duplicates++;
           return [];
         }
+        // Platshållar- och gissade adresser stoppas: de studsar och skadar
+        // avsändardomänens rykte.
+        const full_name = sanitizeName(l.full_name);
+        const first_name = sanitizeName(l.first_name);
+        const last_name = sanitizeName(l.last_name);
+        if (classifyRecipient(email, full_name ?? first_name).quality === "invalid") {
+          invalid++;
+          return [];
+        }
         seen.add(email);
-        return [{ ...l, email }];
+        return [{ ...l, email, full_name, first_name, last_name }];
       });
 
       // Hoppa över e-postadresser som redan finns i sekvensen
