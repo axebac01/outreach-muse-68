@@ -643,9 +643,12 @@ async function syncImap(admin: any, account: any): Promise<number> {
         .eq("provider_message_id", providerId)
         .eq("email_account_id", account.id)
         .maybeSingle();
-      if (existing) continue;
+      if (existing) {
+        if (msg.uid > newHighestUid) newHighestUid = msg.uid;
+        continue;
+      }
 
-      // Parse MIME
+
       let parsedMail: any;
       try {
         // mailparser needs a Buffer/string — a raw Uint8Array is treated as a
