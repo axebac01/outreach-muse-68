@@ -43,6 +43,7 @@ import { toUserMessage, unwrapFunctionError, extractErrorInfo, isAuthFailure } f
 import { usePlanLimits, canCreateMore } from "@/hooks/usePlanLimits";
 import { useEmailAccounts } from "@/hooks/useEmailAccounts";
 import { PlanLimitBanner } from "@/components/PlanLimitBanner";
+import { mailRegionHeaders } from "@/lib/mailRegion";
 
 interface Props {
   open: boolean;
@@ -163,7 +164,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
     host: string,
   ): Promise<TestResult> => {
     try {
-      const { data, error } = await supabase.functions.invoke(fn, { body });
+      const { data, error } = await supabase.functions.invoke(fn, { body, headers: mailRegionHeaders });
       if (error) {
         const unwrapped = await unwrapFunctionError(error);
         throw unwrapped;
@@ -251,6 +252,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
       const { data, error } = await supabase.functions.invoke(
         "connect-smtp-account",
         {
+          headers: mailRegionHeaders,
           body: {
             email: form.email,
             display_name: form.display_name || null,
