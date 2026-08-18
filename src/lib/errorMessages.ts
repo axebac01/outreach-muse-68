@@ -29,6 +29,7 @@ const KNOWN_CODES: Record<string, string> = {
   smtp_personal_outlook_blocked: "errors.smtp.personalOutlookBlocked",
   smtp_app_password_required: "errors.smtp.appPasswordRequired",
   smtp_host_not_allowed: "errors.smtp.hostNotAllowed",
+  smtp_sender_blocked: "errors.smtp.senderBlocked",
   smtp_generic: "errors.smtp.genericNoDetail",
   // IMAP
   imap_missing_fields: "errors.imap.missingFields",
