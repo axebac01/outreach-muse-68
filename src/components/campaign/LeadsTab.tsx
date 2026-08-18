@@ -17,10 +17,21 @@ import {
   useSequenceLeadCount,
   useAddSequenceLeads,
   useDeleteSequenceLead,
+  useDeleteSequenceLeads,
   useSequenceSendStats,
   useSequenceUnsubscribes,
   type LeadSendStat,
 } from "@/hooks/useSequence";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CsvColumnMapper } from "@/components/CsvColumnMapper";
 import { toUserMessage } from "@/lib/errorMessages";
 
