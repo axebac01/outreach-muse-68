@@ -14,16 +14,21 @@ Felkoderna i studsarna bekräftar det: 5.1.1 / 5.4.1 (adressen finns inte), 5.1.
 - 308 utskick ligger fortfarande schemalagda fram till 24 augusti. Kampanjen står som pausad.
 - Inga svar registrerade ännu på den här kampanjen.
 
-## Vad som faktiskt är fel: listan, inte tekniken
+## Var kommer skräpadresserna ifrån?
 
-Leadlistan innehåller påhittade och gissade adresser:
+Kontrollerat i databasen: samtliga 317 leads lades in i en och samma import 18 augusti kl. 10:35 (lokal tid), ingen av adresserna finns i MailLeads egen leadsdatabas (0 träffar mot `marketplace_leads`), och det finns ingen kod i MailLead som gissar eller konstruerar mejladresser.
 
-- 9 adresser på `@example.com` (`ceo@example.com`, `cfo@example.com`) — ren platshållardata.
-- 35 adresser med mönstren `john.doe@`, `jane.smith@`, `example@` — gissade namn, inte verkliga personer.
-- 100 adresser är rollbaserade (`info@`, `kontakt@`, `ceo@`, `cfo@`) — de studsar oftare och filtreras hårdare.
-- Av de 308 som fortfarande ligger i kö har **36 en uppenbart falsk adress**.
+Slutsats: **innehållet kommer från filen du laddade upp**, inte från MailLead. Exempel ur raderna:
+
+- `cfo@curamet.se` med namnet `[Name of CFO]` — en ifylld mall från källan.
+- `jane.smith@...`, `janesmith@...`, `cfo@example.com` med namn som "CFO Name", "Name Surname".
+
+Det ser ut som en lista där en AI eller ett scrapingverktyg har fyllt i platshållare när den inte hittade en riktig kontaktperson, och sedan gissat adressmönster på företagets domän.
+
+Det enda MailLead gör med fälten är att dela upp `full_name` i för- och efternamn (därav `first_name = "[Name"`), och att härleda namn/företag från adressen om kolumnen är tom. Inga adresser hittas på eller ändras.
 
 Fortsätter kampanjen som den är bränner den avsändardomänen `bisdata-kampanj.se` och Websupport kan spärra kontona.
+
 
 ## Åtgärdsplan
 
@@ -33,6 +38,7 @@ Fortsätter kampanjen som den är bränner den avsändardomänen `bisdata-kampan
 
 ### 2. Blockera skräpadresser vid import
 - Ny validering som körs vid CSV-import och vid import från leads-databasen: uppenbart falska mönster (exempeldomäner, platshållarnamn, ogiltigt format, dubbletter) plockas bort automatiskt, och du får en sammanfattning: "312 importerade, 5 uteslutna (falsk adress)".
+- Även platshållare i namnfältet flaggas: text inom hakparenteser (`[Name of CFO]`), "Name Surname", "CFO Name" och liknande — annars skickas mejl som börjar "Hej [Name of CFO]".
 - Rollbaserade adresser markeras som varning, inte hårt stopp — du väljer själv.
 
 ### 3. Förkontroll före start
