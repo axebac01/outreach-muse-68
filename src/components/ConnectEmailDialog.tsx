@@ -60,6 +60,8 @@ type TestResult = {
   message?: string;
   detail?: string;
   authFailed?: boolean;
+  stage?: string;
+  altHost?: string;
 };
 
 
@@ -172,12 +174,14 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
       if (data?.error) throw data.error;
       return { state: "ok" };
     } catch (e: unknown) {
-      const { detail } = extractErrorInfo(e);
+      const { detail, stage, altHost } = extractErrorInfo(e);
       return {
         state: "error",
         message: toUserMessage(e, t, fallbackKey, { host }),
         detail,
         authFailed: isAuthFailure(e),
+        stage,
+        altHost,
       };
     }
   };
@@ -684,6 +688,33 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
                               ? result.message ?? t("emailAccounts.testFailed")
                               : ""}
                       </span>
+                      {result.state === "error" && result.altHost && (
+                        <span className="mt-1 flex flex-wrap items-center gap-2">
+                          <span className="text-[11px] text-muted-foreground">
+                            {t("emailAccounts.custom.altHostSuggestion", {
+                              host: result.altHost,
+                            })}
+                          </span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-[11px]"
+                            onClick={() => update("smtp_host", result.altHost)}
+                          >
+                            {t("emailAccounts.custom.useAltHost", {
+                              host: result.altHost,
+                            })}
+                          </Button>
+                        </span>
+                      )}
+                      {result.state === "error" && result.stage && (
+                        <span className="block text-[11px] text-muted-foreground mt-0.5">
+                          {t("emailAccounts.custom.failedAtStage", {
+                            stage: result.stage,
+                          })}
+                        </span>
+                      )}
                       {result.state === "error" && result.detail && (
                         <details className="mt-1">
                           <summary className="text-[11px] text-muted-foreground cursor-pointer select-none">
