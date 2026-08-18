@@ -68,6 +68,9 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const { data: unsubs } = useSequenceUnsubscribes(sequenceId);
   const addLeads = useAddSequenceLeads(sequenceId);
   const deleteLead = useDeleteSequenceLead(sequenceId);
+  const deleteLeads = useDeleteSequenceLeads(sequenceId);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmMode, setConfirmMode] = useState<null | "selected" | "filtered">(null);
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("all");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
