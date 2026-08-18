@@ -18,22 +18,29 @@ import {
   useAddSequenceLeads,
   useDeleteSequenceLead,
   useSequenceSendStats,
+  useSequenceUnsubscribes,
   type LeadSendStat,
 } from "@/hooks/useSequence";
 import { CsvColumnMapper } from "@/components/CsvColumnMapper";
 import { toUserMessage } from "@/lib/errorMessages";
 
-type LeadStatusFilter = "all" | "sent" | "scheduled" | "failed" | "none" | "replied";
+type LeadStatusFilter = "all" | "sent" | "scheduled" | "failed" | "none" | "replied" | "unsubscribed";
 
 const STATUS_META: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   sent: { label: "Skickat", variant: "default" },
   scheduled: { label: "Schemalagt", variant: "secondary" },
   failed: { label: "Misslyckades", variant: "destructive" },
   replied: { label: "Svarat", variant: "default" },
+  unsubscribed: { label: "Avregistrerad", variant: "outline" },
   none: { label: "Inte skickat", variant: "outline" },
 };
 
-const deriveStatus = (leadStatus: string, stat?: LeadSendStat): keyof typeof STATUS_META => {
+const deriveStatus = (
+  leadStatus: string,
+  stat?: LeadSendStat,
+  isUnsubscribed?: boolean,
+): keyof typeof STATUS_META => {
+  if (leadStatus === "unsubscribed" || isUnsubscribed) return "unsubscribed";
   if (leadStatus === "replied") return "replied";
   if (!stat) return "none";
   if (stat.lastStatus === "failed") return "failed";
