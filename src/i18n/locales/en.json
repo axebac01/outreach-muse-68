@@ -115,7 +115,8 @@
       "authChecklistUsername": "The username is your full email address, not just the part before @.",
       "authChecklistPassword": "The password is the same one you use for webmail — not your hosting account password.",
       "authChecklistEnabled": "SMTP/IMAP is enabled for the mailbox at your provider.",
-      "authChecklistPort": "Try port 587 (STARTTLS) if 465 (SSL) is rejected."
+      "authChecklistPort": "Try port 587 (STARTTLS) if 465 (SSL) is rejected.",
+      "showTechnicalDetails": "Show technical details"
     },
     "success": {
       "title": "Email account connected",

@@ -115,7 +115,8 @@
       "authChecklistUsername": "Användarnamnet är hela mejladressen, inte bara delen före @.",
       "authChecklistPassword": "Lösenordet är samma som i webbmailen — inte kontolösenordet hos webbhotellet.",
       "authChecklistEnabled": "SMTP/IMAP är påslaget för postlådan hos din leverantör.",
-      "authChecklistPort": "Prova port 587 (STARTTLS) om 465 (SSL) nekas."
+      "authChecklistPort": "Prova port 587 (STARTTLS) om 465 (SSL) nekas.",
+      "showTechnicalDetails": "Visa tekniska detaljer"
     },
     "success": {
       "title": "Mejlkonto anslutet",
