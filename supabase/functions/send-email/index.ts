@@ -237,6 +237,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Loggas för att kunna härleda SMTP-geoblock (551) till fel exekveringsregion.
+  console.log("send-email region:", Deno.env.get("SB_REGION") ?? "unknown");
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
