@@ -16,6 +16,10 @@ type StructuredError = {
   code?: string;
   message?: string;
   detail?: string;
+  /** Vilken fas i SMTP-dialogen som fallerade (connect/greeting/ehlo/auth). */
+  stage?: string;
+  /** Alternativ värd som fungerade när den angivna spärrades. */
+  alt_host?: string;
 };
 
 const KNOWN_CODES: Record<string, string> = {
@@ -177,7 +181,13 @@ function extractStructured(err: unknown): StructuredError | null {
   const candidates = [anyErr, anyErr.error, anyErr.context, anyErr.data?.error];
   for (const c of candidates) {
     if (c && typeof c === "object" && (c.code || c.message)) {
-      return { code: c.code, message: c.message, detail: c.detail };
+      return {
+        code: c.code,
+        message: c.message,
+        detail: c.detail,
+        stage: c.stage,
+        alt_host: c.alt_host,
+      };
     }
   }
   return null;
@@ -232,6 +242,17 @@ function authFailedKey(code: string, host?: string): string | null {
     : "errors.imap.authFailedGeneric";
 }
 
+/**
+ * Zoho svarar 554 5.1.8 även när lösenordet är rätt — orsaken är nästan alltid
+ * fel värd (smtppro vs smtp), plan utan extern SMTP eller app-lösenord.
+ */
+function senderBlockedKey(code: string, host?: string): string | null {
+  if (code !== "smtp_sender_blocked") return null;
+  return (host ?? "").toLowerCase().includes("zoho")
+    ? "errors.smtp.senderBlockedZoho"
+    : null;
+}
+
 export function toUserMessage(
   err: unknown,
   tArg?: TFunction,
@@ -247,7 +268,9 @@ export function toUserMessage(
 
   const structured = extractStructured(err);
   if (structured?.code && KNOWN_CODES[structured.code]) {
-    const key = authFailedKey(structured.code, opts?.host) ?? KNOWN_CODES[structured.code];
+    const key = authFailedKey(structured.code, opts?.host) ??
+      senderBlockedKey(structured.code, opts?.host) ??
+      KNOWN_CODES[structured.code];
     return render(key, { detail: structured.detail ?? "" });
   }
 
@@ -261,9 +284,12 @@ export function toUserMessage(
   if (raw) {
     const match = matchFreeText(raw);
     if (match) {
-      const key = match.key === "errors.smtp.authFailed"
-        ? (authFailedKey("smtp_auth_failed", opts?.host) ?? match.key)
-        : match.key;
+      let key = match.key;
+      if (key === "errors.smtp.authFailed") {
+        key = authFailedKey("smtp_auth_failed", opts?.host) ?? key;
+      } else if (key === "errors.smtp.senderBlocked") {
+        key = senderBlockedKey("smtp_sender_blocked", opts?.host) ?? key;
+      }
       return render(key, match.opts);
     }
   }
@@ -275,10 +301,20 @@ export function toUserMessage(
 }
 
 /** Plockar ut felkod och teknisk detalj för visning i UI. */
-export function extractErrorInfo(err: unknown): { code?: string; detail?: string } {
+export function extractErrorInfo(err: unknown): {
+  code?: string;
+  detail?: string;
+  stage?: string;
+  altHost?: string;
+} {
   const s = extractStructured(err);
   const detail = s?.detail ?? (err instanceof Error ? err.message : typeof err === "string" ? err : undefined);
-  return { code: s?.code, detail: detail ? trimDetail(detail, 200) : undefined };
+  return {
+    code: s?.code,
+    detail: detail ? trimDetail(detail, 200) : undefined,
+    stage: s?.stage,
+    altHost: s?.alt_host,
+  };
 }
 
 /** True när felet beror på avvisad inloggning (SMTP eller IMAP). */
