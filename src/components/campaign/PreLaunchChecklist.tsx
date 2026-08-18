@@ -2,6 +2,7 @@ import { CheckCircle2, AlertTriangle, Circle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSequenceSteps, useSequenceSenders, useSequenceLeads, type Sequence } from "@/hooks/useSequence";
 import { useEmailAccounts } from "@/hooks/useEmailAccounts";
+import { summarizeRecipients } from "@/lib/emailAddressQuality";
 
 
 type CheckLevel = "ok" | "warn" | "fail";
@@ -65,6 +66,40 @@ export const PreLaunchChecklist = ({ sequence }: { sequence: Sequence }) => {
       ? { level: "fail", label: "Inga leads tillagda", hint: "Lägg till leads under fliken Leads." }
       : { level: "ok", label: `${leads.length} leads redo att kontaktas` },
   );
+
+  // Listkvalitet: platshållar- och gissade adresser är den vanligaste orsaken
+  // till höga bounce-tal och kan få avsändardomänen spärrad.
+  if (leads.length > 0) {
+    const quality = summarizeRecipients(
+      (leads as any[]).map((l) => ({ email: l.email, name: l.full_name ?? l.first_name })),
+    );
+    const reasonText = Object.entries(quality.reasons)
+      .map(([reason, n]) => `${n} ${reason.toLowerCase()}`)
+      .join(", ");
+
+    if (quality.invalidRatio > 0.05) {
+      checks.push({
+        level: "fail",
+        label: `${quality.invalid} av ${quality.total} adresser ser påhittade ut (${Math.round(quality.invalidRatio * 100)} %)`,
+        hint: `${reasonText}. Ta bort dem under fliken Leads innan du startar — annars studsar de och skadar din avsändardomän.`,
+      });
+    } else if (quality.invalid > 0) {
+      checks.push({
+        level: "warn",
+        label: `${quality.invalid} adresser ser påhittade ut`,
+        hint: `${reasonText}. Rensa dem för säkerhets skull.`,
+      });
+    } else if (quality.risky / quality.total > 0.5) {
+      checks.push({
+        level: "warn",
+        label: `${quality.risky} av ${quality.total} är rollbaserade adresser (info@, ceo@ …)`,
+        hint: "De filtreras hårdare och svarar sällan. Kör dem gärna i en separat, långsammare kampanj.",
+      });
+    } else {
+      checks.push({ level: "ok", label: "Listkvalitet ser bra ut" });
+    }
+  }
+
 
   // Steps
   const emptySteps = steps.filter((s: any) => !s.subject?.trim() || !s.body?.trim());

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { withSaveStatus } from "./useSaveStatus";
+import { classifyRecipient, sanitizeName } from "@/lib/emailAddressQuality";
 
 export type Sequence = {
   id: string;
@@ -17,6 +18,8 @@ export type Sequence = {
   daily_limit_per_account: number;
   created_at: string;
   updated_at: string;
+  paused_reason?: string | null;
+  paused_at?: string | null;
 };
 
 export type SequenceLead = {
@@ -169,7 +172,7 @@ export const useSequenceSendStats = (sequenceId: string | undefined) => {
       const totalSteps = stepsRes.count ?? 0;
 
 
-      const summary = { sent: 0, scheduled: 0, failed: 0, replied: 0 };
+      const summary = { sent: 0, scheduled: 0, failed: 0, replied: 0, bounced: 0, bounceRate: 0 };
       const byLeadId = new Map<string, LeadSendStat>();
 
       for (const s of sends) {
@@ -199,7 +202,11 @@ export const useSequenceSendStats = (sequenceId: string | undefined) => {
 
       for (const l of leads) {
         if (l.status === "replied") summary.replied++;
+        else if (l.status === "bounced") summary.bounced++;
       }
+
+      summary.bounceRate = summary.sent > 0 ? summary.bounced / summary.sent : 0;
+
 
       return { summary, byLeadId, totalSteps };
     },
@@ -312,8 +319,17 @@ export const useAddSequenceLeads = (sequenceId: string) => {
           duplicates++;
           return [];
         }
+        // Platshållar- och gissade adresser stoppas: de studsar och skadar
+        // avsändardomänens rykte.
+        const full_name = sanitizeName(l.full_name);
+        const first_name = sanitizeName(l.first_name);
+        const last_name = sanitizeName(l.last_name);
+        if (classifyRecipient(email, full_name ?? first_name).quality === "invalid") {
+          invalid++;
+          return [];
+        }
         seen.add(email);
-        return [{ ...l, email }];
+        return [{ ...l, email, full_name, first_name, last_name }];
       });
 
       // Hoppa över e-postadresser som redan finns i sekvensen

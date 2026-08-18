@@ -1232,6 +1232,8 @@ export type Database = {
           id: string
           name: string
           pause_on_reply: boolean
+          paused_at: string | null
+          paused_reason: string | null
           sending_days: Json
           sending_window_end: string
           sending_window_start: string
@@ -1249,6 +1251,8 @@ export type Database = {
           id?: string
           name?: string
           pause_on_reply?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
           sending_days?: Json
           sending_window_end?: string
           sending_window_start?: string
@@ -1266,6 +1270,8 @@ export type Database = {
           id?: string
           name?: string
           pause_on_reply?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
           sending_days?: Json
           sending_window_end?: string
           sending_window_start?: string

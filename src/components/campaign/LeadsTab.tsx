@@ -35,7 +35,7 @@ import {
 import { CsvColumnMapper } from "@/components/CsvColumnMapper";
 import { toUserMessage } from "@/lib/errorMessages";
 
-type LeadStatusFilter = "all" | "sent" | "scheduled" | "failed" | "none" | "replied" | "unsubscribed";
+type LeadStatusFilter = "all" | "sent" | "scheduled" | "failed" | "none" | "replied" | "unsubscribed" | "bounced" | "invalid";
 
 const STATUS_META: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   sent: { label: "Skickat", variant: "default" },
@@ -43,6 +43,8 @@ const STATUS_META: Record<string, { label: string; variant: "default" | "seconda
   failed: { label: "Misslyckades", variant: "destructive" },
   replied: { label: "Svarat", variant: "default" },
   unsubscribed: { label: "Avregistrerad", variant: "outline" },
+  bounced: { label: "Studsade", variant: "destructive" },
+  invalid: { label: "Ogiltig adress", variant: "destructive" },
   none: { label: "Inte skickat", variant: "outline" },
 };
 
@@ -52,6 +54,8 @@ const deriveStatus = (
   isUnsubscribed?: boolean,
 ): keyof typeof STATUS_META => {
   if (leadStatus === "unsubscribed" || isUnsubscribed) return "unsubscribed";
+  if (leadStatus === "bounced") return "bounced";
+  if (leadStatus === "invalid") return "invalid";
   if (leadStatus === "replied") return "replied";
   if (!stat) return "none";
   if (stat.lastStatus === "failed") return "failed";
@@ -59,6 +63,7 @@ const deriveStatus = (
   if (stat.scheduled > 0) return "scheduled";
   return "none";
 };
+
 
 export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
   const { t } = useTranslation();
@@ -417,6 +422,8 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   <SelectItem value="failed">Misslyckades</SelectItem>
                   <SelectItem value="replied">Svarat</SelectItem>
                   <SelectItem value="unsubscribed">Avregistrerad</SelectItem>
+                  <SelectItem value="bounced">Studsade</SelectItem>
+                  <SelectItem value="invalid">Ogiltig adress</SelectItem>
                   <SelectItem value="none">Inte skickat</SelectItem>
                 </SelectContent>
               </Select>

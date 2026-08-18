@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Target, Package, Gift, MessageSquare, Send, Clock, AlertTriangle, MessageCircle, UserMinus } from "lucide-react";
+import { Target, Package, Gift, MessageSquare, Send, Clock, AlertTriangle, MessageCircle, UserMinus, MailX } from "lucide-react";
 import { useUpdateCampaign, useCampaignSequence } from "@/hooks/useCampaigns";
 import { useSequenceSendStats, useSequenceUnsubscribes } from "@/hooks/useSequence";
 import { useRef } from "react";
@@ -39,7 +39,14 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
     debounceRef.current = setTimeout(() => update.mutate(patch), 500);
   };
 
-  const s = stats?.summary ?? { sent: 0, scheduled: 0, failed: 0, replied: 0 };
+  const s = stats?.summary ?? { sent: 0, scheduled: 0, failed: 0, replied: 0, bounced: 0, bounceRate: 0 };
+  const bouncePct = Math.round((s.bounceRate ?? 0) * 100);
+  const bounceTone =
+    (s.bounceRate ?? 0) >= 0.08
+      ? "text-destructive"
+      : (s.bounceRate ?? 0) > 0.03
+        ? "text-warning"
+        : "";
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -50,7 +57,7 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="rounded-xl border bg-card p-4">
           <div className="text-xs text-muted-foreground flex items-center gap-1.5"><Send className="h-3.5 w-3.5" /> Skickade mejl</div>
           <div className="text-2xl font-semibold">{s.sent}</div>
@@ -64,6 +71,13 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
           <div className="text-2xl font-semibold">{s.failed}</div>
         </div>
         <div className="rounded-xl border bg-card p-4">
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5"><MailX className="h-3.5 w-3.5" /> Studsade</div>
+          <div className={`text-2xl font-semibold ${bounceTone}`}>{s.bounced ?? 0}</div>
+          {s.sent > 0 && (
+            <div className={`text-[11px] ${bounceTone || "text-muted-foreground"}`}>{bouncePct} % av utskicken</div>
+          )}
+        </div>
+        <div className="rounded-xl border bg-card p-4">
           <div className="text-xs text-muted-foreground flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Svar</div>
           <div className="text-2xl font-semibold">{s.replied}</div>
         </div>
@@ -72,6 +86,17 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
           <div className="text-2xl font-semibold">{unsubs?.count ?? 0}</div>
         </div>
       </div>
+
+      {(s.bounceRate ?? 0) > 0.03 && s.sent >= 10 && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+          <div className="font-medium text-destructive">Hög studsfrekvens ({bouncePct} %)</div>
+          <p className="text-muted-foreground text-xs pt-1">
+            Över 3 % är en varningssignal och över 8 % pausas kampanjen automatiskt. Rensa påhittade
+            och gissade adresser under fliken Leads innan du fortsätter.
+          </p>
+        </div>
+      )}
+
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="rounded-xl border bg-card p-4">
