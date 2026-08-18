@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { simpleParser } from "npm:mailparser@3.7.2";
+import { Buffer } from "node:buffer";
 import { corsHeaders, decryptToken, getValidGoogleAccessToken, getValidMicrosoftAccessToken, TokenRevokedError } from "../_shared/oauth.ts";
 import { ImapClient, ImapError } from "../_shared/imapClient.ts";
 import { redactSecrets } from "../_shared/redactSecrets.ts";
@@ -595,8 +596,18 @@ async function syncImap(admin: any, account: any): Promise<number> {
     // last_uid but the mailbox got recreated/renumbered.
     let uids: number[] = [];
     const lastUid: number = account.imap_last_uid ?? 0;
-    if (lastUid > 0 && box.uidNext && lastUid < box.uidNext * 10) {
+    // Sanity: a stored cursor at/above UIDNEXT means it is stale (mailbox
+    // renumbered, or the cursor was written from another mailbox). In that
+    // case fall back to a date window instead of searching an empty range.
+    const cursorUsable = lastUid > 0 && (!box.uidNext || lastUid < box.uidNext);
+    if (cursorUsable) {
       uids = await client.searchSinceUid(lastUid + 1);
+      if (uids.length === 0) {
+        // Nothing above the cursor — double-check with a date window so a bad
+        // cursor can never permanently hide new mail.
+        const since = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+        uids = await client.searchSince(since);
+      }
     } else {
       const since = new Date(Date.now() - 14 * 24 * 3600 * 1000);
       uids = await client.searchSince(since);
@@ -604,6 +615,9 @@ async function syncImap(admin: any, account: any): Promise<number> {
 
     // Sort + cap
     uids = uids.slice(-MAX_MESSAGES);
+    console.log(
+      `IMAP ${account.email}: uidNext=${box.uidNext} exists=${box.exists} lastUid=${lastUid} cursorUsable=${cursorUsable} candidates=${uids.length}`,
+    );
 
     const accountEmailLower = String(account.email).toLowerCase();
     for (const uid of uids) {
@@ -614,9 +628,12 @@ async function syncImap(admin: any, account: any): Promise<number> {
         console.warn(`IMAP fetch failed uid=${uid}:`, e?.message);
         continue;
       }
-      if (!msg) continue;
+      if (!msg) { console.warn(`IMAP uid=${uid}: empty fetch`); continue; }
 
-      if (msg.uid > newHighestUid) newHighestUid = msg.uid;
+      // NOTE: the UID cursor is only advanced after a message has actually
+      // been handled — otherwise a parse failure would silently skip mail
+      // forever.
+
 
       // Dedupe: same UID may have been processed before
       const providerId = `imap-${account.id}-${msg.uid}`;
@@ -626,20 +643,28 @@ async function syncImap(admin: any, account: any): Promise<number> {
         .eq("provider_message_id", providerId)
         .eq("email_account_id", account.id)
         .maybeSingle();
-      if (existing) continue;
+      if (existing) {
+        if (msg.uid > newHighestUid) newHighestUid = msg.uid;
+        continue;
+      }
 
-      // Parse MIME
+
       let parsedMail: any;
       try {
-        parsedMail = await simpleParser(msg.raw);
+        // mailparser needs a Buffer/string — a raw Uint8Array is treated as a
+        // stream and fails with "input.once is not a function".
+        parsedMail = await simpleParser(Buffer.from(msg.raw));
       } catch (e: any) {
         console.warn(`MIME parse failed uid=${msg.uid}:`, e?.message);
         continue;
       }
 
       const fromAddr = parsedMail.from?.value?.[0]?.address ?? "";
-      if (!fromAddr) continue;
+      if (!fromAddr) { console.warn(`IMAP uid=${msg.uid}: no from address`); continue; }
+      if (msg.uid > newHighestUid) newHighestUid = msg.uid;
       if (fromAddr.toLowerCase() === accountEmailLower) continue;
+
+
 
       const fromName = parsedMail.from?.value?.[0]?.name;
       const toArr: any[] = parsedMail.to?.value ?? [];
