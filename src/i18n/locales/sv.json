@@ -738,6 +738,7 @@
       "appPasswordRequired": "Gmail kräver ett app-lösenord (inte ditt vanliga lösenord). Generera ett på myaccount.google.com/apppasswords.",
       "generic": "SMTP-test misslyckades: {{detail}}",
       "hostNotAllowed": "Servern kunde inte nås (privat eller okänd adress). Kontrollera serveradressen.",
+      "senderBlocked": "Mejlservern blockerar den här adressen som avsändare. Kontrollera att adressen är en riktig brevlåda (inte ett alias), att utgående SMTP är påslaget för kontot hos din leverantör, och att användarnamnet är hela mejladressen. Vissa leverantörer kräver ett separat SMTP-lösenord.",
       "genericNoDetail": "SMTP-testet misslyckades. Kontrollera server, port, användarnamn och lösenord.",
       "authFailedGeneric": "Mejlservern nekade inloggningen. Kontrollera att användarnamnet är hela mejladressen och att lösenordet är samma som du loggar in med i webbmailen. Vissa leverantörer kräver att SMTP aktiveras för postlådan."
     },
