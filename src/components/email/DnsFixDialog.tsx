@@ -46,12 +46,13 @@ type Props = {
 };
 
 const RecordRow = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex items-center gap-2">
-    <span className="w-16 shrink-0 text-xs text-muted-foreground">{label}</span>
-    <code className="flex-1 min-w-0 truncate rounded bg-muted px-2 py-1 text-xs">{value}</code>
+  <div className="flex items-start gap-2">
+    <span className="w-16 shrink-0 pt-1 text-xs text-muted-foreground">{label}</span>
+    <code className="flex-1 min-w-0 break-all whitespace-pre-wrap rounded bg-muted px-2 py-1 text-xs">{value}</code>
     <CopyButton text={value} label="" />
   </div>
 );
+
 
 const DnsFixDialog = ({ domain, provider, report, accountId, trigger }: Props) => {
   const { t } = useTranslation();
@@ -109,7 +110,7 @@ const DnsFixDialog = ({ domain, provider, report, accountId, trigger }: Props) =
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{t("emailAccounts.dnsFix.title")}</DialogTitle>
           <DialogDescription>
