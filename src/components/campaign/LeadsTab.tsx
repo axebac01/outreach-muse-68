@@ -379,6 +379,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   <SelectItem value="scheduled">Schemalagt</SelectItem>
                   <SelectItem value="failed">Misslyckades</SelectItem>
                   <SelectItem value="replied">Svarat</SelectItem>
+                  <SelectItem value="unsubscribed">Avregistrerad</SelectItem>
                   <SelectItem value="none">Inte skickat</SelectItem>
                 </SelectContent>
               </Select>
@@ -412,7 +413,7 @@ export const LeadsTab = ({ sequenceId }: { sequenceId: string }) => {
                   {pagedLeads
                     .map((l) => {
                       const stat = stats?.byLeadId.get(l.id);
-                      const key = deriveStatus(l.status, stat);
+                      const key = deriveStatus(l.status, stat, isUnsub(l.email));
                       const meta = STATUS_META[key];
                       const totalSteps = stats?.totalSteps ?? 0;
                       return (
