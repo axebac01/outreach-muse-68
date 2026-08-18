@@ -38,6 +38,7 @@ Fortsätter kampanjen som den är bränner den avsändardomänen `bisdata-kampan
 
 ### 2. Blockera skräpadresser vid import
 - Ny validering som körs vid CSV-import och vid import från leads-databasen: uppenbart falska mönster (exempeldomäner, platshållarnamn, ogiltigt format, dubbletter) plockas bort automatiskt, och du får en sammanfattning: "312 importerade, 5 uteslutna (falsk adress)".
+- Även platshållare i namnfältet flaggas: text inom hakparenteser (`[Name of CFO]`), "Name Surname", "CFO Name" och liknande — annars skickas mejl som börjar "Hej [Name of CFO]".
 - Rollbaserade adresser markeras som varning, inte hårt stopp — du väljer själv.
 
 ### 3. Förkontroll före start
