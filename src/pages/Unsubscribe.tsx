@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, MailX, XCircle } from "lucide-react";
 import Layout from "@/components/Layout";
 import SeoHead from "@/components/SeoHead";
+import { Button } from "@/components/ui/button";
 
 const FUNCTIONS_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/unsubscribe`;
 
 type State =
   | { kind: "loading" }
+  | { kind: "confirm"; email: string }
+  | { kind: "submitting"; email: string }
   | { kind: "done"; email: string }
   | { kind: "error" };
 
@@ -25,13 +28,13 @@ const Unsubscribe = () => {
       }
       try {
         const res = await fetch(
-          `${FUNCTIONS_URL}?format=json&t=${encodeURIComponent(token)}`,
+          `${FUNCTIONS_URL}?format=json&action=peek&t=${encodeURIComponent(token)}`,
           { method: "POST" },
         );
         const data = await res.json().catch(() => null);
         if (cancelled) return;
         if (res.ok && data?.ok) {
-          setState({ kind: "done", email: data.email ?? "" });
+          setState({ kind: "confirm", email: data.email ?? "" });
         } else {
           setState({ kind: "error" });
         }
@@ -44,6 +47,24 @@ const Unsubscribe = () => {
       cancelled = true;
     };
   }, [token]);
+
+  const confirm = async (email: string) => {
+    setState({ kind: "submitting", email });
+    try {
+      const res = await fetch(
+        `${FUNCTIONS_URL}?format=json&action=confirm&t=${encodeURIComponent(token)}`,
+        { method: "POST" },
+      );
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
+        setState({ kind: "done", email: data.email ?? email });
+      } else {
+        setState({ kind: "error" });
+      }
+    } catch {
+      setState({ kind: "error" });
+    }
+  };
 
   return (
     <Layout>
@@ -61,9 +82,38 @@ const Unsubscribe = () => {
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
                   <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
                 </div>
-                <h1 className="text-xl font-semibold">Avregistrerar…</h1>
+                <h1 className="text-xl font-semibold">Ett ögonblick…</h1>
                 <p className="text-sm text-muted-foreground">
-                  Vänta ett ögonblick medan vi uppdaterar dina inställningar.
+                  Vi hämtar dina uppgifter.
+                </p>
+              </>
+            )}
+
+            {(state.kind === "confirm" || state.kind === "submitting") && (
+              <>
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                  <MailX className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <h1 className="text-xl font-semibold">Vill du avregistrera dig?</h1>
+                  <p className="text-sm text-muted-foreground">
+                    {state.email
+                      ? `${state.email} slutar då få mejl från oss.`
+                      : "Din adress slutar då få mejl från oss."}
+                  </p>
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={state.kind === "submitting"}
+                  onClick={() => confirm(state.email)}
+                >
+                  {state.kind === "submitting" && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Ja, avregistrera mig
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Ett klick räcker — du behöver inte fylla i något mer.
                 </p>
               </>
             )}

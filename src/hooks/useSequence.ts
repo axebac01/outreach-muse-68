@@ -266,6 +266,49 @@ export const useSequenceUnsubscribes = (sequenceId: string | undefined) => {
   });
 };
 
+/**
+ * Avregistreringsförsök som öppnade sidan men aldrig bekräftades.
+ * Ogiltiga länkar kan inte kopplas till en användare (ingen giltig token),
+ * så signalen vi kan visa är: adresser som sett sidan utan att slutföra.
+ */
+export const useIncompleteUnsubscribes = (sequenceId: string | undefined) => {
+  return useQuery({
+    queryKey: ["unsubscribe_incomplete", sequenceId],
+    enabled: !!sequenceId,
+    queryFn: async () => {
+      const [events, leads] = await Promise.all([
+        fetchAllRows<{ email: string | null; outcome: string }>((from, to) =>
+          supabase
+            .from("unsubscribe_events")
+            .select("email, outcome")
+            .range(from, to),
+        ),
+        fetchAllRows<{ email: string }>((from, to) =>
+          supabase
+            .from("sequence_leads")
+            .select("email")
+            .eq("sequence_id", sequenceId!)
+            .range(from, to),
+        ),
+      ]);
+
+      const leadEmails = new Set(
+        leads.map((l) => (l.email ?? "").toLowerCase()).filter(Boolean),
+      );
+      const viewed = new Set<string>();
+      const confirmed = new Set<string>();
+      for (const e of events) {
+        const email = (e.email ?? "").toLowerCase();
+        if (!email || !leadEmails.has(email)) continue;
+        if (e.outcome === "viewed") viewed.add(email);
+        if (e.outcome === "confirmed") confirmed.add(email);
+      }
+      for (const e of confirmed) viewed.delete(e);
+      return viewed.size;
+    },
+  });
+};
+
 export const useSequenceLeadCount = (sequenceId: string | undefined) => {
   return useQuery({
     queryKey: ["sequence_leads_count", sequenceId],

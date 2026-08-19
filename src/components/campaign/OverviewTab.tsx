@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Target, Package, Gift, MessageSquare, Send, Clock, AlertTriangle, MessageCircle, UserMinus, MailX } from "lucide-react";
 import { useUpdateCampaign, useCampaignSequence } from "@/hooks/useCampaigns";
-import { useSequenceSendStats, useSequenceUnsubscribes } from "@/hooks/useSequence";
+import { useSequenceSendStats, useSequenceUnsubscribes, useIncompleteUnsubscribes } from "@/hooks/useSequence";
 import { useRef } from "react";
 
 interface Props {
@@ -32,6 +32,7 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
   const update = useUpdateCampaign(campaign.id);
   const { data: stats } = useSequenceSendStats(sequenceId);
   const { data: unsubs } = useSequenceUnsubscribes(sequenceId);
+  const { data: incompleteUnsubs } = useIncompleteUnsubscribes(sequenceId);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const queueSave = (patch: Record<string, any>) => {
@@ -97,6 +98,18 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
         </div>
       )}
 
+      {(incompleteUnsubs ?? 0) > 0 && (
+        <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 text-sm">
+          <div className="font-medium">
+            {incompleteUnsubs} avregistreringsförsök slutfördes inte
+          </div>
+          <p className="text-muted-foreground text-xs pt-1">
+            Adresser som öppnade avregistreringssidan men aldrig tryckte på knappen.
+            Oftast automatiska länkkontroller hos mottagarens spamfilter — men om
+            antalet växer kan det tyda på att länken krånglar.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="rounded-xl border bg-card p-4">
