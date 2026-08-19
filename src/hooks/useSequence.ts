@@ -266,6 +266,21 @@ export const useSequenceUnsubscribes = (sequenceId: string | undefined) => {
   });
 };
 
+/** Misslyckade avregistreringsförsök (trasig/ogiltig länk) för användaren. */
+export const useFailedUnsubscribeAttempts = () => {
+  return useQuery({
+    queryKey: ["unsubscribe_failed_attempts"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("unsubscribe_events")
+        .select("id", { count: "exact", head: true })
+        .eq("outcome", "invalid_token");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+};
+
 export const useSequenceLeadCount = (sequenceId: string | undefined) => {
   return useQuery({
     queryKey: ["sequence_leads_count", sequenceId],
