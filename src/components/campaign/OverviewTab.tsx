@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Target, Package, Gift, MessageSquare, Send, Clock, AlertTriangle, MessageCircle, UserMinus, MailX } from "lucide-react";
 import { useUpdateCampaign, useCampaignSequence } from "@/hooks/useCampaigns";
-import { useSequenceSendStats, useSequenceUnsubscribes } from "@/hooks/useSequence";
+import { useSequenceSendStats, useSequenceUnsubscribes, useIncompleteUnsubscribes } from "@/hooks/useSequence";
 import { useRef } from "react";
 
 interface Props {
