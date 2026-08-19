@@ -25,6 +25,7 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const token = url.searchParams.get("t") || "";
+  const action = url.searchParams.get("action") || "";
   // The functions gateway serves our HTML as text/plain under a sandbox CSP,
   // which strips styling and mangles UTF-8. So a plain browser GET is bounced
   // to the branded app page, which then calls back here with format=json.
@@ -43,20 +44,50 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  const tokenKind = token.includes(".") ? "signed" : "short";
+
+  const logEvent = async (
+    outcome: "viewed" | "confirmed" | "invalid_token",
+    userId?: string | null,
+    email?: string | null,
+  ) => {
+    try {
+      await admin.from("unsubscribe_events").insert({
+        user_id: userId ?? null,
+        email: email ? email.toLowerCase() : null,
+        token_kind: tokenKind,
+        outcome,
+      });
+    } catch (_e) {
+      // Logging must never block an unsubscribe.
+    }
+  };
+
   // Two link formats: the signed token (List-Unsubscribe header) and the
   // short id used in the visible footer link.
   const verified = token.includes(".")
     ? await verifyUnsubscribeToken(token)
-    : await resolveShortUnsubscribeId(admin, token);
+    : token
+    ? await resolveShortUnsubscribeId(admin, token)
+    : null;
+
   if (!verified) {
+    await logEvent("invalid_token");
     return json({ ok: false, error: "invalid_token" }, 400);
+  }
+
+  // The branded page first "peeks" to show the address and a confirm button,
+  // so link scanners that merely open the URL never unsubscribe anyone.
+  if (action === "peek") {
+    await logEvent("viewed", verified.userId, verified.email);
+    return json({ ok: true, pending: true, email: verified.email });
   }
 
   await admin.from("unsubscribes").upsert(
     {
       user_id: verified.userId,
       email: verified.email.toLowerCase(),
-      source: req.method === "POST" ? "one_click" : "link",
+      source: action === "confirm" ? "link" : "one_click",
     },
     { onConflict: "user_id,email" },
   );
@@ -78,6 +109,8 @@ Deno.serve(async (req) => {
       .eq("lead_id", sl.id)
       .eq("status", "scheduled");
   }
+
+  await logEvent("confirmed", verified.userId, verified.email);
 
   return json({ ok: true, email: verified.email });
 });
