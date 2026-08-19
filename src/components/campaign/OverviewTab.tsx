@@ -32,6 +32,7 @@ export const OverviewTab = ({ campaign, sequenceStatus, sequenceId, leadCount }:
   const update = useUpdateCampaign(campaign.id);
   const { data: stats } = useSequenceSendStats(sequenceId);
   const { data: unsubs } = useSequenceUnsubscribes(sequenceId);
+  const { data: incompleteUnsubs } = useIncompleteUnsubscribes(sequenceId);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const queueSave = (patch: Record<string, any>) => {
