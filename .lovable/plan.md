@@ -16,6 +16,13 @@ En viktig sidoeffekt: sidan avregistrerar **automatiskt vid laddning**. Kör en 
 `/avregistrera` visar mottagarens adress och en knapp "Ja, avregistrera mig". Ingen avregistrering sker förrän knappen trycks. Efter klick visas dagens bekräftelsevy. Ogiltig/saknad länk visar felvyn direkt som nu.
 Ett-klicks-avregistrering via mejlklientens inbyggda knapp (`List-Unsubscribe-Post`) påverkas inte — den går fortfarande direkt igenom på servern.
 
+**Är det lagligt?** Ja. En enda bekräftelseknapp är standard och tillåtet:
+- GDPR/ePrivacy kräver att det ska vara lika enkelt att säga nej som ja — ett klick utan inloggning, utan formulär och utan att fylla i sin adress uppfyller det.
+- CAN-SPAM kräver en fungerande mekanism som inte kräver mer än ett enkelt steg eller att man skickar mejl/loggar in. En knapp på landningssidan är uttryckligen godkänt.
+- Gmail/Yahoos avsändarkrav gäller `List-Unsubscribe` med ett-klick i mejlklienten — den behåller vi oförändrad, så kraven är fortsatt uppfyllda.
+Det som *inte* är okej är flerstegsflöden, inloggning, "ange varför du lämnar" som obligatoriskt eller preferenscenter där man måste bocka av listor. Inget av det byggs här.
+
+
 ### 2. Logga varje försök så vi ser sanningen framöver
 Varje anrop till avregistreringsfunktionen loggas: lyckad, ogiltig token, eller bara sidvisning utan klick. Då syns det i data om någon faktiskt misslyckas nästa gång.
 
