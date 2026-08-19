@@ -1426,6 +1426,33 @@ export type Database = {
         }
         Relationships: []
       }
+      unsubscribe_events: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          outcome: string
+          token_kind: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          outcome: string
+          token_kind?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          outcome?: string
+          token_kind?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       unsubscribe_links: {
         Row: {
           created_at: string
