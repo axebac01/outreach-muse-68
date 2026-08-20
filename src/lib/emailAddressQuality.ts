@@ -115,6 +115,12 @@ const FAKE_NAME_PATTERNS: RegExp[] = [
   /\bjohn\s+doe\b|\bjane\s+doe\b|\bjane\s+smith\b|\bjohn\s+smith\b/i,
   /\bname\s+surname\b/i,
   /\bokänd\b|\bunknown\b|\bn\/a\b/i,
+  /\bnot\s+found\b|\bej\s+(hittad|känd|funnen)\b|\bsaknas\b/i,
+  /\bfiktiv\b|\bplaceholder\b|\bplatshållare\b|\bdummy\b/i,
+  /\b(ceo|cfo|cto|coo|vd|chairman|executive|kontaktperson)\s*\d*$/i,
+  /^\S+\s+(ceo|cfo|cto|coo|vd|chairman|executive)\s*\d*$/i,
+  /\b(namn|name)\s*\d+\b/i,
+  /\bnamn\s+på\b|\bden\s+som\b/i,
 ];
 
 export const isPlaceholderName = (name?: string | null): boolean => {
