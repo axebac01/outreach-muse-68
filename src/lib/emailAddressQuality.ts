@@ -48,6 +48,10 @@ const FAKE_LOCAL_PARTS = [
   "janesmith",
   "firstname.lastname",
   "fornamn.efternamn",
+  "förnamn.efternamn",
+  "fornamn",
+  "förnamn",
+  "efternamn",
   "example",
   "exempel",
   "test",
@@ -63,7 +67,9 @@ const FAKE_LOCAL_PARTS = [
   "n.a",
   "na",
   "unknown",
+  "notfound",
   "okand",
+  "okänd",
 ];
 
 /** Rollbaserade prefix — levereras ofta men svarar sällan och filtreras hårdare */
