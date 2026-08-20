@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { renderTemplate } from "../_shared/renderTemplate.ts";
 import { redactSecrets } from "../_shared/redactSecrets.ts";
+import { classifyRecipient } from "../_shared/emailAddressQuality.ts";
 
 
 const corsHeaders = {
@@ -240,11 +241,24 @@ Deno.serve(async (req) => {
       }
 
       const lead = leadById.get(row.lead_id);
-      if (!lead || ["replied", "unsubscribed", "bounced", "completed"].includes(lead.status)) {
+      if (!lead || ["replied", "unsubscribed", "bounced", "completed", "invalid"].includes(lead.status)) {
         await admin.from("scheduled_sends").update({
           status: "cancelled",
           cancelled_reason: lead ? `lead_${lead.status}` : "lead_missing",
         }).eq("id", row.id);
+        result.cancelled++;
+        continue;
+      }
+
+      // Sista skyddsnätet: klassa adressen precis före sändning. Fångar
+      // påhittade adresser som importerats innan importfiltret fanns.
+      const verdict = classifyRecipient(lead.email, lead.full_name);
+      if (verdict.quality === "invalid") {
+        await admin.from("sequence_leads").update({ status: "invalid" }).eq("id", row.lead_id);
+        await admin.from("scheduled_sends").update({
+          status: "cancelled",
+          cancelled_reason: `lead_invalid:${verdict.reason ?? "quality"}`,
+        }).eq("lead_id", row.lead_id).in("status", ["scheduled", "processing"]);
         result.cancelled++;
         continue;
       }
@@ -257,6 +271,7 @@ Deno.serve(async (req) => {
         result.cancelled++;
         continue;
       }
+
 
       const seq = seqById.get(row.sequence_id);
       if (!seq || seq.status === "paused" || seq.status === "completed") {
