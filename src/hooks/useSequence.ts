@@ -584,9 +584,15 @@ export const useSequenceStatusActions = (sequenceId: string, campaignId?: string
   };
 
   const setStatus = async (status: "active" | "paused" | "completed") => {
+    // Vid manuell återstart nollställs pausorsaken — annars ligger gamla
+    // studsar kvar och skrämmer i UI:t efter att listan rensats.
+    const patch =
+      status === "active"
+        ? { status, paused_reason: null, paused_at: null }
+        : { status };
     const { error } = await supabase
       .from("sequences")
-      .update({ status })
+      .update(patch)
       .eq("id", sequenceId);
     if (error) throw error;
   };
