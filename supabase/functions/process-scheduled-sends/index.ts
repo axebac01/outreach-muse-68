@@ -469,13 +469,48 @@ Deno.serve(async (req) => {
 
       if (!sendRes.ok) {
         const txt = await sendRes.text().catch(() => "");
+        const clean = redactSecrets(txt).slice(0, 500);
+
+        // Avsändarfel (fel/utgånget lösenord) ska pausa kontot direkt — inte
+        // bränna ett lead per försök tills dagskvoten är slut.
+        if (/\b535\b|authentication failed|auth.*(failed|denied)|invalid_grant|5\.7\.8/i.test(txt)) {
+          pausedAccounts.add(row.email_account_id);
+          await admin.from("email_accounts").update({
+            status: "error",
+            status_message: "SMTP-inloggningen nekades (fel eller utgånget lösenord). Återanslut kontot.",
+            paused_reason: "auth_failed",
+            paused_at: new Date().toISOString(),
+          }).eq("id", row.email_account_id);
+          await admin.from("scheduled_sends")
+            .update({ status: "paused_account_error", error_message: "Avsändarkontot behöver återanslutas" })
+            .eq("email_account_id", row.email_account_id)
+            .in("status", ["scheduled", "processing"]);
+          await admin.from("scheduled_sends")
+            .update({ status: "paused_account_error", error_message: "Avsändarkontot behöver återanslutas" })
+            .eq("id", row.id);
+          result.paused++;
+          continue;
+        }
+
+        // Saknat innehåll är ett konfigurationsfel — lägg tillbaka i kö.
+        if (/Missing fields/i.test(txt)) {
+          await admin.from("scheduled_sends").update({
+            status: "scheduled",
+            scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            error_message: "Steget saknar ämne eller text",
+          }).eq("id", row.id);
+          result.deferred++;
+          continue;
+        }
+
         await admin.from("scheduled_sends").update({
           status: "failed",
-          error_message: redactSecrets(txt).slice(0, 500),
+          error_message: clean,
         }).eq("id", row.id);
         result.failed++;
         continue;
       }
+
 
       const sendJson = await sendRes.json().catch(() => ({} as any));
       if (sendJson?.skipped) {
