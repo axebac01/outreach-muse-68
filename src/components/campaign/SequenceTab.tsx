@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Sparkles, Send } from "lucide-react";
 import {
@@ -13,7 +13,7 @@ import { AiWriteSequenceDialog } from "./AiWriteSequenceDialog";
 import { SendTestEmailDialog } from "./SendTestEmailDialog";
 
 export const SequenceTab = ({ sequenceId, campaign }: { sequenceId: string; campaign?: any }) => {
-  const { data: steps = [] } = useSequenceSteps(sequenceId);
+  const { data: steps = [], isSuccess: stepsLoaded } = useSequenceSteps(sequenceId);
   const { data: leads = [] } = useSequenceLeads(sequenceId);
   const upsertStep = useUpsertStep(sequenceId);
   const deleteStep = useDeleteStep(sequenceId);
@@ -42,13 +42,17 @@ export const SequenceTab = ({ sequenceId, campaign }: { sequenceId: string; camp
     ? leadOptions.find((l) => l.id === previewLeadId) ?? null
     : leadOptions[0] ?? null;
 
-  // Säkerställ att första steget existerar
+  // Säkerställ att första steget existerar — men bara när stegen faktiskt är
+  // hämtade, annars skulle ett tomt steg kunna skriva över befintligt innehåll.
+  const ensuredRef = useRef<string | null>(null);
   useEffect(() => {
-    if (steps.length === 0) {
-      upsertStep.mutate({ step_order: 0, subject: "", body: "", wait_days: 0 });
-    }
+    if (!stepsLoaded || steps.length > 0) return;
+    if (ensuredRef.current === sequenceId) return;
+    ensuredRef.current = sequenceId;
+    upsertStep.mutate({ step_order: 0, subject: "", body: "", wait_days: 0 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [steps.length === 0]);
+  }, [stepsLoaded, steps.length, sequenceId]);
+
 
   const previewStep = steps[activeIndex] ?? steps[0];
   const inheritedSubject = useMemo(() => {
