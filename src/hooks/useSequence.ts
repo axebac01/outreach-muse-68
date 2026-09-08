@@ -500,14 +500,20 @@ export const useUpsertStep = (sequenceId: string) => {
           .eq("id", step.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("sequence_steps").insert({
-          sequence_id: sequenceId,
-          user_id: user!.id,
-          step_order: step.step_order,
-          subject: step.subject ?? null,
-          body: step.body ?? "",
-          wait_days: step.wait_days ?? 0,
-        });
+        // Upsert på (sequence_id, step_order): om steget redan finns (t.ex.
+        // autoskapat eller AI-skrivet innan listan hunnit laddas om) uppdateras
+        // det istället för att kasta duplicate key-fel.
+        const { error } = await supabase.from("sequence_steps").upsert(
+          {
+            sequence_id: sequenceId,
+            user_id: user!.id,
+            step_order: step.step_order,
+            subject: step.subject ?? null,
+            body: step.body ?? "",
+            wait_days: step.wait_days ?? 0,
+          },
+          { onConflict: "sequence_id,step_order" },
+        );
         if (error) throw error;
       }
     },
