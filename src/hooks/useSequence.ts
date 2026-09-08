@@ -500,9 +500,10 @@ export const useUpsertStep = (sequenceId: string) => {
           .eq("id", step.id)
           .maybeSingle();
 
-        const patch: Record<string, unknown> = { wait_days: step.wait_days ?? 0 };
+        const patch: { wait_days: number; subject?: string | null; body?: string } = { wait_days: step.wait_days ?? 0 };
         if (!(isBlank(step.subject) && !isBlank(existing?.subject))) patch.subject = step.subject ?? null;
         if (!(isBlank(step.body) && !isBlank(existing?.body))) patch.body = step.body ?? "";
+
 
         const { error } = await supabase
           .from("sequence_steps")
