@@ -95,6 +95,19 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const blankSteps = steps.filter((s: any) =>
+      !String(s.subject ?? "").trim() ||
+      !String(s.body ?? "").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim()
+    );
+    if (blankSteps.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: `Steg ${blankSteps.map((s: any) => (s.step_order ?? 0) + 1).join(", ")} saknar ämne eller text. Fyll i innehållet innan du startar.`,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (!senders || senders.length === 0) {
       return new Response(JSON.stringify({ error: "No sender accounts selected" }), {
         status: 400,
