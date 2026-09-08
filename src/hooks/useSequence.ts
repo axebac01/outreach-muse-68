@@ -511,10 +511,28 @@ export const useUpsertStep = (sequenceId: string) => {
           .eq("id", step.id);
         if (error) throw error;
       } else {
+        // Steg utan id: kolla om raden redan finns på (sequence_id, step_order).
+        const { data: existing } = await supabase
+          .from("sequence_steps")
+          .select("id, subject, body")
+          .eq("sequence_id", sequenceId)
+          .eq("step_order", step.step_order)
+          .maybeSingle();
 
-        // Upsert på (sequence_id, step_order): om steget redan finns (t.ex.
-        // autoskapat eller AI-skrivet innan listan hunnit laddas om) uppdateras
-        // det istället för att kasta duplicate key-fel.
+        if (existing) {
+          // Ett tomt "skapa steg"-anrop får aldrig radera befintligt innehåll.
+          if (isBlank(step.subject) && isBlank(step.body)) return;
+          const patch: { wait_days: number; subject?: string | null; body?: string } = {
+            wait_days: step.wait_days ?? 0,
+          };
+          if (!(isBlank(step.subject) && !isBlank(existing.subject))) patch.subject = step.subject ?? null;
+          if (!(isBlank(step.body) && !isBlank(existing.body))) patch.body = step.body ?? "";
+          const { error } = await supabase.from("sequence_steps").update(patch).eq("id", existing.id);
+          if (error) throw error;
+          return;
+        }
+
+        // Upsert på (sequence_id, step_order) som skydd mot samtidiga skapanden.
         const { error } = await supabase.from("sequence_steps").upsert(
           {
             sequence_id: sequenceId,
@@ -528,6 +546,7 @@ export const useUpsertStep = (sequenceId: string) => {
         );
         if (error) throw error;
       }
+
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sequence_steps", sequenceId] });
