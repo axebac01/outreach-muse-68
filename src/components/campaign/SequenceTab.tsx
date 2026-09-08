@@ -13,7 +13,7 @@ import { AiWriteSequenceDialog } from "./AiWriteSequenceDialog";
 import { SendTestEmailDialog } from "./SendTestEmailDialog";
 
 export const SequenceTab = ({ sequenceId, campaign }: { sequenceId: string; campaign?: any }) => {
-  const { data: steps = [] } = useSequenceSteps(sequenceId);
+  const { data: steps = [], isSuccess: stepsLoaded } = useSequenceSteps(sequenceId);
   const { data: leads = [] } = useSequenceLeads(sequenceId);
   const upsertStep = useUpsertStep(sequenceId);
   const deleteStep = useDeleteStep(sequenceId);
