@@ -345,6 +345,24 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Tomt steg (saknar ämne eller text) får aldrig bränna ett lead. Skjut upp
+      // utskicket och pausa kampanjen så att användaren hinner fylla i innehållet.
+      if (!String(step.subject ?? "").trim() || !String(step.body ?? "").trim()) {
+        await admin.from("scheduled_sends").update({
+          status: "scheduled",
+          scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          error_message: "Steget saknar ämne eller text",
+        }).eq("id", row.id);
+        await admin.from("sequences").update({
+          status: "paused",
+          paused_reason: "Ett mejlsteg saknar ämne eller text",
+          paused_at: new Date().toISOString(),
+        }).eq("id", row.sequence_id).eq("status", "active");
+        result.deferred++;
+        continue;
+      }
+
+
       const vars = {
         first_name: lead.first_name || (lead.full_name?.split(" ")[0] ?? ""),
         last_name: lead.last_name || "",
