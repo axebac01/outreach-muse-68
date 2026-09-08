@@ -42,9 +42,19 @@ export function withSaveStatus<TVars, TOptions extends {
     onError: (err: any, vars: TVars, ctx: any) => {
       pendingCount = Math.max(0, pendingCount - 1);
       const l = resolveLabel(label, vars);
+      const msg = String(err?.message ?? "");
+      // Visa aldrig råa databas-/tekniska fel för användaren
+      let description = "Något gick fel. Försök igen – ladda om sidan om det återkommer.";
+      if (msg.includes("duplicate key value")) {
+        description = "Steget fanns redan. Ladda om sidan och försök igen.";
+      } else if (msg.includes("row-level security") || msg.includes("permission denied")) {
+        description = "Du saknar behörighet för den här ändringen.";
+      } else if (msg.toLowerCase().includes("failed to fetch") || msg.toLowerCase().includes("network")) {
+        description = "Kunde inte nå servern. Kontrollera din internetanslutning.";
+      }
       toast.error(`Kunde inte spara ${l.toLowerCase()}`, {
         id: toastId(l),
-        description: err?.message,
+        description,
         duration: 5000,
       });
       return options.onError?.(err, vars, ctx);
