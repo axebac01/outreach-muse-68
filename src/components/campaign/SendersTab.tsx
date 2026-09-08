@@ -123,17 +123,21 @@ export const SendersTab = ({ sequence }: { sequence: Sequence }) => {
               className="w-32" />
             <p className="text-xs text-muted-foreground">Rekommenderat: 25 mejl per konto och dag för bästa leverans.</p>
           </div>
+          {senders.length > 0 && (
+            <div className="rounded-md bg-muted/50 p-3 text-sm">
+              <strong>{dailyLimit} per konto × {senders.length} konto{senders.length > 1 ? "n" : ""} = upp till {totalCapacity} mejl per dag.</strong>
+              {leads.length > 0 && (
+                <> Med {leads.length} leads tar kampanjen ~{daysNeeded} dag(ar).</>
+              )}
+            </div>
+          )}
           {dailyLimit > 50 && (
             <div className="flex items-start gap-2 rounded-md bg-destructive/10 text-destructive p-3 text-xs">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
               <span>Att skicka över 50 mejl per dag och konto kan skada din leverans.</span>
             </div>
           )}
-          {senders.length > 0 && leads.length > 0 && (
-            <div className="rounded-md bg-muted/50 p-3 text-sm">
-              Med {leads.length} leads över {senders.length} konto(n) à {dailyLimit}/dag tar kampanjen ~{daysNeeded} dag(ar).
-            </div>
-          )}
+
         </CardContent>
       </Card>
 
