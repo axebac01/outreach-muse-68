@@ -138,7 +138,17 @@ const Inbox = () => {
     }
   }, [selected?.id]);
 
+  const suspicion = useMemo(() => {
+    if (!lastInbound || selected?.is_lead_related) return null;
+    return inspectInboundEmail({
+      from_address: lastInbound.from_address,
+      subject: lastInbound.subject,
+      body: lastInbound.body_text || (lastInbound.body_html ? String(lastInbound.body_html).replace(/<[^>]+>/g, " ") : ""),
+    });
+  }, [lastInbound?.id, selected?.is_lead_related]);
+
   const handleAnalyze = async (force = false) => {
+
     if (!lastInbound) return;
     setAnalyzing(true);
     try {
