@@ -441,9 +441,22 @@ const Inbox = () => {
                   <div className="space-y-3">
                     {messages.map((m) => (
                       <MessageBubble key={m.id} m={m} />
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-3">
+                    {suspicion?.suspicious && (
+                      <div className="rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs p-3 space-y-1">
+                        <div className="flex items-center gap-1.5 font-medium">
+                          <AlertCircle className="h-3.5 w-3.5" /> Kan vara bluff — klicka inte på länkar
+                        </div>
+                        <div className="text-destructive/80">{suspicion.reasons.join(" · ")}</div>
+                      </div>
+                    )}
+                    {messages.map((m) => (
+                      <MessageBubble key={m.id} m={m} />
                     ))}
                   </div>
                 </ScrollArea>
+
                 <div className="border-t p-3 space-y-2 bg-muted/20">
                   {lastInbound?.sentiment === "unsubscribe_request" && (
                     <div className="rounded-md bg-destructive/10 text-destructive text-xs p-2 flex items-center justify-between gap-2">
