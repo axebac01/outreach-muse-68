@@ -405,9 +405,14 @@ const Inbox = () => {
                           {lastInbound.language}
                         </Badge>
                       )}
-                      {!lastInbound.ai_analyzed_at && !lastInbound.ai_analysis_error && (
+                      {analyzing && (
                         <Badge variant="secondary" className="text-[10px] gap-1">
                           <Loader2 className="h-2.5 w-2.5 animate-spin" /> Analyserar…
+                        </Badge>
+                      )}
+                      {!selected.is_lead_related && (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">
+                          Utanför kampanj
                         </Badge>
                       )}
                       {lastInbound.ai_analysis_error && (
@@ -419,8 +424,9 @@ const Inbox = () => {
                         <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto"
                           onClick={() => handleAnalyze(true)} disabled={analyzing}>
                           {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                          Analysera om
+                          {lastInbound.ai_analyzed_at ? "Analysera om" : "Analysera"}
                         </Button>
+
                       ) : (
                         <Button asChild size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto">
                           <Link to="/pricing">
