@@ -25,6 +25,8 @@ import { formatDistanceToNow } from "date-fns";
 import { sv } from "date-fns/locale";
 import { useAuth } from "@/context/AuthContext";
 import { mailRegionHeaders } from "@/lib/mailRegion";
+import { inspectInboundEmail } from "@/lib/suspiciousEmail";
+
 
 const Inbox = () => {
   const { user } = useAuth();
@@ -138,7 +140,17 @@ const Inbox = () => {
     }
   }, [selected?.id]);
 
+  const suspicion = useMemo(() => {
+    if (!lastInbound || selected?.is_lead_related) return null;
+    return inspectInboundEmail({
+      from_address: lastInbound.from_address,
+      subject: lastInbound.subject,
+      body: lastInbound.body_text || (lastInbound.body_html ? String(lastInbound.body_html).replace(/<[^>]+>/g, " ") : ""),
+    });
+  }, [lastInbound?.id, selected?.is_lead_related]);
+
   const handleAnalyze = async (force = false) => {
+
     if (!lastInbound) return;
     setAnalyzing(true);
     try {
@@ -405,9 +417,14 @@ const Inbox = () => {
                           {lastInbound.language}
                         </Badge>
                       )}
-                      {!lastInbound.ai_analyzed_at && !lastInbound.ai_analysis_error && (
+                      {analyzing && (
                         <Badge variant="secondary" className="text-[10px] gap-1">
                           <Loader2 className="h-2.5 w-2.5 animate-spin" /> Analyserar…
+                        </Badge>
+                      )}
+                      {!selected.is_lead_related && (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30">
+                          Utanför kampanj
                         </Badge>
                       )}
                       {lastInbound.ai_analysis_error && (
@@ -419,8 +436,9 @@ const Inbox = () => {
                         <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto"
                           onClick={() => handleAnalyze(true)} disabled={analyzing}>
                           {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                          Analysera om
+                          {lastInbound.ai_analyzed_at ? "Analysera om" : "Analysera"}
                         </Button>
+
                       ) : (
                         <Button asChild size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1 ml-auto">
                           <Link to="/pricing">
@@ -432,12 +450,22 @@ const Inbox = () => {
                   )}
                 </div>
                 <ScrollArea className="flex-1 p-4">
+
                   <div className="space-y-3">
+                    {suspicion?.suspicious && (
+                      <div className="rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs p-3 space-y-1">
+                        <div className="flex items-center gap-1.5 font-medium">
+                          <AlertCircle className="h-3.5 w-3.5" /> Kan vara bluff — klicka inte på länkar
+                        </div>
+                        <div className="text-destructive/80">{suspicion.reasons.join(" · ")}</div>
+                      </div>
+                    )}
                     {messages.map((m) => (
                       <MessageBubble key={m.id} m={m} />
                     ))}
                   </div>
                 </ScrollArea>
+
                 <div className="border-t p-3 space-y-2 bg-muted/20">
                   {lastInbound?.sentiment === "unsubscribe_request" && (
                     <div className="rounded-md bg-destructive/10 text-destructive text-xs p-2 flex items-center justify-between gap-2">
