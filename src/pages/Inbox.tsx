@@ -438,10 +438,7 @@ const Inbox = () => {
                   )}
                 </div>
                 <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-3">
-                    {messages.map((m) => (
-                      <MessageBubble key={m.id} m={m} />
-                <ScrollArea className="flex-1 p-4">
+
                   <div className="space-y-3">
                     {suspicion?.suspicious && (
                       <div className="rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs p-3 space-y-1">
