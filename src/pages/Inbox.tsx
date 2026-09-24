@@ -25,6 +25,8 @@ import { formatDistanceToNow } from "date-fns";
 import { sv } from "date-fns/locale";
 import { useAuth } from "@/context/AuthContext";
 import { mailRegionHeaders } from "@/lib/mailRegion";
+import { inspectInboundEmail } from "@/lib/suspiciousEmail";
+
 
 const Inbox = () => {
   const { user } = useAuth();
