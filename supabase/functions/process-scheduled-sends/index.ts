@@ -300,7 +300,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const acc = accById.get(row.email_account_id);
       if (!acc || acc.status !== "active") {
         pausedAccounts.add(row.email_account_id);
         await admin.from("scheduled_sends")
@@ -363,6 +362,10 @@ Deno.serve(async (req) => {
       }
 
 
+      const acc = accById.get(row.email_account_id);
+      const fallbackSenderName = String(acc?.email ?? "").split("@")[0]
+        .replace(/^./, (char: string) => char.toUpperCase());
+      const senderName = acc?.sender_name || acc?.display_name || fallbackSenderName;
       const vars = {
         first_name: lead.first_name || (lead.full_name?.split(" ")[0] ?? ""),
         last_name: lead.last_name || "",
@@ -370,6 +373,9 @@ Deno.serve(async (req) => {
         company: lead.company || "",
         role: lead.role || "",
         email: lead.email,
+        sender_name: senderName,
+        sender_email: acc?.email || "",
+        sender_signature: acc?.signature || senderName,
       };
       const subject = renderTemplate(step.subject || "", vars);
       const rawBody = renderTemplate(step.body || "", vars);
