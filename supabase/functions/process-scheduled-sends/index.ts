@@ -300,6 +300,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      const acc = accById.get(row.email_account_id);
       if (!acc || acc.status !== "active") {
         pausedAccounts.add(row.email_account_id);
         await admin.from("scheduled_sends")
@@ -362,7 +363,6 @@ Deno.serve(async (req) => {
       }
 
 
-      const acc = accById.get(row.email_account_id);
       const fallbackSenderName = String(acc?.email ?? "").split("@")[0]
         .replace(/^./, (char: string) => char.toUpperCase());
       const senderName = acc?.sender_name || acc?.display_name || fallbackSenderName;
