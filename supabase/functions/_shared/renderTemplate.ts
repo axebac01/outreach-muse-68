@@ -1,5 +1,6 @@
 // Deno-compatible copy of src/lib/renderTemplate.ts (template render only)
 export type RenderVars = {
+  greeting?: string | null;
   email?: string | null;
   full_name?: string | null;
   first_name?: string | null;
@@ -29,6 +30,7 @@ export function renderTemplate(template: string, vars: RenderVars): string {
   return template.replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (_m, key: string) => {
     const k = key.toLowerCase();
     switch (k) {
+      case "greeting": return fbFirst(vars) ? `Hej ${fbFirst(vars)},` : "Hej,";
       case "first_name": return fbFirst(vars);
       case "last_name": return fbLast(vars);
       case "full_name":

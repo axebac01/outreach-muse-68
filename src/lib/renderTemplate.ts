@@ -1,4 +1,5 @@
 export type LeadVars = {
+  greeting?: string | null;
   email?: string | null;
   full_name?: string | null;
   first_name?: string | null;
@@ -29,6 +30,7 @@ export interface VariableDef {
 }
 
 export const VARIABLE_DEFS: VariableDef[] = [
+  { key: "greeting", group: "lead", label: "Greeting" },
   { key: "first_name", group: "lead", label: "First name" },
   { key: "last_name", group: "lead", label: "Last name" },
   { key: "full_name", group: "lead", label: "Full name" },
@@ -61,6 +63,7 @@ export const renderTemplate = (template: string, vars: RenderVars): string => {
   return template.replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (_m, key: string) => {
     const k = key.toLowerCase();
     switch (k) {
+      case "greeting": return fbFirst(vars) ? `Hej ${fbFirst(vars)},` : "Hej,";
       case "first_name": return fbFirst(vars);
       case "last_name": return fbLast(vars);
       case "full_name":
