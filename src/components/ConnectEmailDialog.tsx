@@ -48,6 +48,8 @@ import { mailRegionHeaders } from "@/lib/mailRegion";
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  /** När satt öppnas dialogen i återanslutningsläge för ett befintligt SMTP-konto. */
+  reconnectAccount?: EmailAccount | null;
 }
 
 type View =
