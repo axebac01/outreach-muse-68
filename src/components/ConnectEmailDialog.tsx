@@ -93,6 +93,31 @@ const ConnectEmailDialog = ({ open, onOpenChange, reconnectAccount }: Props) => 
     onOpenChange(v);
   };
 
+  // Återanslutningsläge: hoppa direkt till SMTP/IMAP-formuläret med kontots
+  // uppgifter ifyllda (lösenord lämnas tomt — användaren fyller i nytt).
+  useEffect(() => {
+    if (open && reconnectAccount) {
+      setView({ kind: "custom" });
+      setTested(false);
+      setTests({ smtp: { state: "idle" }, imap: { state: "idle" } });
+      setSameAsSmtp(false);
+      setForm({
+        email: reconnectAccount.email,
+        display_name: reconnectAccount.display_name ?? "",
+        smtp_host: reconnectAccount.smtp_host ?? "",
+        smtp_port: reconnectAccount.smtp_port ?? 465,
+        smtp_secure: true,
+        smtp_username: reconnectAccount.email,
+        smtp_password: "",
+        imap_host: reconnectAccount.imap_host ?? "",
+        imap_port: reconnectAccount.imap_port ?? 993,
+        imap_secure: true,
+        imap_username: reconnectAccount.email,
+        imap_password: "",
+      });
+    }
+  }, [open, reconnectAccount]);
+
   const startMicrosoftOauth = async () => {
     setOauthLoading("microsoft");
     try {
