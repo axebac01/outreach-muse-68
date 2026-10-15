@@ -2,8 +2,9 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Mail, Plus, Trash2, AlertCircle, CheckCircle2, PenLine, Flame, Info, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import {
   useEmailAccounts,
   useDeleteEmailAccount,
@@ -35,6 +36,31 @@ const EmailAccounts = () => {
   const { limits: planLimits } = usePlanLimits();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<EmailAccount | null>(null);
+  const [reconnecting, setReconnecting] = useState<EmailAccount | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const reconnectParam = searchParams.get("reconnect");
+  const handledReconnectRef = useRef<string | null>(null);
+  const accountRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Bannern "Fixa →" länkar hit med ?reconnect=<id> — scrolla till kontot,
+  // markera det och öppna återanslutningsdialogen automatiskt.
+  useEffect(() => {
+    if (!reconnectParam || !accounts || handledReconnectRef.current === reconnectParam) return;
+    const target = accounts.find((a) => a.id === reconnectParam);
+    if (!target) return;
+    handledReconnectRef.current = reconnectParam;
+    accountRefs.current[target.id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (target.auth_type === "oauth") {
+      handleReconnect(target);
+    } else {
+      setReconnecting(target);
+      setDialogOpen(true);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("reconnect");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reconnectParam, accounts]);
 
   const accountCount = accounts?.length ?? 0;
   const planCap = planLimits?.email_accounts ?? -1;
