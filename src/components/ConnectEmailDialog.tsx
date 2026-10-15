@@ -41,7 +41,7 @@ import {
 } from "@/lib/emailProviders";
 import { toUserMessage, unwrapFunctionError, extractErrorInfo, isAuthFailure } from "@/lib/errorMessages";
 import { usePlanLimits, canCreateMore } from "@/hooks/usePlanLimits";
-import { useEmailAccounts } from "@/hooks/useEmailAccounts";
+import { useEmailAccounts, type EmailAccount } from "@/hooks/useEmailAccounts";
 import { PlanLimitBanner } from "@/components/PlanLimitBanner";
 import { mailRegionHeaders } from "@/lib/mailRegion";
 
@@ -68,7 +68,7 @@ type TestResult = {
 
 
 
-const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
+const ConnectEmailDialog = ({ open, onOpenChange, reconnectAccount }: Props) => {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [testing, setTesting] = useState(false);
