@@ -184,7 +184,15 @@ const EmailAccounts = () => {
                 const { cap, rampUpDay, providerCeiling } = effectiveCap(limit, acc.created_at, acc.provider);
                 const used = sentToday[acc.id] || 0;
                 return (
-                <div key={acc.id} className="rounded-xl border bg-card p-4 space-y-3">
+                <div
+                  key={acc.id}
+                  ref={(el) => { accountRefs.current[acc.id] = el; }}
+                  className={`rounded-xl border bg-card p-4 space-y-3 ${
+                    acc.status === "error" || acc.status === "needs_reconnect"
+                      ? "border-destructive/50"
+                      : ""
+                  }`}
+                >
                   <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
@@ -219,12 +227,16 @@ const EmailAccounts = () => {
                           <span className="hidden sm:inline">{t("emailAccounts.reactivate")}</span>
                         </Button>
                       )}
-                      {acc.auth_type === "oauth" && acc.status !== "active" && acc.status !== "paused_bounce" && (
+                      {acc.status !== "active" && acc.status !== "paused_bounce" && (
                         <Button
                           variant="outline"
                           size="sm"
                           className="gap-1.5"
-                          onClick={() => handleReconnect(acc)}
+                          onClick={() =>
+                            acc.auth_type === "oauth"
+                              ? handleReconnect(acc)
+                              : (setReconnecting(acc), setDialogOpen(true))
+                          }
                           title={t("emailAccounts.reconnectHint")}
                         >
                           <RefreshCw className="h-3.5 w-3.5" />
@@ -327,7 +339,14 @@ const EmailAccounts = () => {
         </div>
       </div>
 
-      <ConnectEmailDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ConnectEmailDialog
+        open={dialogOpen}
+        onOpenChange={(v) => {
+          setDialogOpen(v);
+          if (!v) setReconnecting(null);
+        }}
+        reconnectAccount={reconnecting}
+      />
       <EditSignatureDialog
         account={editing}
         open={!!editing}
