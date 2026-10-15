@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,13 +41,15 @@ import {
 } from "@/lib/emailProviders";
 import { toUserMessage, unwrapFunctionError, extractErrorInfo, isAuthFailure } from "@/lib/errorMessages";
 import { usePlanLimits, canCreateMore } from "@/hooks/usePlanLimits";
-import { useEmailAccounts } from "@/hooks/useEmailAccounts";
+import { useEmailAccounts, type EmailAccount } from "@/hooks/useEmailAccounts";
 import { PlanLimitBanner } from "@/components/PlanLimitBanner";
 import { mailRegionHeaders } from "@/lib/mailRegion";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  /** När satt öppnas dialogen i återanslutningsläge för ett befintligt SMTP-konto. */
+  reconnectAccount?: EmailAccount | null;
 }
 
 type View =
@@ -66,7 +68,7 @@ type TestResult = {
 
 
 
-const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
+const ConnectEmailDialog = ({ open, onOpenChange, reconnectAccount }: Props) => {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [testing, setTesting] = useState(false);
@@ -90,6 +92,31 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
     }
     onOpenChange(v);
   };
+
+  // Återanslutningsläge: hoppa direkt till SMTP/IMAP-formuläret med kontots
+  // uppgifter ifyllda (lösenord lämnas tomt — användaren fyller i nytt).
+  useEffect(() => {
+    if (open && reconnectAccount) {
+      setView({ kind: "custom" });
+      setTested(false);
+      setTests({ smtp: { state: "idle" }, imap: { state: "idle" } });
+      setSameAsSmtp(false);
+      setForm({
+        email: reconnectAccount.email,
+        display_name: reconnectAccount.display_name ?? "",
+        smtp_host: reconnectAccount.smtp_host ?? "",
+        smtp_port: reconnectAccount.smtp_port ?? 465,
+        smtp_secure: true,
+        smtp_username: reconnectAccount.email,
+        smtp_password: "",
+        imap_host: reconnectAccount.imap_host ?? "",
+        imap_port: reconnectAccount.imap_port ?? 993,
+        imap_secure: true,
+        imap_username: reconnectAccount.email,
+        imap_password: "",
+      });
+    }
+  }, [open, reconnectAccount]);
 
   const startMicrosoftOauth = async () => {
     setOauthLoading("microsoft");
@@ -258,6 +285,7 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
         {
           headers: mailRegionHeaders,
           body: {
+            account_id: reconnectAccount?.id ?? undefined,
             email: form.email,
             display_name: form.display_name || null,
             smtp_host: form.smtp_host,
@@ -300,9 +328,15 @@ const ConnectEmailDialog = ({ open, onOpenChange }: Props) => {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("emailAccounts.providerPicker.title")}</DialogTitle>
+          <DialogTitle>
+            {reconnectAccount
+              ? `Återanslut ${reconnectAccount.email}`
+              : t("emailAccounts.providerPicker.title")}
+          </DialogTitle>
           <DialogDescription>
-            {t("emailAccounts.providerPicker.subtitle")}
+            {reconnectAccount
+              ? "Uppgifterna är ifyllda — ange det nya lösenordet, testa och spara."
+              : t("emailAccounts.providerPicker.subtitle")}
           </DialogDescription>
         </DialogHeader>
 
