@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -285,6 +285,7 @@ const ConnectEmailDialog = ({ open, onOpenChange, reconnectAccount }: Props) => 
         {
           headers: mailRegionHeaders,
           body: {
+            account_id: reconnectAccount?.id ?? undefined,
             email: form.email,
             display_name: form.display_name || null,
             smtp_host: form.smtp_host,
