@@ -328,9 +328,15 @@ const ConnectEmailDialog = ({ open, onOpenChange, reconnectAccount }: Props) => 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("emailAccounts.providerPicker.title")}</DialogTitle>
+          <DialogTitle>
+            {reconnectAccount
+              ? `Återanslut ${reconnectAccount.email}`
+              : t("emailAccounts.providerPicker.title")}
+          </DialogTitle>
           <DialogDescription>
-            {t("emailAccounts.providerPicker.subtitle")}
+            {reconnectAccount
+              ? "Uppgifterna är ifyllda — ange det nya lösenordet, testa och spara."
+              : t("emailAccounts.providerPicker.subtitle")}
           </DialogDescription>
         </DialogHeader>
 
