@@ -119,6 +119,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
+      account_id,
       email,
       display_name,
       smtp_host,
@@ -169,6 +170,46 @@ Deno.serve(async (req) => {
     const imap_password_enc = imap_password
       ? await encryptIfPossible(admin, imap_password)
       : null;
+
+    // Återanslutning: uppdatera befintligt konto (ägarskap kontrolleras)
+    // i stället för att skapa en dubblett.
+    if (account_id) {
+      const { data: updated, error: updateErr } = await admin
+        .from("email_accounts")
+        .update({
+          email,
+          display_name: display_name ?? null,
+          status: "active",
+          status_message: null,
+          paused_reason: null,
+          paused_at: null,
+          smtp_host,
+          smtp_port: Number(smtp_port),
+          smtp_secure: smtp_secure !== false,
+          smtp_username,
+          smtp_password_enc,
+          imap_host: imap_host ?? null,
+          imap_port: imap_port ? Number(imap_port) : null,
+          imap_secure: imap_secure !== false,
+          imap_username: imap_username ?? null,
+          imap_password_enc,
+        })
+        .eq("id", String(account_id))
+        .eq("user_id", userId)
+        .select("id")
+        .single();
+
+      if (updateErr || !updated) {
+        return new Response(
+          JSON.stringify({ error: updateErr?.message ?? "Account not found" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      return new Response(JSON.stringify({ id: updated.id, ok: true, reconnected: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: inserted, error: insertErr } = await admin
       .from("email_accounts")
