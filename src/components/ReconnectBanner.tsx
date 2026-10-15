@@ -21,7 +21,7 @@ export const ReconnectBanner = () => {
 
   return (
     <Link
-      to="/email-accounts"
+      to={`/email-accounts?reconnect=${first.id}`}
       className="block bg-destructive/10 border-b border-destructive/30 text-destructive hover:bg-destructive/15 transition-colors"
     >
       <div className="container mx-auto px-4 py-2.5 flex items-start sm:items-center gap-2 text-sm flex-wrap">
