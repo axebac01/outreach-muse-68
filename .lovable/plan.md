@@ -1,25 +1,34 @@
-# Byt mejltexter i Insynia v2
+# Insynia v2: nya mejltexter och en snabbare app
 
-Kampanjen "Insynia v2 – Redovisningskonsulter" är fortfarande ett utkast. Inget har skickats.
+## Rättelse
+Jag hade fel när jag skrev att inget har skickats. Kampanjen började skicka den 6 oktober. **119 mejl har gått ut** med de gamla texterna. Just nu är kampanjen pausad och inga utskick väntar i kön.
 
-## Vad som ändras
-Alla tre mejl byts mot de nya texterna, ordagrant. Väntetiden är kvar på 0, 4 och 5 dagar.
-
+## Del 1: Nya mejltexter
+Alla tre mejl byts mot dina nya texter, ordagrant. Väntetiden mellan mejlen är kvar på 0, 4 och 5 dagar.
 1. **Från redovisning till rådgivning**
 2. **Vad är er egen redovisningsbyrå värd?**
 3. **Prova först – bestäm sedan**
 
-- **Hälsning:** Texterna börjar med "Hej,". Den ersätts med den automatiska hälsningen, som blir "Hej Förnamn," när det finns ett namn och annars "Hej,". Säg till om du hellre vill ha "Hej," till alla.
+- **Hälsning:** Mejlen börjar med "Hej Förnamn," när det finns ett namn och annars med "Hej,".
 - **Länk:** Varje "insynia.se" blir en klickbar länk till https://insynia.se.
-- **Punktlistor** (mejl 1 och 3) blir riktiga listor. Pilraden i mejl 2 står kvar som den är.
-- **Signatur:** "Vänliga hälsningar / Johan Pokorny / Bisdata / Insynia" skrivs in exakt så i texten, i stället för avsändarens egen signatur. Mejlen skickas fortfarande från Kevins och Oskars adresser.
-- **Avregistrering:** En avregistreringslänk läggs automatiskt längst ner i varje mejl. Gmail och Outlook får också en avregistreringsknapp med ett klick. Det behövs alltså ingen egen länk i texten.
+- **Punktlistor** blir riktiga listor.
+- **Signatur:** Varje mejl avslutas med "Vänliga hälsningar / Johan Pokorny / Bisdata / Insynia".
+- **Avregistrering:** En avregistreringslänk läggs automatiskt längst ner i varje mejl. Gmail och Outlook får också en avregistreringsknapp med ett klick.
+- **De 119 som redan har fått mejl** fortsätter med de nya texterna från nästa steg. Ingen får det första mejlet en gång till.
+- Kampanjen förblir pausad. Du startar den själv när du har läst igenom texterna.
 
-## Kontroll
-- Läs tillbaka de tre stegen och kontrollera ämnesrader, länkar och väntetider.
-- Visa ett exempel på hur ett mejl ser ut, med och utan förnamn.
-- Kampanjen ligger kvar som utkast. Du startar den själv.
+## Del 2: Laggigheten
+Databasen mår bra (62 % minne, inga larm). Det som gör appen seg är att vissa sökningar läser igenom hela tabeller:
+- Mejltrådar i inkorgen tar upp till 7 sekunder att öppna.
+- Inkorgssynken kontrollerar varje nytt mejl mot alla mejl som redan finns.
+- Sökningar bland leads och dubblettkontroller vid import.
+
+Åtgärd: lägg till genvägar (index) så att databasen hittar rätt rader direkt. Sedan mäter jag igen och jämför.
 
 ## Tekniska detaljer
-- Uppdatera `sequence_steps` (step_order 0–2) för sekvensen som hör till kampanjen `c4f9915d-…`. Ändra bara subject och body, som HTML: `<p>`, `<ul><li>` och `<a href="https://insynia.se">insynia.se</a>`.
-- Den första raden "Hej," ersätts med `{{greeting}}`. Ingen ändring i koden.
+- Uppdatera `sequence_steps` (step_order 0–2) i sekvensen `57d7f537-…`. Ändra bara subject och body, som HTML (`<p>`, `<ul><li>`, `<a>`). Den första raden "Hej," ersätts med `{{greeting}}`.
+- Migration med följande index:
+  - `email_messages(email_account_id, provider_message_id)`
+  - `email_messages(user_id, email_account_id, thread_key, created_at)`
+  - `sequence_leads(user_id, lower(email))` med `text_pattern_ops` eller trigram för ilike
+- Mät före och efter med `slow_queries` och EXPLAIN.
